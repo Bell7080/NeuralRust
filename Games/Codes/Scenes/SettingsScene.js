@@ -6,6 +6,16 @@
 //  의존: FontManager, SaveManager, InputManager, utils.js
 // ================================================================
 
+// ── Neural Rust 컬러 팔레트 (중앙 관리) ─────────────────────────
+// BG       #050407   베이스 배경
+// GRID     #0f0a05   그리드 선
+// BORDER   #2a1a0a   테두리/구분선
+// DIM      #1e1008   어두운 텍스트
+// MID      #3d2010   중간 텍스트
+// ACCENT   #a05018   주요 강조 (녹슨 주황)
+// BRIGHT   #c8a070   밝은 강조 (동판)
+// TEXT     #c8bfb0   주 텍스트
+
 class SettingsScene extends Phaser.Scene {
   constructor() { super({ key: 'SettingsScene' }); }
 
@@ -19,7 +29,6 @@ class SettingsScene extends Phaser.Scene {
     const H  = this.scale.height;
     const cx = W / 2;
 
-    // InputManager 씬 재등록 (키 오브젝트 갱신)
     InputManager.reinit(this);
 
     this._buildBackground(W, H);
@@ -39,7 +48,6 @@ class SettingsScene extends Phaser.Scene {
 
   shutdown() {
     this._removeInputEl();
-    // 리바인딩 중이면 취소
     if (InputManager._rebindListener) InputManager._cancelRebind();
     if (this._fsHandler) {
       document.removeEventListener('fullscreenchange',       this._fsHandler);
@@ -54,10 +62,17 @@ class SettingsScene extends Phaser.Scene {
 
   // ── 배경 ──────────────────────────────────────────────────────
   _buildBackground(W, H) {
-    this.add.rectangle(0, 0, W, H, 0x060608).setOrigin(0);
+    this.add.rectangle(0, 0, W, H, 0x050407).setOrigin(0);
+
+    const scan = this.add.graphics();
+    for (let y = 0; y < H; y += 4) {
+      scan.lineStyle(1, 0x1a0e06, 0.25);
+      scan.lineBetween(0, y, W, y);
+    }
+
     const grid = this.add.graphics();
-    grid.lineStyle(1, 0x0d0d12, 1);
-    const step = Math.round(W / 48);
+    grid.lineStyle(1, 0x0f0a05, 0.6);
+    const step = Math.round(W / 56);
     for (let x = 0; x <= W; x += step) grid.lineBetween(x, 0, x, H);
     for (let y = 0; y <= H; y += step) grid.lineBetween(0, y, W, y);
   }
@@ -65,9 +80,16 @@ class SettingsScene extends Phaser.Scene {
   // ── 타이틀 ────────────────────────────────────────────────────
   _buildTitle(W, H, cx) {
     this.add.text(cx, H * 0.09, '설  정', {
-      fontSize: scaledFontSize(32, this.scale),
-      fill: '#9999aa',
+      fontSize: scaledFontSize(30, this.scale),
+      fill: '#6b4020',
       fontFamily: FontManager.TITLE,
+    }).setOrigin(0.5);
+
+    this.add.text(cx, H * 0.09 + parseInt(scaledFontSize(22, this.scale)), 'SETTINGS', {
+      fontSize: scaledFontSize(9, this.scale),
+      fill: '#2a1508',
+      fontFamily: FontManager.MONO,
+      letterSpacing: 5,
     }).setOrigin(0.5);
   }
 
@@ -75,7 +97,7 @@ class SettingsScene extends Phaser.Scene {
   _buildTabs(W, H, cx) {
     const tabY   = H * 0.20;
     const tabW   = W * 0.14;
-    const tabH   = parseInt(scaledFontSize(36, this.scale));
+    const tabH   = parseInt(scaledFontSize(34, this.scale));
     const gap    = W * 0.015;
 
     const tabs = [
@@ -95,8 +117,8 @@ class SettingsScene extends Phaser.Scene {
       this._drawTabBg(bg, tx, tabY, tabW, tabH, selected);
 
       this.add.text(tx + tabW / 2, tabY + tabH / 2, tab.label, {
-        fontSize: scaledFontSize(12, this.scale),
-        fill: selected ? '#d4cfc6' : '#555566',
+        fontSize: scaledFontSize(11, this.scale),
+        fill: selected ? '#c8a070' : '#3d2010',
         fontFamily: FontManager.TITLE,
       }).setOrigin(0.5);
 
@@ -118,7 +140,7 @@ class SettingsScene extends Phaser.Scene {
     });
 
     const line = this.add.graphics();
-    line.lineStyle(1, 0x222230, 1);
+    line.lineStyle(1, 0x2a1a0a, 1);
     line.lineBetween(W * 0.05, tabY + tabH + 2, W * 0.95, tabY + tabH + 2);
 
     if (this._activeTab === 'font')  this._buildFontTab(W, H, cx);
@@ -129,9 +151,9 @@ class SettingsScene extends Phaser.Scene {
 
   _drawTabBg(gfx, x, y, w, h, selected, hover = false) {
     gfx.clear();
-    if (selected)   { gfx.fillStyle(0x1a1a28, 1); gfx.lineStyle(1, 0x333344, 0.8); }
-    else if (hover) { gfx.fillStyle(0x111118, 1); gfx.lineStyle(1, 0x2a2a3a, 0.6); }
-    else            { gfx.fillStyle(0x000000, 0); gfx.lineStyle(1, 0x1a1a22, 0.5); }
+    if (selected)   { gfx.fillStyle(0x1e1008, 1); gfx.lineStyle(1, 0x4a2810, 0.9); }
+    else if (hover) { gfx.fillStyle(0x140c05, 1); gfx.lineStyle(1, 0x2a1a0a, 0.7); }
+    else            { gfx.fillStyle(0x000000, 0); gfx.lineStyle(1, 0x1a0e06, 0.5); }
     gfx.strokeRect(x, y, w, h);
     gfx.fillRect(x, y, w, h);
   }
@@ -141,8 +163,8 @@ class SettingsScene extends Phaser.Scene {
   // ══════════════════════════════════════════════════════════════
   _buildFontTab(W, H, cx) {
     this.add.text(W * 0.08, H * 0.32, '[ 폰트 ]', {
-      fontSize: scaledFontSize(13, this.scale),
-      fill: '#444455',
+      fontSize: scaledFontSize(12, this.scale),
+      fill: '#3d2010',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
@@ -166,20 +188,20 @@ class SettingsScene extends Phaser.Scene {
     this._drawOptionBox(box, W * 0.08, y - 28, W * 0.84, 56, isSelected);
 
     const nameText = this.add.text(W * 0.13, y - 8, opt.label, {
-      fontSize: scaledFontSize(16, this.scale),
-      fill: isSelected ? '#d4cfc6' : '#555566',
+      fontSize: scaledFontSize(15, this.scale),
+      fill: isSelected ? '#c8a070' : '#3d2010',
       fontFamily: opt.family,
     }).setOrigin(0, 0.5);
 
     this.add.text(W * 0.13, y + 10, opt.desc, {
       fontSize: scaledFontSize(10, this.scale),
-      fill: isSelected ? '#666677' : '#333344',
+      fill: isSelected ? '#4a2810' : '#251508',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
     this.add.text(W * 0.09, y, isSelected ? '▶' : '·', {
-      fontSize: scaledFontSize(12, this.scale),
-      fill: isSelected ? '#886655' : '#333344',
+      fontSize: scaledFontSize(11, this.scale),
+      fill: isSelected ? '#a05018' : '#251508',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
@@ -189,13 +211,13 @@ class SettingsScene extends Phaser.Scene {
     hit.on('pointerover', () => {
       if (this._currentFont !== opt.key) {
         this._drawOptionBox(box, W * 0.08, y - 28, W * 0.84, 56, false, true);
-        nameText.setStyle({ fill: '#aaaaaa' });
+        nameText.setStyle({ fill: '#8a6040' });
       }
     });
     hit.on('pointerout', () => {
       if (this._currentFont !== opt.key) {
         this._drawOptionBox(box, W * 0.08, y - 28, W * 0.84, 56, false, false);
-        nameText.setStyle({ fill: '#555566' });
+        nameText.setStyle({ fill: '#3d2010' });
       }
     });
     hit.on('pointerdown', () => {
@@ -210,24 +232,24 @@ class SettingsScene extends Phaser.Scene {
   _buildPreview(W, H, cx) {
     const py = H * 0.76;
     const line = this.add.graphics();
-    line.lineStyle(1, 0x1a1a22, 1);
+    line.lineStyle(1, 0x1e1008, 1);
     line.lineBetween(W * 0.1, py - 20, W * 0.9, py - 20);
 
     this.add.text(W * 0.08, py, '미리보기', {
-      fontSize: scaledFontSize(11, this.scale),
-      fill: '#333344',
+      fontSize: scaledFontSize(10, this.scale),
+      fill: '#2a1508',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    this.add.text(cx, py + 28, '공방 — PROJECT001 — 가나다 ABC 123', {
-      fontSize: scaledFontSize(17, this.scale),
-      fill: '#888899',
+    this.add.text(cx, py + 26, 'NEURAL RUST — 뉴럴 러스트 — ABC 123', {
+      fontSize: scaledFontSize(16, this.scale),
+      fill: '#6b4020',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5, 0);
 
-    this.add.text(cx, py + 56, '어둠 속에서 빛을 찾아 헤매는 자의 이야기', {
-      fontSize: scaledFontSize(12, this.scale),
-      fill: '#444455',
+    this.add.text(cx, py + 54, '소프트웨어만 살아남은 세계, 붕괴 후 102년', {
+      fontSize: scaledFontSize(11, this.scale),
+      fill: '#3d2010',
       fontFamily: FontManager.BODY,
     }).setOrigin(0.5, 0);
   }
@@ -239,15 +261,10 @@ class SettingsScene extends Phaser.Scene {
     const isFullscreen = !!document.fullscreenElement;
 
     this.add.text(W * 0.08, H * 0.32, '[ 화면 모드 ]', {
-      fontSize: scaledFontSize(13, this.scale),
-      fill: '#444455',
+      fontSize: scaledFontSize(12, this.scale),
+      fill: '#3d2010',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
-
-    // ── Electron 안내 ─────────────────────────────────────────
-    // Electron 이식 후: requestFullscreen / exitFullscreen 대신
-    // win.setFullScreen(true/false) 로 교체.
-    // 아래 옵션 UI 구조는 그대로 유지됨.
 
     const options = [
       { key: 'fullscreen', label: '전체화면', desc: 'F11 또는 이 항목으로 전환' },
@@ -265,20 +282,20 @@ class SettingsScene extends Phaser.Scene {
       this._drawOptionBox(box, W * 0.08, y - 28, W * 0.84, 56, isSelected);
 
       const nameText = this.add.text(W * 0.13, y - 8, opt.label, {
-        fontSize: scaledFontSize(16, this.scale),
-        fill: isSelected ? '#d4cfc6' : '#555566',
+        fontSize: scaledFontSize(15, this.scale),
+        fill: isSelected ? '#c8a070' : '#3d2010',
         fontFamily: FontManager.TITLE,
       }).setOrigin(0, 0.5);
 
       this.add.text(W * 0.13, y + 10, opt.desc, {
         fontSize: scaledFontSize(10, this.scale),
-        fill: isSelected ? '#666677' : '#333344',
+        fill: isSelected ? '#4a2810' : '#251508',
         fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);
 
       this.add.text(W * 0.09, y, isSelected ? '▶' : '·', {
-        fontSize: scaledFontSize(12, this.scale),
-        fill: isSelected ? '#886655' : '#333344',
+        fontSize: scaledFontSize(11, this.scale),
+        fill: isSelected ? '#a05018' : '#251508',
         fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);
 
@@ -288,13 +305,13 @@ class SettingsScene extends Phaser.Scene {
       hit.on('pointerover', () => {
         if (!isSelected) {
           this._drawOptionBox(box, W * 0.08, y - 28, W * 0.84, 56, false, true);
-          nameText.setStyle({ fill: '#aaaaaa' });
+          nameText.setStyle({ fill: '#8a6040' });
         }
       });
       hit.on('pointerout', () => {
         if (!isSelected) {
           this._drawOptionBox(box, W * 0.08, y - 28, W * 0.84, 56, false, false);
-          nameText.setStyle({ fill: '#555566' });
+          nameText.setStyle({ fill: '#3d2010' });
         }
       });
       hit.on('pointerdown', () => {
@@ -308,8 +325,8 @@ class SettingsScene extends Phaser.Scene {
     });
 
     this.add.text(cx, H * 0.72, 'F11 키로도 전체화면을 전환할 수 있습니다', {
-      fontSize: scaledFontSize(11, this.scale),
-      fill: '#333344',
+      fontSize: scaledFontSize(10, this.scale),
+      fill: '#2a1508',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
   }
@@ -326,32 +343,29 @@ class SettingsScene extends Phaser.Scene {
     const leftX     = W * 0.06;
     const rightX    = W * 0.52;
 
-    // 섹션 헤더
     this.add.text(leftX, H * 0.26, '[ 키 설정 ]', {
-      fontSize: scaledFontSize(13, this.scale),
-      fill: '#444455',
+      fontSize: scaledFontSize(12, this.scale),
+      fill: '#3d2010',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
     this.add.text(W - leftX, H * 0.26, 'ESC — 변경 취소', {
       fontSize: scaledFontSize(10, this.scale),
-      fill: '#2a2a3a',
+      fill: '#251508',
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5);
 
-    // 리바인딩 중 오버레이 텍스트 (나중에 표시용)
     const waitText = this.add.text(cx, H * 0.88, '', {
-      fontSize: scaledFontSize(13, this.scale),
-      fill: '#886655',
+      fontSize: scaledFontSize(12, this.scale),
+      fill: '#a05018',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(50);
 
-    // 각 액션 행 렌더
-    const rowObjects = []; // 나중에 rebind 후 갱신하기 위해
+    const rowObjects = [];
 
     actions.forEach((action, i) => {
-      const col  = i % colCount;
-      const row  = Math.floor(i / colCount);
+      const col   = i % colCount;
+      const row   = Math.floor(i / colCount);
       const baseX = col === 0 ? leftX : rightX;
       const y     = startY + row * rowH;
 
@@ -359,7 +373,6 @@ class SettingsScene extends Phaser.Scene {
       rowObjects.push(obj);
     });
 
-    // 기본값 초기화 버튼
     const resetY = startY + Math.ceil(actions.length / colCount) * rowH + H * 0.04;
     this._makeButton(cx, resetY, W * 0.22, 32, '기본값으로 초기화', () => {
       this._showConfirmPopup(cx, H, '키 설정을 기본값으로 되돌리겠습니까?', () => {
@@ -377,39 +390,35 @@ class SettingsScene extends Phaser.Scene {
     const keyBtnW = colW * 0.26;
     const rowPad  = 6;
 
-    // 행 배경
     const rowBg = this.add.graphics();
     const drawRowBg = (hover) => {
       rowBg.clear();
-      rowBg.fillStyle(hover ? 0x0e0e14 : 0x000000, hover ? 1 : 0);
-      rowBg.lineStyle(1, 0x1a1a22, 0.4);
+      rowBg.fillStyle(hover ? 0x120a04 : 0x000000, hover ? 1 : 0);
+      rowBg.lineStyle(1, 0x1e1008, 0.4);
       rowBg.fillRect(baseX, y - rowH / 2 + rowPad, colW, rowH - rowPad * 2);
       rowBg.strokeRect(baseX, y - rowH / 2 + rowPad, colW, rowH - rowPad * 2);
     };
     drawRowBg(false);
 
-    // 액션 라벨
     this.add.text(labelX, y, action.label, {
-      fontSize: scaledFontSize(12, this.scale),
-      fill: '#777788',
+      fontSize: scaledFontSize(11, this.scale),
+      fill: '#4a3020',
       fontFamily: FontManager.BODY,
     }).setOrigin(0, 0.5);
 
-    // 키 버튼 박스
-    const keyBg = this.add.graphics();
+    const keyBg   = this.add.graphics();
     const keyText = this.add.text(keyBtnX, y, InputManager.displayName(action.key), {
-      fontSize: scaledFontSize(12, this.scale),
-      fill: '#aaaacc',
+      fontSize: scaledFontSize(11, this.scale),
+      fill: '#8a6040',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
 
     const drawKeyBg = (state) => {
-      // state: 'normal' | 'hover' | 'waiting'
       keyBg.clear();
       const colors = {
-        normal:  { fill: 0x111120, line: 0x333355 },
-        hover:   { fill: 0x1a1a30, line: 0x5555aa },
-        waiting: { fill: 0x1a1200, line: 0x886622 },
+        normal:  { fill: 0x140c05, line: 0x3d2010 },
+        hover:   { fill: 0x1e1008, line: 0x6b3818 },
+        waiting: { fill: 0x1a1000, line: 0x8a5010 },
       };
       const c = colors[state] || colors.normal;
       keyBg.fillStyle(c.fill, 1);
@@ -419,7 +428,6 @@ class SettingsScene extends Phaser.Scene {
     };
     drawKeyBg('normal');
 
-    // 히트 영역
     const hit = this.add.rectangle(baseX + colW / 2, y, colW, rowH - rowPad * 2, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
 
@@ -432,26 +440,25 @@ class SettingsScene extends Phaser.Scene {
       if (!isWaiting) { drawRowBg(false); drawKeyBg('normal'); }
     });
     hit.on('pointerdown', () => {
-      if (InputManager._rebindTarget) return; // 다른 리바인딩 진행 중
+      if (InputManager._rebindTarget) return;
 
       isWaiting = true;
       drawRowBg(false);
       drawKeyBg('waiting');
-      keyText.setText('?').setStyle({ fill: '#cc9944' });
+      keyText.setText('?').setStyle({ fill: '#c87830' });
       waitText.setText(`'${action.label}' — 새 키를 누르세요  (ESC: 취소)`);
 
       InputManager.startRebind(action.key, (newKey) => {
         isWaiting = false;
         if (newKey) {
-          keyText.setText(InputManager.displayName(action.key)).setStyle({ fill: '#aaaacc' });
-          // 다른 행도 갱신 (중복 제거로 바뀐 키가 있을 수 있음)
-          rowObjects.forEach((obj, i2) => {
+          keyText.setText(InputManager.displayName(action.key)).setStyle({ fill: '#8a6040' });
+          rowObjects.forEach((obj) => {
             if (obj && obj.keyText && obj.actionKey) {
               obj.keyText.setText(InputManager.displayName(obj.actionKey));
             }
           });
         } else {
-          keyText.setText(InputManager.displayName(action.key)).setStyle({ fill: '#aaaacc' });
+          keyText.setText(InputManager.displayName(action.key)).setStyle({ fill: '#8a6040' });
         }
         drawRowBg(false);
         drawKeyBg('normal');
@@ -473,8 +480,8 @@ class SettingsScene extends Phaser.Scene {
     const rightBtnX = boxX + boxW + (W * 0.92 - (boxX + boxW)) / 2;
 
     this.add.text(boxX, startY, '[ 내 저장 코드 ]', {
-      fontSize: scaledFontSize(13, this.scale),
-      fill: '#444455',
+      fontSize: scaledFontSize(12, this.scale),
+      fill: '#3d2010',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
@@ -487,15 +494,15 @@ class SettingsScene extends Phaser.Scene {
     const rowY = startY + 18;
 
     const codeBox = this.add.graphics();
-    codeBox.fillStyle(0x0d0d12, 1);
-    codeBox.lineStyle(1, 0x222233, 0.8);
+    codeBox.fillStyle(0x0d0905, 1);
+    codeBox.lineStyle(1, 0x2a1a0a, 0.8);
     codeBox.strokeRect(boxX, rowY, boxW, rowH);
     codeBox.fillRect(boxX, rowY, boxW, rowH);
 
     const displayCode = exportCode.length > 55 ? exportCode.substring(0, 55) + '…' : exportCode;
     this.add.text(boxX + 10, rowY + rowH / 2, displayCode, {
       fontSize: scaledFontSize(10, this.scale),
-      fill: '#666688',
+      fill: '#4a3020',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
@@ -510,14 +517,14 @@ class SettingsScene extends Phaser.Scene {
     const inputY = loadY + 18;
 
     this.add.text(boxX, loadY, '[ 저장 코드로 불러오기 ]', {
-      fontSize: scaledFontSize(13, this.scale),
-      fill: '#444455',
+      fontSize: scaledFontSize(12, this.scale),
+      fill: '#3d2010',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
     const inputBg = this.add.graphics();
-    inputBg.fillStyle(0x0d0d12, 1);
-    inputBg.lineStyle(1, 0x222233, 0.8);
+    inputBg.fillStyle(0x0d0905, 1);
+    inputBg.lineStyle(1, 0x2a1a0a, 0.8);
     inputBg.strokeRect(boxX, inputY, boxW, rowH);
     inputBg.fillRect(boxX, inputY, boxW, rowH);
 
@@ -526,13 +533,13 @@ class SettingsScene extends Phaser.Scene {
 
     const inputText = this.add.text(boxX + 10, inputY + rowH / 2, placeholder, {
       fontSize: scaledFontSize(10, this.scale),
-      fill: '#2a2a3a',
+      fill: '#251508',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setDepth(10);
 
     const cursor = this.add.text(boxX + 10, inputY + rowH / 2, '|', {
       fontSize: scaledFontSize(11, this.scale),
-      fill: '#aaaacc',
+      fill: '#8a6040',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setDepth(10).setAlpha(0);
 
@@ -549,11 +556,11 @@ class SettingsScene extends Phaser.Scene {
 
     const updateDisplay = () => {
       if (inputValue === '') {
-        inputText.setText(placeholder).setStyle({ fill: '#2a2a3a' });
+        inputText.setText(placeholder).setStyle({ fill: '#251508' });
         cursor.setAlpha(0);
       } else {
         const shown = inputValue.length > 55 ? inputValue.substring(0, 55) + '…' : inputValue;
-        inputText.setText(shown).setStyle({ fill: '#888899' });
+        inputText.setText(shown).setStyle({ fill: '#6b4020' });
         cursor.setX(boxX + 10 + inputText.width + 2);
       }
     };
@@ -563,8 +570,8 @@ class SettingsScene extends Phaser.Scene {
     hitInput.on('pointerdown', () => {
       this._inputFocused = true;
       inputBg.clear();
-      inputBg.fillStyle(0x0d0d12, 1);
-      inputBg.lineStyle(1, 0x444466, 1);
+      inputBg.fillStyle(0x0d0905, 1);
+      inputBg.lineStyle(1, 0x5a3018, 1);
       inputBg.strokeRect(boxX, inputY, boxW, rowH);
       inputBg.fillRect(boxX, inputY, boxW, rowH);
     });
@@ -572,8 +579,8 @@ class SettingsScene extends Phaser.Scene {
       if (!objs.includes(hitInput)) {
         this._inputFocused = false;
         inputBg.clear();
-        inputBg.fillStyle(0x0d0d12, 1);
-        inputBg.lineStyle(1, 0x222233, 0.8);
+        inputBg.fillStyle(0x0d0905, 1);
+        inputBg.lineStyle(1, 0x2a1a0a, 0.8);
         inputBg.strokeRect(boxX, inputY, boxW, rowH);
         inputBg.fillRect(boxX, inputY, boxW, rowH);
       }
@@ -620,18 +627,18 @@ class SettingsScene extends Phaser.Scene {
     // ── 초기화 ────────────────────────────────────────────────
     const resetY = loadY + H * 0.22;
     const sep = this.add.graphics();
-    sep.lineStyle(1, 0x1a1a22, 1);
+    sep.lineStyle(1, 0x1e1008, 1);
     sep.lineBetween(boxX, resetY - 14, W * 0.92, resetY - 14);
 
     this.add.text(boxX, resetY, '[ 초기화 ]', {
-      fontSize: scaledFontSize(13, this.scale),
-      fill: '#444455',
+      fontSize: scaledFontSize(12, this.scale),
+      fill: '#3d2010',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
     this.add.text(boxX, resetY + 22, '모든 저장 데이터와 설정을 삭제합니다', {
-      fontSize: scaledFontSize(11, this.scale),
-      fill: '#333333',
+      fontSize: scaledFontSize(10, this.scale),
+      fill: '#251508',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
@@ -644,17 +651,17 @@ class SettingsScene extends Phaser.Scene {
         this._removeInputEl();
         this._showToast(cx, H * 0.5, '초기화 완료', () => {
           this.scene.restart({ from: this.fromScene, tab: 'save' });
-        }, '#ff6666');
+        }, '#cc5533');
       });
     }, true);
   }
 
   // ── 버튼 공통 ─────────────────────────────────────────────────
   _makeButton(x, y, bw, bh, label, onClick, danger = false) {
-    const nc = danger ? 0x2a1010 : 0x1a1a28;
-    const nb = danger ? 0x553333 : 0x333355;
-    const hc = danger ? 0x3a1515 : 0x252535;
-    const hb = danger ? 0x884444 : 0x555577;
+    const nc = danger ? 0x1a0808 : 0x140c05;
+    const nb = danger ? 0x5a2010 : 0x3d2010;
+    const hc = danger ? 0x241010 : 0x1e1008;
+    const hb = danger ? 0x8a3018 : 0x6b3818;
 
     const bg = this.add.graphics();
     const draw = (fill, border) => {
@@ -667,8 +674,8 @@ class SettingsScene extends Phaser.Scene {
     draw(nc, nb);
 
     this.add.text(x, y, label, {
-      fontSize: scaledFontSize(11, this.scale),
-      fill: danger ? '#aa6666' : '#888899',
+      fontSize: scaledFontSize(10, this.scale),
+      fill: danger ? '#8a4030' : '#6b4020',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
 
@@ -687,18 +694,18 @@ class SettingsScene extends Phaser.Scene {
     const popX = cx - popW / 2;
     const popY = H * 0.5 - popH / 2;
 
-    const overlay = this.add.rectangle(0, 0, W, H, 0x000000, 0.65)
+    const overlay = this.add.rectangle(0, 0, W, H, 0x000000, 0.72)
       .setOrigin(0).setDepth(500).setInteractive();
 
     const box = this.add.graphics().setDepth(501);
-    box.fillStyle(0x060608, 1);
-    box.lineStyle(1, 0x333344, 1);
+    box.fillStyle(0x0a0705, 1);
+    box.lineStyle(1, 0x3d2010, 1);
     box.strokeRect(popX, popY, popW, popH);
     box.fillRect(popX, popY, popW, popH);
 
     const msgText = this.add.text(cx, popY + popH * 0.32, message, {
-      fontSize: scaledFontSize(13, this.scale),
-      fill: '#aaaaaa',
+      fontSize: scaledFontSize(12, this.scale),
+      fill: '#8a6040',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(502);
 
@@ -712,7 +719,7 @@ class SettingsScene extends Phaser.Scene {
 
     const makePopBtn = (bx, label, color, hcolor, cb) => {
       const t = this.add.text(bx, btnY, label, {
-        fontSize: scaledFontSize(13, this.scale),
+        fontSize: scaledFontSize(12, this.scale),
         fill: color,
         fontFamily: FontManager.MONO,
       }).setOrigin(0.5).setDepth(502).setInteractive({ useHandCursor: true });
@@ -722,15 +729,15 @@ class SettingsScene extends Phaser.Scene {
       return t;
     };
 
-    const confirmBtn = makePopBtn(cx - btnGap, '확인', '#aa6666', '#cc8888', () => { closePopup(); onConfirm(); });
-    const cancelBtn  = makePopBtn(cx + btnGap, '취소', '#555566', '#aaaaaa', () => { closePopup(); });
+    const confirmBtn = makePopBtn(cx - btnGap, '확인', '#8a3018', '#cc5533', () => { closePopup(); onConfirm(); });
+    const cancelBtn  = makePopBtn(cx + btnGap, '취소', '#3d2010', '#8a6040', () => { closePopup(); });
   }
 
   // ── 토스트 ────────────────────────────────────────────────────
   _showToast(cx, y, message, onComplete, color) {
     const toast = this.add.text(cx, y, message, {
-      fontSize: scaledFontSize(20, this.scale),
-      fill: color || '#ccccee',
+      fontSize: scaledFontSize(18, this.scale),
+      fill: color || '#c8a070',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(200).setAlpha(0);
 
@@ -750,9 +757,9 @@ class SettingsScene extends Phaser.Scene {
   // ── 공통 옵션 박스 ────────────────────────────────────────────
   _drawOptionBox(gfx, x, y, w, h, selected, hover = false) {
     gfx.clear();
-    if (selected)   { gfx.lineStyle(1, 0x554433, 0.8); gfx.fillStyle(0x1a1510, 1); }
-    else if (hover) { gfx.lineStyle(1, 0x333344, 0.6); gfx.fillStyle(0x0e0e12, 1); }
-    else            { gfx.lineStyle(1, 0x1a1a22, 0.6); gfx.fillStyle(0x000000, 0); }
+    if (selected)   { gfx.lineStyle(1, 0x6b3810, 0.9); gfx.fillStyle(0x1a0e06, 1); }
+    else if (hover) { gfx.lineStyle(1, 0x2a1a0a, 0.6); gfx.fillStyle(0x120a04, 1); }
+    else            { gfx.lineStyle(1, 0x1a0e06, 0.6); gfx.fillStyle(0x000000, 0); }
     gfx.strokeRect(x, y, w, h);
     gfx.fillRect(x, y, w, h);
   }
@@ -760,17 +767,17 @@ class SettingsScene extends Phaser.Scene {
   // ── 뒤로가기 ──────────────────────────────────────────────────
   _buildBackButton(W, H) {
     const btn = this.add.text(W * 0.08, H * 0.93, '← 돌아가기', {
-      fontSize: scaledFontSize(14, this.scale),
-      fill: '#444455',
+      fontSize: scaledFontSize(13, this.scale),
+      fill: '#3d2010',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
 
-    btn.on('pointerover', () => btn.setStyle({ fill: '#aaaaaa' }));
-    btn.on('pointerout',  () => btn.setStyle({ fill: '#444455' }));
+    btn.on('pointerover', () => btn.setStyle({ fill: '#c8a070' }));
+    btn.on('pointerout',  () => btn.setStyle({ fill: '#3d2010' }));
     btn.on('pointerdown', () => {
       if (InputManager._rebindListener) InputManager._cancelRebind();
       this._removeInputEl();
-      const flash = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x060608, 0)
+      const flash = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x050407, 0)
         .setOrigin(0).setDepth(999);
       this.tweens.add({
         targets: flash, alpha: 1, duration: 300, ease: 'Sine.easeIn',
@@ -778,9 +785,8 @@ class SettingsScene extends Phaser.Scene {
       });
     });
 
-    // ESC: 리바인딩 진행 중이 아닐 때만 뒤로가기
     this.input.keyboard.on('keydown-ESC', () => {
-      if (InputManager._rebindTarget) return; // 리바인딩이 먼저 처리
+      if (InputManager._rebindTarget) return;
       this._removeInputEl();
       this.scene.start(this.fromScene);
     });

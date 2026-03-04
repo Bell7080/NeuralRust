@@ -7,24 +7,10 @@
 //    - localStorage 에 저장 / 불러오기
 //    - 리바인딩(rebind) 지원
 //    - isDown(action) / isJustDown(action) 로 씬에서 조회
-//
-//  사용법:
-//    InputManager.init(scene)          — 씬 create() 에서 호출
-//    InputManager.isDown('confirm')    — 매 프레임 체크
-//    InputManager.isJustDown('menu')   — 단발 입력 체크
-//    InputManager.startRebind('confirm', callback) — 리바인딩 시작
-//
-//  Electron 이식 시:
-//    localStorage → electron-store 또는 fs.writeFileSync 로 교체만 하면 됨.
-//    Phaser 키 캡처 로직은 그대로 유지.
 // ================================================================
 
 const InputManager = {
 
-  // ── 액션 정의 ────────────────────────────────────────────────
-  // key: 액션 ID (코드 내부에서 사용)
-  // label: 설정 화면에 표시할 이름
-  // default: 기본 키 (Phaser KeyCodes 문자열)
   ACTIONS: [
     { key: 'confirm',   label: '확인 / 상호작용',  default: 'Z'      },
     { key: 'cancel',    label: '취소 / 뒤로가기',  default: 'X'      },
@@ -38,34 +24,26 @@ const InputManager = {
     { key: 'map',       label: '지도',              default: 'M'      },
   ],
 
-  STORAGE_KEY: 'project001_keybinds',
+  STORAGE_KEY: 'neural_rust_keybinds',
 
-  // 현재 바인딩 { actionKey: 'KEY_STRING' }
   _binds: {},
-
-  // Phaser 키 오브젝트 { actionKey: Phaser.Input.Keyboard.Key }
   _keys: {},
-
-  // 리바인딩 대기 중인 액션
   _rebindTarget: null,
   _rebindCallback: null,
   _rebindListener: null,
 
-  // ── 초기화 ────────────────────────────────────────────────────
   init(scene) {
     this._scene = scene;
     this._loadBinds();
     this._registerKeys(scene);
   },
 
-  // ── 씬 전환 시 재등록 ─────────────────────────────────────────
   reinit(scene) {
     this._scene = scene;
     this._keys  = {};
     this._registerKeys(scene);
   },
 
-  // ── 키 등록 ───────────────────────────────────────────────────
   _registerKeys(scene) {
     if (!scene || !scene.input || !scene.input.keyboard) return;
     this.ACTIONS.forEach(action => {
@@ -80,7 +58,6 @@ const InputManager = {
     });
   },
 
-  // ── 입력 조회 ─────────────────────────────────────────────────
   isDown(actionKey) {
     return this._keys[actionKey]?.isDown ?? false;
   },
@@ -95,18 +72,11 @@ const InputManager = {
     return k ? Phaser.Input.Keyboard.JustUp(k) : false;
   },
 
-  // ── 현재 바인딩 키 문자열 반환 ────────────────────────────────
   getKey(actionKey) {
     return this._binds[actionKey] ||
       this.ACTIONS.find(a => a.key === actionKey)?.default || '?';
   },
 
-  // ── 리바인딩 ──────────────────────────────────────────────────
-  /**
-   * 다음 키 입력을 actionKey 에 바인딩
-   * @param {string}   actionKey  - 변경할 액션
-   * @param {Function} callback   - (newKeyStr) => void  성공/취소 모두 호출
-   */
   startRebind(actionKey, callback) {
     if (this._rebindListener) this._cancelRebind();
 
@@ -117,7 +87,6 @@ const InputManager = {
       e.preventDefault();
       e.stopImmediatePropagation();
 
-      // ESC → 취소
       if (e.code === 'Escape') {
         this._cancelRebind();
         callback(null);
@@ -127,7 +96,6 @@ const InputManager = {
       const keyStr = this._codeToPhaser(e.code, e.key);
       if (!keyStr) { callback(null); return; }
 
-      // 중복 바인딩 확인 — 기존 액션에서 제거 후 재할당
       Object.keys(this._binds).forEach(k => {
         if (this._binds[k] === keyStr && k !== actionKey) {
           this._binds[k] = this.ACTIONS.find(a => a.key === k)?.default || '';
@@ -157,15 +125,12 @@ const InputManager = {
     this._rebindListener = null;
   },
 
-  // ── 기본값으로 초기화 ─────────────────────────────────────────
   resetToDefaults() {
     this._binds = {};
     this._saveBinds();
     if (this._scene) this._registerKeys(this._scene);
   },
 
-  // ── 저장 / 불러오기 ───────────────────────────────────────────
-  // TODO(Electron): localStorage → electron-store / fs 로 교체
   _saveBinds() {
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this._binds));
@@ -183,15 +148,10 @@ const InputManager = {
     }
   },
 
-  // ── KeyboardEvent.code → Phaser KeyCodes 문자열 변환 ─────────
   _codeToPhaser(code, key) {
-    // 문자 키 (KeyA, KeyB …)
     if (/^Key[A-Z]$/.test(code)) return code.replace('Key', '');
-
-    // 숫자 키 (Digit0 … Digit9)
     if (/^Digit\d$/.test(code)) return code.replace('Digit', '');
 
-    // 특수 매핑 테이블
     const MAP = {
       ArrowUp:      'UP',
       ArrowDown:    'DOWN',
@@ -237,7 +197,6 @@ const InputManager = {
     return MAP[code] || null;
   },
 
-  // ── 표시용 키 이름 ────────────────────────────────────────────
   displayName(actionKey) {
     const k = this.getKey(actionKey);
     const DISPLAY = {

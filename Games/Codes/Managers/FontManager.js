@@ -3,17 +3,10 @@
 //  경로: Games/Codes/Managers/FontManager.js
 //
 //  역할: 폰트 중앙 관리 + 설정에서 폰트 전환 지원
-//  사용법:
-//    1. Games/Assets/Fonts/ 에 폰트 파일(.woff2) 업로드
-//    2. FONTS 배열에 항목 추가
-//    3. FontManager.init() 호출 후 게임 시작
-//    4. FontManager.TITLE / .BODY / .MONO → 현재 활성 폰트 반환
-//    5. FontManager.setActive('system')  → 폰트 전환
 // ================================================================
 
 const FontManager = {
 
-  // ── 등록된 폰트 목록 ─────────────────────────────────────────
   FONTS: [
     {
       key:    'NeoDunggeunmoPro',
@@ -24,7 +17,6 @@ const FontManager = {
     },
   ],
 
-  // ── 폰트 프리셋 ──────────────────────────────────────────────
   PRESETS: {
     game: {
       TITLE: "'NeoDunggeunmoPro', monospace",
