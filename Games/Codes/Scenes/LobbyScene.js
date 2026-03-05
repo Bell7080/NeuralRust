@@ -3,7 +3,7 @@
 //  경로: Games/Codes/Scenes/LobbyScene.js
 //
 //  역할: NEURAL RUST 메인 타이틀 / 로비 화면
-//  의존: FontManager, SaveManager, utils.js
+//  의존: FontManager, SaveManager, AudioManager, utils.js
 // ================================================================
 
 class LobbyScene extends Phaser.Scene {
@@ -13,6 +13,8 @@ class LobbyScene extends Phaser.Scene {
     const W  = this.scale.width;
     const H  = this.scale.height;
     const cx = W / 2;
+
+    AudioManager.reinit(this);
 
     this._buildBackground(W, H, cx);
     this._buildTitle(W, H, cx);
@@ -147,21 +149,20 @@ class LobbyScene extends Phaser.Scene {
     }).setOrigin(0.5).setAlpha(0).setScale(SX, SY).setDepth(9);
 
     const fireGlitch = () => {
-      const origX = cx;
-      this.tweens.timeline({
-        tweens: [
-          { targets: glitchOrange, alpha: 0.55, x: origX - 4, duration: 40,  ease: 'Stepped' },
-          { targets: glitchOrange, alpha: 0.55, x: origX + 4, duration: 60,  ease: 'Stepped' },
-          { targets: glitchOrange, alpha: 0,    x: origX,     duration: 40,  ease: 'Stepped' },
-        ],
-      });
+      // 효과음 재생 (나중에 에셋 추가 시 자동 적용)
+      AudioManager.playSFX('glitch_title');
+
+      // 오렌지: 깜짝 등장 → x 이동 → 사라짐
+      glitchOrange.setAlpha(0.6).setX(cx - 4);
+      this.time.delayedCall(45, () => { glitchOrange.setX(cx + 5); });
+      this.time.delayedCall(95, () => { glitchOrange.setX(cx - 2); });
+      this.time.delayedCall(130, () => { glitchOrange.setAlpha(0).setX(cx); });
+
+      // 블루: 30ms 뒤 반대 방향
       this.time.delayedCall(30, () => {
-        this.tweens.timeline({
-          tweens: [
-            { targets: glitchBlue, alpha: 0.30, x: origX + 5, duration: 50,  ease: 'Stepped' },
-            { targets: glitchBlue, alpha: 0,    x: origX,     duration: 60,  ease: 'Stepped' },
-          ],
-        });
+        glitchBlue.setAlpha(0.35).setX(cx + 6);
+        this.time.delayedCall(55, () => { glitchBlue.setX(cx - 3); });
+        this.time.delayedCall(110, () => { glitchBlue.setAlpha(0).setX(cx); });
       });
     };
 

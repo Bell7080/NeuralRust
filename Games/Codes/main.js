@@ -14,7 +14,7 @@
 //    3. F11 전체화면 토글 → Electron 에서 직접 처리하거나 globalShortcut 등록
 //    4. contextmenu / dragstart preventDefault
 //       → Electron webPreferences: { contextIsolation: true } 로 대체 가능
-//    5. localStorage (FontManager, SaveManager, InputManager)
+//    5. localStorage (FontManager, SaveManager, InputManager, AudioManager)
 //       → electron-store 또는 app.getPath('userData') 기반 fs 로 교체
 // ================================================================
 
@@ -31,6 +31,9 @@ function startGame() {
 
   fsPromise.finally(() => {
     FontManager.init().then(() => {
+
+      // AudioManager 볼륨 불러오기 (씬 없이 초기화)
+      AudioManager._load();
 
       const game = new Phaser.Game({
         type:            Phaser.AUTO,
