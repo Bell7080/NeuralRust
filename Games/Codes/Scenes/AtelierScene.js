@@ -59,9 +59,9 @@ class AtelierScene extends Phaser.Scene {
     const H = this.H;
 
     const TabMap = {
-      explore: Tab_Explore, recruit: Tab_Recruit, squad: Tab_Squad,
+      explore: Tab_Explore, recruit: Tab_Recruit, manage: Tab_Manage, squad: Tab_Squad,
       facility: Tab_Facility, outsource: Tab_Outsource, dredge: Tab_Dredge,
-      storage: Tab_Storage, codex: Tab_Codex, memory: Tab_Memory,
+      shop: Tab_Shop, storage: Tab_Storage, codex: Tab_Codex, memory: Tab_Memory,
     };
 
     const build = () => {
@@ -111,6 +111,7 @@ class AtelierScene extends Phaser.Scene {
 
   _buildSideButtons(W, H) {
     const leftItems = [
+      { key: 'shop',    label: '상  점' },
       { key: 'storage', label: '창  고' },
       { key: 'codex',   label: '도  감' },
       { key: 'memory',  label: '회  상' },
@@ -125,11 +126,12 @@ class AtelierScene extends Phaser.Scene {
     });
 
     const rightItems = [
-      { key: 'recruit',   label: '영  입'   },
-      { key: 'squad',     label: '탐 사 대' },
-      { key: 'facility',  label: '시  설'   },
-      { key: 'outsource', label: '외  주'   },
-      { key: 'dredge',    label: '드 레 지' },
+      { key: 'recruit',  label: '영  입'   },
+      { key: 'manage',   label: '관  리'   },
+      { key: 'squad',    label: '탐 사 대' },
+      { key: 'facility', label: '시  설'   },
+      { key: 'outsource',label: '외  주'   },
+      { key: 'dredge',   label: '드 레 지' },
     ];
     rightItems.forEach((item, i) => {
       const refs = this._makeSideButton(

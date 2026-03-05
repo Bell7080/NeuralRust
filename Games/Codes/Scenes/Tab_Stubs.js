@@ -103,3 +103,19 @@ class Tab_Memory {
   hide()    { this._tab.hide();    }
   destroy() { this._tab.destroy(); }
 }
+
+class Tab_Manage {
+  constructor(scene, W, H) { this._tab = makeStubTab(scene, W, H, '관  리'); }
+  get _container() { return this._tab._container || null; }
+  show()    { this._tab.show();    }
+  hide()    { this._tab.hide();    }
+  destroy() { this._tab.destroy(); }
+}
+
+class Tab_Shop {
+  constructor(scene, W, H) { this._tab = makeStubTab(scene, W, H, '상  점'); }
+  get _container() { return this._tab._container || null; }
+  show()    { this._tab.show();    }
+  hide()    { this._tab.hide();    }
+  destroy() { this._tab.destroy(); }
+}
