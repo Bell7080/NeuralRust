@@ -25,7 +25,7 @@ class LobbyScene extends Phaser.Scene {
 
     const scan = this.add.graphics();
     for (let y = 0; y < H; y += 4) {
-      scan.lineStyle(1, 0x1a0e06, 0.35);
+      scan.lineStyle(1, 0x1a0e06, 0.25);
       scan.lineBetween(0, y, W, y);
     }
 
@@ -40,12 +40,7 @@ class LobbyScene extends Phaser.Scene {
       grid.lineBetween(0, y, W, y);
     }
 
-    const glow = this.add.graphics();
-    const glowColors = [0xa05018, 0x6b3010, 0x3d1a08];
-    glowColors.forEach((col, i) => {
-      glow.fillStyle(col, 0.012 * (5 - i));
-      glow.fillEllipse(cx, H * 0.38, W * 0.7, H * 0.55);
-    });
+    // ── 원형 글로우 제거 (삭제됨) ──
 
     const deco = this.add.graphics();
     const lineY = H * 0.78;
@@ -79,7 +74,7 @@ class LobbyScene extends Phaser.Scene {
 
     const label = this.add.text(cx, H * 0.20, 'P  R  O  J  E  C  T    0  0  1', {
       fontSize: scaledFontSize(12, this.scale),
-      fill: '#3a2510',
+      fill: '#5a3d1a',
       fontFamily: FontManager.MONO,
       letterSpacing: 3,
     }).setOrigin(0.5).setAlpha(0);
@@ -118,14 +113,14 @@ class LobbyScene extends Phaser.Scene {
 
     const subKo = this.add.text(cx, H * 0.51, '뉴  럴  러  스  트', {
       fontSize: scaledFontSize(17, this.scale),
-      fill: '#3d2010',
+      fill: '#6b4a28',
       fontFamily: FontManager.MONO,
       letterSpacing: 6,
     }).setOrigin(0.5).setAlpha(0);
 
     const tagline = this.add.text(cx, H * 0.58, '소프트웨어만 살아남은 세계  —  붕괴 후 102년', {
       fontSize: scaledFontSize(14, this.scale),
-      fill: '#251508',
+      fill: '#4a3018',
       fontFamily: FontManager.MONO,
       letterSpacing: 1,
     }).setOrigin(0.5).setAlpha(0);
@@ -137,6 +132,44 @@ class LobbyScene extends Phaser.Scene {
     this.tweens.add({ targets: title,   alpha: 1,    duration: 1200, delay: 650,  ease: 'Sine.easeOut' });
     this.tweens.add({ targets: subKo,   alpha: 1,    duration: 900,  delay: 1000, ease: 'Sine.easeOut' });
     this.tweens.add({ targets: tagline, alpha: 1,    duration: 800,  delay: 1300, ease: 'Sine.easeOut' });
+
+    // ── 글리치 레이어 (오렌지 / 블루) ────────────────────────
+    const glitchOrange = this.add.text(cx, titleY, 'NEURAL  RUST', {
+      fontSize: FS,
+      fill: '#c85018',
+      fontFamily: FontManager.TITLE,
+    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY).setDepth(10);
+
+    const glitchBlue = this.add.text(cx, titleY, 'NEURAL  RUST', {
+      fontSize: FS,
+      fill: '#1850a0',
+      fontFamily: FontManager.TITLE,
+    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY).setDepth(9);
+
+    const fireGlitch = () => {
+      const origX = cx;
+      this.tweens.timeline({
+        tweens: [
+          { targets: glitchOrange, alpha: 0.55, x: origX - 4, duration: 40,  ease: 'Stepped' },
+          { targets: glitchOrange, alpha: 0.55, x: origX + 4, duration: 60,  ease: 'Stepped' },
+          { targets: glitchOrange, alpha: 0,    x: origX,     duration: 40,  ease: 'Stepped' },
+        ],
+      });
+      this.time.delayedCall(30, () => {
+        this.tweens.timeline({
+          tweens: [
+            { targets: glitchBlue, alpha: 0.30, x: origX + 5, duration: 50,  ease: 'Stepped' },
+            { targets: glitchBlue, alpha: 0,    x: origX,     duration: 60,  ease: 'Stepped' },
+          ],
+        });
+      });
+    };
+
+    // 0.8s 후 첫 발화, 이후 4.8s 마다 반복
+    this.time.delayedCall(800, () => {
+      fireGlitch();
+      this.time.addEvent({ delay: 4800, loop: true, callback: fireGlitch });
+    });
   }
 
   _buildMenu(W, H) {
@@ -168,13 +201,13 @@ class LobbyScene extends Phaser.Scene {
 
     const marker = this.add.text(x - indent, y, '│', {
       fontSize: scaledFontSize(17, this.scale),
-      fill: '#2a1508',
+      fill: '#4a2a10',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setAlpha(0);
 
     const btn = this.add.text(x, y, label, {
-      fontSize: scaledFontSize(22, this.scale),
-      fill: '#4a3020',
+      fontSize: scaledFontSize(24, this.scale),
+      fill: '#7a5530',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0, 0.5).setAlpha(0).setInteractive({ useHandCursor: true });
 
@@ -187,10 +220,10 @@ class LobbyScene extends Phaser.Scene {
 
     btn.on('pointerover', () => {
       this.tweens.add({ targets: btn, x: origX + shift, duration: 100, ease: 'Sine.easeOut' });
-      btn.setStyle({ fill: '#c8a070' });
-      marker.setStyle({ fill: '#a05018' });
+      btn.setStyle({ fill: '#e8c090' });
+      marker.setStyle({ fill: '#c06020' });
       underline.clear();
-      underline.lineStyle(1, 0x6b3010, 0.8);
+      underline.lineStyle(1, 0x8b4010, 0.9);
       underline.lineBetween(
         x, y + parseInt(scaledFontSize(16, this.scale)),
         x + btn.width + shift + 4, y + parseInt(scaledFontSize(16, this.scale))
@@ -199,8 +232,8 @@ class LobbyScene extends Phaser.Scene {
 
     btn.on('pointerout', () => {
       this.tweens.add({ targets: btn, x: origX, duration: 100, ease: 'Sine.easeOut' });
-      btn.setStyle({ fill: '#4a3020' });
-      marker.setStyle({ fill: '#2a1508' });
+      btn.setStyle({ fill: '#7a5530' });
+      marker.setStyle({ fill: '#4a2a10' });
       underline.clear();
     });
 
@@ -210,7 +243,6 @@ class LobbyScene extends Phaser.Scene {
   _onMenuClick(key) {
     switch (key) {
       case 'new':
-        // 기존 세이브 초기화 후 Day 1 / phase 'start' 로 새 게임 시작
         SaveManager.deleteSave();
         SaveManager.deleteStory();
         SaveManager.save({ arc: 0 });
@@ -219,7 +251,6 @@ class LobbyScene extends Phaser.Scene {
         break;
 
       case 'load':
-        // 세이브가 있으면 그대로 공방으로
         if (SaveManager.hasSave())
           this._transition(() => this.scene.start('LoadingScene', { next: 'AtelierScene' }));
         break;
@@ -246,13 +277,13 @@ class LobbyScene extends Phaser.Scene {
   _buildFooter(W, H) {
     this.add.text(W - 14, H - 12, 'v0.0.1  prototype', {
       fontSize: scaledFontSize(12, this.scale),
-      fill: '#1e1008',
+      fill: '#3a2510',
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 1);
 
     this.add.text(14, H - 12, 'YEAR 102  ·  POST-COLLAPSE', {
       fontSize: scaledFontSize(12, this.scale),
-      fill: '#1e1008',
+      fill: '#3a2510',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 1);
   }

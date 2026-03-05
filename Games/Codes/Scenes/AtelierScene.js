@@ -30,29 +30,28 @@ class AtelierScene extends Phaser.Scene {
   }
 
   _buildBackground(W, H) {
-    this.add.rectangle(0, 0, W, H, 0x050407).setOrigin(0);
+    this.add.rectangle(0, 0, W, H, 0x060408).setOrigin(0);
     const scan = this.add.graphics();
     for (let y = 0; y < H; y += 4) {
-      scan.lineStyle(1, 0x1a0e06, 0.22);
+      scan.lineStyle(1, 0x1a0e06, 0.18);
       scan.lineBetween(0, y, W, y);
     }
     const grid = this.add.graphics();
     const step = Math.round(W / 56);
-    grid.lineStyle(1, 0x0f0a05, 0.6);
+    grid.lineStyle(1, 0x120d06, 0.7);
     for (let x = 0; x <= W; x += step) grid.lineBetween(x, 0, x, H);
     for (let y = 0; y <= H; y += step) grid.lineBetween(0, y, W, y);
     this.add.text(W / 2, H * 0.50, 'ATELIER', {
       fontSize: scaledFontSize(80, this.scale),
-      fill: '#0a0705',
+      fill: '#0e0a06',
       fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5).setAlpha(0.13);
+    }).setOrigin(0.5).setAlpha(0.18);
   }
 
   _buildHUD(W, H) {
     new AtelierHUD(this, W, H);
   }
 
-  // ── 탭 전환: destroy → 새 인스턴스 생성 ─────────────────────
   _switchTab(key, instant = false) {
     if (!instant && key === this._activeTab) return;
 
@@ -81,7 +80,6 @@ class AtelierScene extends Phaser.Scene {
 
     if (instant) { build(); return; }
 
-    // 페이드 아웃 → 교체 → 페이드 인
     const prev = this._currentTabObj;
     if (prev && prev._container) {
       this.tweens.add({
@@ -106,8 +104,8 @@ class AtelierScene extends Phaser.Scene {
     if (!this._sideButtonRefs) return;
     this._sideButtonRefs.forEach(({ key, btn, marker }) => {
       const active = key === this._activeTab;
-      btn.setStyle({ fill: active ? '#c8a070' : '#4a3020' });
-      marker.setStyle({ fill: active ? '#a05018' : '#2a1508' });
+      btn.setStyle({ fill: active ? '#e8c080' : '#7a5030' });
+      marker.setStyle({ fill: active ? '#c06820' : '#4a2a10' });
     });
   }
 
@@ -153,14 +151,14 @@ class AtelierScene extends Phaser.Scene {
     const marker = this.add.text(
       alignRight ? x + indent : x - indent, y, '│', {
         fontSize: scaledFontSize(18, this.scale),
-        fill: isActive ? '#a05018' : '#2a1508',
+        fill: isActive ? '#c06820' : '#4a2a10',
         fontFamily: FontManager.MONO,
       }
     ).setOrigin(alignRight ? 0 : 1, 0.5);
 
     const btn = this.add.text(x, y, label, {
-      fontSize: scaledFontSize(24, this.scale),
-      fill: isActive ? '#c8a070' : '#4a3020',
+      fontSize: scaledFontSize(26, this.scale),
+      fill: isActive ? '#e8c080' : '#7a5030',
       fontFamily: FontManager.TITLE,
     }).setOrigin(alignRight ? 1 : 0, 0.5)
       .setInteractive({ useHandCursor: true });
@@ -171,7 +169,7 @@ class AtelierScene extends Phaser.Scene {
     const drawUnderline = (on) => {
       underline.clear();
       if (!on) return;
-      underline.lineStyle(1, 0x6b3010, 0.8);
+      underline.lineStyle(1, 0x8b4010, 0.9);
       const uw = btn.width + shift + 4;
       const ly = y + parseInt(scaledFontSize(17, this.scale));
       if (alignRight) underline.lineBetween(x - uw, ly, x, ly);
@@ -182,15 +180,15 @@ class AtelierScene extends Phaser.Scene {
     btn.on('pointerover', () => {
       if (key === this._activeTab) return;
       this.tweens.add({ targets: btn, x: alignRight ? origX - shift : origX + shift, duration: 100, ease: 'Sine.easeOut' });
-      btn.setStyle({ fill: '#c8a070' });
-      marker.setStyle({ fill: '#a05018' });
+      btn.setStyle({ fill: '#e8c080' });
+      marker.setStyle({ fill: '#c06820' });
       drawUnderline(true);
     });
     btn.on('pointerout', () => {
       if (key === this._activeTab) return;
       this.tweens.add({ targets: btn, x: origX, duration: 100, ease: 'Sine.easeOut' });
-      btn.setStyle({ fill: '#4a3020' });
-      marker.setStyle({ fill: '#2a1508' });
+      btn.setStyle({ fill: '#7a5030' });
+      marker.setStyle({ fill: '#4a2a10' });
       drawUnderline(false);
     });
     btn.on('pointerdown', () => this._switchTab(key));
@@ -202,7 +200,7 @@ class AtelierScene extends Phaser.Scene {
     const shift = parseInt(scaledFontSize(8, this.scale));
 
     const sepLine = this.add.graphics();
-    sepLine.lineStyle(1, 0x2a1a0a, 0.5);
+    sepLine.lineStyle(1, 0x3a2a10, 0.7);
     sepLine.lineBetween(
       x - this.W * 0.18, y - parseInt(scaledFontSize(28, this.scale)),
       x + this.W * 0.18, y - parseInt(scaledFontSize(28, this.scale))
@@ -210,13 +208,13 @@ class AtelierScene extends Phaser.Scene {
 
     const marker = this.add.text(x - parseInt(scaledFontSize(36, this.scale)), y, '│', {
       fontSize: scaledFontSize(18, this.scale),
-      fill: this._activeTab === 'explore' ? '#a05018' : '#2a1508',
+      fill: this._activeTab === 'explore' ? '#c06820' : '#4a2a10',
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5);
 
     const btn = this.add.text(x, y, '탐    색', {
-      fontSize: scaledFontSize(26, this.scale),
-      fill: this._activeTab === 'explore' ? '#c8a070' : '#4a3020',
+      fontSize: scaledFontSize(28, this.scale),
+      fill: this._activeTab === 'explore' ? '#e8c080' : '#7a5030',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
@@ -226,30 +224,30 @@ class AtelierScene extends Phaser.Scene {
     btn.on('pointerover', () => {
       if (this._activeTab === 'explore') return;
       this.tweens.add({ targets: btn, x: origX + shift, duration: 100, ease: 'Sine.easeOut' });
-      btn.setStyle({ fill: '#c8a070' });
-      marker.setStyle({ fill: '#a05018' });
+      btn.setStyle({ fill: '#e8c080' });
+      marker.setStyle({ fill: '#c06820' });
     });
     btn.on('pointerout', () => {
       if (this._activeTab === 'explore') return;
       this.tweens.add({ targets: btn, x: origX, duration: 100, ease: 'Sine.easeOut' });
-      btn.setStyle({ fill: '#4a3020' });
-      marker.setStyle({ fill: '#2a1508' });
+      btn.setStyle({ fill: '#7a5030' });
+      marker.setStyle({ fill: '#4a2a10' });
     });
     btn.on('pointerdown', () => this._switchTab('explore'));
   }
 
   _buildTopButtons(W, H) {
-    const bh  = parseInt(scaledFontSize(28, this.scale));
+    const bh  = parseInt(scaledFontSize(30, this.scale));
     const by  = H * 0.045;
     const gap = W * 0.008;
 
-    const settingW = parseInt(scaledFontSize(52, this.scale));
+    const settingW = parseInt(scaledFontSize(60, this.scale));
     const settingX = W - W * 0.022 - settingW / 2;
     this._makeTopBtn(settingX, by, settingW, bh, '설  정', () => {
       this.scene.start('SettingsScene', { from: 'AtelierScene' });
     });
 
-    const lobbyW = parseInt(scaledFontSize(52, this.scale));
+    const lobbyW = parseInt(scaledFontSize(60, this.scale));
     const lobbyX = settingX - settingW / 2 - gap - lobbyW / 2;
     this._makeTopBtn(lobbyX, by, lobbyW, bh, '← 로비', () => {
       this._goLobby();
@@ -264,16 +262,16 @@ class AtelierScene extends Phaser.Scene {
     const bg = this.add.graphics();
     const draw = (hover) => {
       bg.clear();
-      bg.fillStyle(hover ? 0x140c05 : 0x0a0705, 1);
-      bg.lineStyle(1, hover ? 0x4a2810 : 0x2a1a0a, 0.8);
+      bg.fillStyle(hover ? 0x1e1208 : 0x100a04, 1);
+      bg.lineStyle(1, hover ? 0x6a3810 : 0x3a2210, 0.9);
       bg.strokeRect(bx - bw / 2, by - bh / 2, bw, bh);
       bg.fillRect(bx - bw / 2, by - bh / 2, bw, bh);
     };
     draw(false);
 
     this.add.text(bx, by, label, {
-      fontSize: scaledFontSize(11, this.scale),
-      fill: '#2a1508',
+      fontSize: scaledFontSize(13, this.scale),
+      fill: '#8a6030',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
 
@@ -285,7 +283,7 @@ class AtelierScene extends Phaser.Scene {
   }
 
   _goLobby() {
-    const flash = this.add.rectangle(0, 0, this.W, this.H, 0x050407, 0)
+    const flash = this.add.rectangle(0, 0, this.W, this.H, 0x060408, 0)
       .setOrigin(0).setDepth(999);
     this.tweens.add({
       targets: flash, alpha: 1, duration: 300, ease: 'Sine.easeIn',
