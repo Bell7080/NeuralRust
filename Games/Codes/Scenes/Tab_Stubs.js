@@ -48,11 +48,6 @@ class Tab_Recruit {
   destroy() { this._tab.destroy(); }
 }
 
-class Tab_Squad {
-  constructor(scene, W, H) { this._tab = makeStubTab(scene, W, H, '탐 사 대'); }
-  get _container() { return this._tab._container || null; }
-  show()    { this._tab.show();    }
-  hide()    { this._tab.hide();    }
   destroy() { this._tab.destroy(); }
 }
 
@@ -104,11 +99,6 @@ class Tab_Memory {
   destroy() { this._tab.destroy(); }
 }
 
-class Tab_Manage {
-  constructor(scene, W, H) { this._tab = makeStubTab(scene, W, H, '관  리'); }
-  get _container() { return this._tab._container || null; }
-  show()    { this._tab.show();    }
-  hide()    { this._tab.hide();    }
   destroy() { this._tab.destroy(); }
 }
 

@@ -18,6 +18,7 @@ class AtelierScene extends Phaser.Scene {
     this.H = H;
 
     InputManager.reinit(this);
+    CharacterManager.initIfEmpty(); // 최초 실행 시 테스트 캐릭터 생성
 
     this._buildBackground(W, H);
     this._buildHUD(W, H);
