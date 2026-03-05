@@ -72,14 +72,11 @@ class LobbyScene extends Phaser.Scene {
   }
 
   _buildTitle(W, H, cx) {
-    // ── 스케일 상수 ─────────────────────────────────────────
-    // 림버스 스타일: 가로 압축 + 세로 확장으로 길쭉한 글자
     const SX     = 0.75;
     const SY     = 1.30;
-    const FS     = scaledFontSize(68, this.scale);   // 타이틀 기준 크기
+    const FS     = scaledFontSize(68, this.scale);
     const titleY = H * 0.355;
 
-    // ── 상단 레이블 ──────────────────────────────────────────
     const label = this.add.text(cx, H * 0.20, 'P  R  O  J  E  C  T    0  0  1', {
       fontSize: scaledFontSize(12, this.scale),
       fill: '#3a2510',
@@ -87,7 +84,6 @@ class LobbyScene extends Phaser.Scene {
       letterSpacing: 3,
     }).setOrigin(0.5).setAlpha(0);
 
-    // ── 글로우 레이어 1 — 가장 바깥쪽, 넓은 번짐 ────────────
     const glow1 = this.add.text(cx, titleY, 'NEURAL  RUST', {
       fontSize: FS,
       fill: '#a05018',
@@ -96,7 +92,6 @@ class LobbyScene extends Phaser.Scene {
       strokeThickness: 26,
     }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
 
-    // ── 글로우 레이어 2 — 안쪽 중간 번짐 ────────────────────
     const glow2 = this.add.text(cx, titleY, 'NEURAL  RUST', {
       fontSize: FS,
       fill: '#c87030',
@@ -105,8 +100,6 @@ class LobbyScene extends Phaser.Scene {
       strokeThickness: 12,
     }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
 
-    // ── 아웃라인 레이어 — 림버스 특유의 선명한 테두리 ────────
-    // 글자 내부를 어둡게, 테두리를 선명한 녹슨 주황으로
     const outline = this.add.text(cx, titleY, 'NEURAL  RUST', {
       fontSize: FS,
       fill: '#0a0604',
@@ -115,7 +108,6 @@ class LobbyScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
 
-    // ── 메인 타이틀 — 최상단 크림 글자 ──────────────────────
     const title = this.add.text(cx, titleY, 'NEURAL  RUST', {
       fontSize: FS,
       fill: '#c8bfb0',
@@ -124,7 +116,6 @@ class LobbyScene extends Phaser.Scene {
       strokeThickness: 1,
     }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
 
-    // ── 한글 부제 ────────────────────────────────────────────
     const subKo = this.add.text(cx, H * 0.51, '뉴  럴  러  스  트', {
       fontSize: scaledFontSize(17, this.scale),
       fill: '#3d2010',
@@ -132,7 +123,6 @@ class LobbyScene extends Phaser.Scene {
       letterSpacing: 6,
     }).setOrigin(0.5).setAlpha(0);
 
-    // ── 세계관 태그라인 ──────────────────────────────────────
     const tagline = this.add.text(cx, H * 0.58, '소프트웨어만 살아남은 세계  —  붕괴 후 102년', {
       fontSize: scaledFontSize(14, this.scale),
       fill: '#251508',
@@ -140,8 +130,6 @@ class LobbyScene extends Phaser.Scene {
       letterSpacing: 1,
     }).setOrigin(0.5).setAlpha(0);
 
-    // ── 페이드인 순서 ─────────────────────────────────────────
-    // 글로우 먼저 올라오고, 그 위에 선명한 글자가 나타나는 연출
     this.tweens.add({ targets: label,   alpha: 1,    duration: 900,  delay: 300,  ease: 'Sine.easeOut' });
     this.tweens.add({ targets: glow1,   alpha: 0.12, duration: 1800, delay: 400,  ease: 'Sine.easeOut' });
     this.tweens.add({ targets: glow2,   alpha: 0.28, duration: 1600, delay: 500,  ease: 'Sine.easeOut' });
@@ -222,15 +210,24 @@ class LobbyScene extends Phaser.Scene {
   _onMenuClick(key) {
     switch (key) {
       case 'new':
-        this._transition(() => this.scene.start('LoadingScene', { next: 'GameScene' }));
+        // 기존 세이브 초기화 후 Day 1 / phase 'start' 로 새 게임 시작
+        SaveManager.deleteSave();
+        SaveManager.deleteStory();
+        SaveManager.save({ arc: 0 });
+        SaveManager.setProgress(1, 'start');
+        this._transition(() => this.scene.start('LoadingScene', { next: 'AtelierScene' }));
         break;
+
       case 'load':
+        // 세이브가 있으면 그대로 공방으로
         if (SaveManager.hasSave())
-          this._transition(() => this.scene.start('LoadingScene', { next: 'GameScene', save: SaveManager.load() }));
+          this._transition(() => this.scene.start('LoadingScene', { next: 'AtelierScene' }));
         break;
+
       case 'settings':
         this._transition(() => this.scene.start('SettingsScene', { from: 'LobbyScene' }));
         break;
+
       case 'quit':
         window.close();
         break;

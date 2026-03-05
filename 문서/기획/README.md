@@ -13,33 +13,36 @@ neural-rust/  (project001)
 ├── 📒 문서/
 │   ├── 기획/
 │   │   ├── README.md          ← 이 파일
-│   │   ├── 세계관.md           ← 핵심 설정 (세계구조·역사·법칙·Cog·모티프)
+│   │   ├── 세계관.md           ← 핵심 설정 (세계구조·역사·법칙·세력·모티프)
 │   │   ├── 시나리오.md          ← 스토리 흐름·씬 목록·대사·엔딩·로어
 │   │   ├── 캐릭터.md            ← 인간·AI 캐릭터 구분 설정집
 │   │   ├── GDD.md              ← 게임 시스템 설계 (루프·직군·UI 등)
 │   │   └── 레퍼런스.md          ← 참고 게임·비주얼·글 자료
 │   └── 개발/
 │       ├── 개발 일지.md
-│       └── 시스템 기획.md       ← 시스템 세부 설계 (루프·자원·직군·Cog·밸런스)
+│       └── 시스템 기획.md       ← 시스템 세부 설계
 │
 ├── 🎮 Games/
 │   ├── Assets/Fonts/
-│   │   └── NeoDunggeunmoPro-Regular.woff2
 │   └── Codes/
 │       ├── Managers/
-│       │   ├── FontManager.js   # 폰트 관리 + 전환
-│       │   ├── SaveManager.js   # 세이브 / 설정 / 스토리 데이터
-│       │   ├── StoryManager.js  # 스토리 흐름 제어 (Day · Flag · Log)
-│       │   ├── InputManager.js  # 키 바인딩 관리
+│       │   ├── FontManager.js
+│       │   ├── SaveManager.js
+│       │   ├── StoryManager.js
+│       │   ├── InputManager.js
 │       │   └── utils.js
-│       ├── Scenes/
-│       │   ├── LobbyScene.js
-│       │   ├── LoadingScene.js
-│       │   ├── SettingsScene.js
-│       │   └── GameScene.js     # 인게임 (개발 중)
-│       ├── Entities/            # (추후)
-│       ├── Systems/             # (추후)
-│       └── UI/                  # (추후)
+│       └── Scenes/
+│           ├── LobbyScene.js
+│           ├── LoadingScene.js
+│           ├── SettingsScene.js
+│           ├── GameScene.js
+│           └── Atelier/
+│               ├── AtelierScene.js   ← 공방 메인 씬
+│               ├── AtelierHUD.js     ← Day / Arc HUD
+│               ├── AtelierTabs.js    ← 탭 버튼 공통 빌더
+│               └── tabs/
+│                   ├── Tab_Explore.js  ← 탐색 탭
+│                   └── Tab_Stubs.js    ← 미구현 탭 플레이스홀더
 │
 └── index.html
 ```
@@ -65,12 +68,14 @@ neural-rust/  (project001)
 | 용어 | 원어 | 의미 |
 |------|------|------|
 | 아크 | Arc | 전류를 정제한 이 세계의 화폐. 선박 동력원이자 경제 기반 |
-| 코그 | Cog | 이 세계의 파벌·세력 단위. 톱니바퀴 이빨 하나를 의미 |
+| 코그 | Cog | **위험도 등급 체계.** Cog 1~5. 구역·적·기록물 등에 적용 |
 | 드레지 | Dredge | AI를 고철 몸체에 불러오는 행위. 심연에서 건져올린다는 뜻 |
+| 공방 | Atelier | 인게임 허브. 탭 기반 경영 화면 |
+| 마스트 | Mast | 이 세계의 파벌·세력 단위 |
 
 ---
 
-## 🎨 컬러 팔레트 (Neural Rust 테마)
+## 🎨 컬러 팔레트
 
 | 이름 | HEX | 용도 |
 |------|-----|------|
@@ -85,11 +90,10 @@ neural-rust/  (project001)
 
 ---
 
-## ♻️ 핵심 루프 요약
+## ♻️ 핵심 루프
 
 ```
-[ 아침 — 경영 ]
-  스토리 씬 / NPC 대화
+[ 아침 — 경영 ]  공방(Atelier) 에서 편성
   AI 배치 · 낚시꾼 보초 배치 · 다이버 목표 설정 · 엔지니어 외주
       ↓
 [ 점심 — 운영 ]
@@ -98,11 +102,22 @@ neural-rust/  (project001)
   AI → Arc 수령
       ↓
 [ 저녁 — 결산 ]
-  Arc · 자원 정산
-  스토리 씬 / 캐릭터 대화
+  Arc · 자원 정산 / 스토리 씬
       ↓
-[ 다음날 아침 ]
-  전날 이벤트 후일담 → 순환
+[ 다음날 아침 ]  순환
+```
+
+---
+
+## 🏗️ 공방 (Atelier) 탭 구조
+
+```
+좌측: [창고] [도감] [회상]      HUD(Day|Arc)      [설정]
+우측:                        [영입][탐사대][시설][외주][드레지]
+
+              [ 중앙 콘텐츠 패널 ]
+
+                  [ 탐  색 ]  ← 하단 중앙 기본 탭
 ```
 
 ---
@@ -110,7 +125,7 @@ neural-rust/  (project001)
 ## 📝 기획 문서 작업 순서
 
 ```
-1. 세계관.md       설정 확정 및 Cog 세력 추가
+1. 세계관.md       세력 용어 확정 및 세력 설정 추가
 2. 캐릭터.md       등장인물 추가
 3. 시나리오.md     씬 목록 작성 (ID 부여)
 4. StoryManager.js STORY_DATA 에 씬 ID 등록
@@ -123,45 +138,10 @@ neural-rust/  (project001)
 
 | 키 | 내용 |
 |---|---|
-| `neural_rust_save` | 인게임 진행 데이터 |
+| `neural_rust_save` | 인게임 진행 데이터 (arc 포함) |
 | `neural_rust_settings` | 설정 (폰트 등) |
 | `neural_rust_story` | 스토리 진행 (Day · 플래그 · 이벤트 로그 · 로어) |
 | `neural_rust_keybinds` | 키 바인딩 |
-
----
-
-## 📖 스토리 시스템 요약
-
-`StoryManager.js` 의 `STORY_DATA` 에 씬을 정의합니다.
-
-```javascript
-5: [
-  {
-    id:    'day5_scene_name',     // 시나리오.md 의 ID와 동일하게
-    phase: 'morning',             // 'morning' | 'noon' | 'evening'
-    once:  true,
-    condition: () => SaveManager.getFlag('some_flag'),
-    onComplete: () => SaveManager.unlockLore('lore_001'),
-  },
-],
-```
-
-씬 파일에서:
-```javascript
-if (StoryManager.shouldPlay('day5_scene_name')) { ... }
-StoryManager.completeScene('day5_scene_name');
-StoryManager.advance();
-StoryManager.debug(); // 콘솔에 현재 상태 출력
-```
-
----
-
-## ⌨️ 키 설정
-
-설정 화면 → 키 설정 탭에서 리바인딩 가능.
-코드: `InputManager.isJustDown('confirm')`
-
-기본 액션: `confirm` / `cancel` / `menu` / `tab` / `moveUp` / `moveDown` / `moveLeft` / `moveRight` / `dash` / `map`
 
 ---
 
@@ -176,20 +156,12 @@ StoryManager.debug(); // 콘솔에 현재 상태 출력
 
 ---
 
-## 🚀 빠른 시작 (Codespaces)
-
-```bash
-npx serve .
-```
-
----
-
 ## 🗺️ 개발 로드맵
 
-| 단계 | 내용 | 환경 |
-|---|---|---|
-| 1단계 ✅ | 환경 구성 · 매니저 구축 · 기획 문서 정리 · 타이틀 확정 (Neural Rust) | 사지방 |
-| 2단계 | 세계관 / 시나리오 작업 + Arc·드레지 시스템 프로토타입 | 사지방 |
-| 3단계 | 핵심 시스템 구현 (Arc 루프 · 낚시꾼 디펜스 · 다이버 수집) + 스토리 씬 | 사지방 |
-| 4단계 | Cog 시스템 + Electron 패키징 → exe | 사지방 / 휴가 |
-| 5단계 | Unity 이식 | 전역 후 |
+| 단계 | 내용 |
+|---|---|
+| 1단계 ✅ | 환경 구성 · 매니저 구축 · 기획 문서 정리 · 타이틀 확정 |
+| 2단계 🔄 | 공방(Atelier) 씬 탭 레이아웃 · 탐색/영입 구현 + 세계관·시나리오 작업 |
+| 3단계 | 핵심 시스템 구현 (Arc 루프 · 낚시꾼 디펜스 · 다이버 수집) + 스토리 씬 |
+| 4단계 | 세력 시스템 + Electron 패키징 → exe |
+| 5단계 | Unity 이식 |
