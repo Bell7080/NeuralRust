@@ -1,23 +1,6 @@
 // ================================================================
 //  Tab_Squad.js
-//  경로: Games/Codes/Scenes/Atelier/tabs/Tab_Squad.js
-//
-//  레이아웃
-//  ┌──────────────────────────────────────────────┐
-//  │                                              │
-//  │   [←]  [캐릭터 카드 슬라이드]  [→]          │
-//  │                                              │
-//  │         ┌─────3×3 배치판─────┐              │
-//  │         │  [칸][칸][칸]       │              │
-//  │         │  [칸][칸][칸]       │              │
-//  │         │  [칸][칸][칸]       │              │
-//  │         └────────────────────┘              │
-//  │  [ 직업 필터 ]  [ Cog 필터 ]                 │
-//  └──────────────────────────────────────────────┘
-//
-//  분할:
-//    Tab_Squad_Grid.js    — 3×3 격자 빌드 + 셀 조작
-//    Tab_Squad_Slider.js  — 슬라이더, 필터, 드래그, 생명주기
+//  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Squad.js
 // ================================================================
 
 class Tab_Squad {
@@ -27,7 +10,9 @@ class Tab_Squad {
     this.H      = H;
     this._container = scene.add.container(0, 0);
 
-    this._squad         = CharacterManager.loadSquad(); // 9 슬롯
+    const raw = CharacterManager.loadSquad();
+    this._squad = this._migrateSquad(raw);
+
     this._selectedSlot  = null;
     this._filterJob     = 'all';
     this._filterCog     = 'all';
@@ -38,6 +23,16 @@ class Tab_Squad {
     this._build();
   }
 
+  _migrateSquad(raw) {
+    if (!raw || !Array.isArray(raw)) return Array(10).fill(null).map(() => []);
+    return Array(10).fill(null).map((_, i) => {
+      const v = raw[i];
+      if (!v) return [];
+      if (Array.isArray(v)) return v.filter(Boolean);
+      return [v];
+    });
+  }
+
   _build() {
     const { scene, W, H } = this;
 
@@ -46,7 +41,6 @@ class Tab_Squad {
     const panelW = W * 0.60;
     const panelH = H * 0.55;
 
-    // 패널 배경
     const bg = scene.add.graphics();
     bg.fillStyle(0x0d0a06, 0.97);
     bg.lineStyle(1, 0x4a2a10, 0.8);
@@ -54,30 +48,35 @@ class Tab_Squad {
     bg.fillRect(panelX, panelY, panelW, panelH);
     this._container.add(bg);
 
-    // 헤더
     this._container.add(scene.add.text(panelX + 16, panelY + 16, '[ 탐 사 대 ]', {
       fontSize: scaledFontSize(12, scene.scale), fill: '#5a3818', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0));
 
-    const cx = panelX + panelW / 2;
+    this._hintText = scene.add.text(panelX + panelW - 16, panelY + 16, '', {
+      fontSize: scaledFontSize(9, scene.scale), fill: '#8a5020', fontFamily: FontManager.MONO,
+    }).setOrigin(1, 0);
+    this._container.add(this._hintText);
 
-    // ── 필터 바 (패널 하단)
+    // ── 필터 바
     this._filterY = panelY + panelH - parseInt(scaledFontSize(36, scene.scale));
     this._buildFilters(panelX, panelW, this._filterY);
 
-    // ── 3×3 배치판
+    // ── 격자
     const gridSize = Math.min(panelW * 0.42, panelH * 0.40);
     const cellSize = gridSize / 3;
-    const gridX    = cx - gridSize / 2;
-    const gridY    = panelY + parseInt(scaledFontSize(48, scene.scale));
 
-    this._gridX     = gridX;
-    this._gridY     = gridY;
-    this._cellSize  = cellSize;
+    const cx    = panelX + panelW / 2;
+    const gridX = cx - gridSize / 2;
+    const gridY = panelY + parseInt(scaledFontSize(48, scene.scale));
+
+    this._gridX    = gridX;
+    this._gridY    = gridY;
+    this._cellSize = cellSize;
+    this._gridSize = gridSize;
     this._gridCells = [];
     this._buildGrid(gridX, gridY, cellSize);
 
-    // ── 캐릭터 슬라이더 (격자 아래)
+    // ── 슬라이더
     const sliderTopY  = gridY + gridSize + parseInt(scaledFontSize(14, scene.scale));
     const sliderBotY  = this._filterY - parseInt(scaledFontSize(8, scene.scale));
     this._sliderAreaX = panelX + 10;

@@ -1,6 +1,6 @@
 // ================================================================
 //  Tab_Manage_Popup.js
-//  경로: Games/Codes/Scenes/Atelier/tabs/Tab_Manage_Popup.js
+//  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Manage_Popup.js
 //
 //  역할: 관리 탭 — 캐릭터 프로필 팝업 UI
 //  의존: Tab_Manage.js (prototype 확장), Tab_Manage_Utils.js
@@ -13,8 +13,8 @@ Object.assign(Tab_Manage.prototype, {
     this._openCharId = char.id;
 
     const { scene, W, H } = this;
-    const pw = W * 0.32;
-    const ph = H * 0.74;
+    const pw = W * 0.34;
+    const ph = H * 0.82;
     const px = (W - pw) / 2;
     const py = (H - ph) / 2;
 
@@ -174,27 +174,67 @@ Object.assign(Tab_Manage.prototype, {
     makeSep(curY);
     curY += parseInt(fs(6));
 
-    // ── 패시브 / 스킬 박스 ──────────────────────────────────────
-    const makeBox = (titleStr, bodyStr, yy) => {
-      const bh   = parseInt(fs(40));
-      const boxG = scene.add.graphics();
+    // ── 패시브 박스 (폰트 크게 + 설명) ─────────────────────────
+    const PASSIVE_DESC = {
+      '윗칸 타격':        '자신의 바로 위 칸에 있는 적을 공격합니다.',
+      '앞칸 타격':        '자신의 바로 앞 칸에 있는 적을 공격합니다.',
+      '현재 칸 타격':     '자신이 위치한 칸의 적을 공격합니다.',
+      '대각 타격':        '대각선 방향의 칸에 있는 적을 공격합니다.',
+      '전열 전체 타격':   '앞쪽 세 칸 전체의 적을 동시에 공격합니다.',
+      '후열 타격':        '자신의 뒤쪽 칸에 있는 적을 공격합니다.',
+      '전/후열 동시 타격':'앞열과 뒷열 양쪽을 동시에 공격합니다.',
+      '전체 칸 타격':     '배치판의 모든 칸에 있는 적을 공격합니다.',
+    };
+    const SKILL_DESC = {
+      '기본 일격':    '기본 공격력으로 단일 대상을 타격합니다.',
+      '빠른 찌르기':  '공격 속도가 증가하여 빠르게 단일 대상을 찌릅니다.',
+      '연속 타격':    '같은 대상을 2회 연속으로 타격합니다.',
+      '방어 자세':    '일정 시간 동안 받는 피해를 20% 감소시킵니다.',
+      '강타':         '공격력의 150%로 단일 대상을 강하게 타격합니다.',
+      '회피 기동':    '다음 공격을 1회 회피할 확률이 크게 증가합니다.',
+      '독 도포':      '대상에게 독을 부여해 지속 피해를 입힙니다.',
+      '광역 타격':    '인접한 모든 적에게 피해를 입힙니다.',
+      '강화 독':      '더욱 강력한 독을 부여해 큰 지속 피해를 입힙니다.',
+      '순간 가속':    '민첩이 일시적으로 크게 상승합니다.',
+      '폭발 타격':    '공격력의 200%로 단일 대상을 폭발적으로 타격합니다.',
+      '전방 스캔':    '앞열 전체의 적 정보를 스캔하고 약점을 파악합니다.',
+      '철갑 관통':    '방어를 무시하고 순수 공격력으로 타격합니다.',
+      '심해 압박':    '수압으로 대상의 이동 속도와 공격력을 감소시킵니다.',
+      '전기 충격':    '전기 충격으로 대상을 잠시 경직시키고 피해를 입힙니다.',
+      '철벽 방어':    '받는 피해를 50% 감소시키는 강력한 방어 태세를 취합니다.',
+      '코어 오버로드':'자신의 코어를 과부하시켜 극대 피해를 입히지만 HP가 감소합니다.',
+      '심연의 포효':  '주변 모든 적에게 공포를 부여하고 대미지를 입힙니다.',
+    };
+
+    const makeBox = (titleStr, nameStr, descStr, yy) => {
+      const nameH = parseInt(fs(18));
+      const descH = parseInt(fs(13));
+      const bh    = parseInt(fs(10)) + nameH + descH + parseInt(fs(10));
+      const boxG  = scene.add.graphics();
       boxG.fillStyle(0x0e0b07, 1);
       boxG.lineStyle(1, 0x3a2010, 0.7);
       boxG.strokeRect(contentX, yy, contentW, bh);
       boxG.fillRect(contentX, yy, contentW, bh);
-      g.add([boxG,
-        scene.add.text(contentX + 6, yy + 4, titleStr, {
-          fontSize: fs(8), fill: '#5a3818', fontFamily: FontManager.MONO,
-        }).setOrigin(0, 0),
-        scene.add.text(contentX + 6, yy + 4 + parseInt(fs(11)), bodyStr, {
-          fontSize: fs(10), fill: '#c8a060', fontFamily: FontManager.TITLE,
-          wordWrap: { width: contentW - 12 },
-        }).setOrigin(0, 0),
-      ]);
-      return yy + bh + 6;
+
+      const titleT = scene.add.text(contentX + 6, yy + 5, titleStr, {
+        fontSize: fs(9), fill: '#5a3818', fontFamily: FontManager.MONO,
+      }).setOrigin(0, 0);
+
+      const nameT = scene.add.text(contentX + 6, yy + 5 + parseInt(fs(12)), nameStr, {
+        fontSize: fs(14), fill: '#e8c060', fontFamily: FontManager.TITLE,
+      }).setOrigin(0, 0);
+
+      const descT = scene.add.text(contentX + 6, yy + 5 + parseInt(fs(12)) + nameH + 2, descStr || '', {
+        fontSize: fs(10), fill: '#7a5830', fontFamily: FontManager.MONO,
+        wordWrap: { width: contentW - 12 },
+      }).setOrigin(0, 0);
+
+      g.add([boxG, titleT, nameT, descT]);
+      return yy + bh + parseInt(fs(6));
     };
-    curY = makeBox('PASSIVE', char.passive, curY);
-    curY = makeBox('SKILL',   char.skill,   curY);
+
+    curY = makeBox('PASSIVE', char.passive, PASSIVE_DESC[char.passive] || '', curY);
+    curY = makeBox('SKILL',   char.skill,   SKILL_DESC[char.skill]     || '', curY);
 
     // ── 하단 버튼 ────────────────────────────────────────────────
     const missing  = char.maxHp - char.currentHp;

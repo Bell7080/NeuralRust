@@ -11,8 +11,11 @@ const CharacterManager = (() => {
     '리프트','러스트','모스','아쿠아','뎁스',
     '타이드','스피어','훅','싱커','바이트',
     '에코','노드','씨드','프록시','시그마',
+    '플럭스','베인','아크','나이트','제로',
+    '커서','링크','스탠','비트','라인',
   ];
   const JOB_LABEL = { fisher:'낚시꾼', diver:'잠수부', ai:'AI' };
+  const JOBS = ['fisher', 'diver', 'ai'];
 
   function calcCog(s){
     if(s<=10)return 1; if(s<=25)return 2; if(s<=45)return 3;
@@ -59,16 +62,54 @@ const CharacterManager = (() => {
       currentHp:stats.hp*10, maxHp:stats.hp*10,
     };
   }
-  const KEY='nr_characters'; const SQUAD_KEY='nr_squad';
+
+  const KEY='nr_characters';
+  const SQUAD_KEY='nr_squad';
+
   function saveAll(c){localStorage.setItem(KEY,JSON.stringify(c));}
   function loadAll(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch{return null;}}
+
+  // 테스트용 30개 캐릭터 생성
   function initIfEmpty(){
-    const ex=loadAll(); if(ex&&ex.length>0)return ex;
-    const chars=[createCharacter('fisher'),createCharacter('diver'),createCharacter('ai')];
-    saveAll(chars); return chars;
+    const ex=loadAll();
+    if(ex && ex.length>0) return ex;
+    const chars=[];
+    // 직업별 10명씩
+    for(let i=0;i<10;i++) chars.push(createCharacter('fisher'));
+    for(let i=0;i<10;i++) chars.push(createCharacter('diver'));
+    for(let i=0;i<10;i++) chars.push(createCharacter('ai'));
+    saveAll(chars);
+    return chars;
   }
-  function loadSquad(){try{const r=localStorage.getItem(SQUAD_KEY);return r?JSON.parse(r):Array(9).fill(null);}catch{return Array(9).fill(null);}}
-  function saveSquad(s){localStorage.setItem(SQUAD_KEY,JSON.stringify(s));}
+
+  // squad: Array(10), 각 슬롯은 id 배열(최대 3)
+  function loadSquad(){
+    try{
+      const r=localStorage.getItem(SQUAD_KEY);
+      if(!r) return Array(10).fill(null).map(()=>[]);
+      const raw=JSON.parse(r);
+      // 구버전(단일 id) 마이그레이션
+      return Array(10).fill(null).map((_,i)=>{
+        const v=raw[i];
+        if(!v) return [];
+        if(Array.isArray(v)) return v.filter(Boolean);
+        return [v];
+      });
+    }catch{
+      return Array(10).fill(null).map(()=>[]);
+    }
+  }
+
+  function saveSquad(s){
+    // 항상 배열-of-배열 포맷으로 저장
+    const normalized = Array(10).fill(null).map((_,i)=>{
+      const v=s[i];
+      if(!v) return [];
+      if(Array.isArray(v)) return v;
+      return [v];
+    });
+    localStorage.setItem(SQUAD_KEY,JSON.stringify(normalized));
+  }
 
   return{initIfEmpty,loadAll,saveAll,createCharacter,calcCog,JOB_LABEL,loadSquad,saveSquad};
 })();

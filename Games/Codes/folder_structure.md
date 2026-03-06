@@ -67,8 +67,9 @@ neural-rust/
 │               ├── Settings_Tab_Video.js   ← 설정 > 비디오
 │               ├── Settings_Tab_Audio.js   ← 설정 > 오디오
 │               ├── Settings_Tab_Keys.js    ← 설정 > 키 설정
-│               ├── Settings_Tab_Save.js    ← 설정 > 저장·초기화
-│               └── SettingsScene.js        ← 설정 씬 껍데기
+│               └── Settings_Tab_Save.js    ← 설정 > 저장·초기화
+│
+│           └── SettingsScene.js            ← 설정 씬 껍데기 (Scenes/ 루트)
 │
 └── Games/Codes/main.js                     ← Phaser 초기화 / 진입점
 ```
@@ -104,7 +105,7 @@ neural-rust/
 <script src="Games/Codes/Scenes/Settings/Settings_Tab_Audio.js"></script>
 <script src="Games/Codes/Scenes/Settings/Settings_Tab_Keys.js"></script>
 <script src="Games/Codes/Scenes/Settings/Settings_Tab_Save.js"></script>
-<script src="Games/Codes/Scenes/Settings/SettingsScene.js"></script>
+<script src="Games/Codes/Scenes/SettingsScene.js"></script>
 
 <!-- ③-Atelier (뼈대 → 확장 순서 엄수) -->
 <script src="Games/Codes/Scenes/Ateliers/AtelierTabs.js"></script>

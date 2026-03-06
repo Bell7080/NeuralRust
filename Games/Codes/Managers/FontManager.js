@@ -49,7 +49,8 @@ const FontManager = {
     this._activePreset = saved;
     if (this.FONTS.length === 0) return Promise.resolve();
     return Promise.all(this.FONTS.map(f => this._loadFont(f)))
-      .then(() => console.log('[FontManager] 폰트 로드 완료'));
+      .then(() => console.log('[FontManager] 폰트 로드 완료'))
+      .catch(e => console.warn('[FontManager] 폰트 로드 중 오류 (무시됨)', e));
   },
 
   setActive(presetKey) {
@@ -65,14 +66,22 @@ const FontManager = {
   get BODY()  { return (this.PRESETS[this._activePreset] || this.PRESETS.kirang).BODY;  },
   get MONO()  { return (this.PRESETS[this._activePreset] || this.PRESETS.kirang).MONO;  },
 
+  // _loadFont: FontFace 생성·load 모두 try-catch로 보호해
+  // 어떤 상황에서도 반드시 resolve()가 호출되도록 보장한다.
   _loadFont(font) {
     return new Promise(resolve => {
-      new FontFace(font.family, `url(${font.src})`, {
-        weight: font.weight || 'normal',
-        style:  font.style  || 'normal',
-      }).load()
-        .then(loaded => { document.fonts.add(loaded); resolve(); })
-        .catch(err   => { console.warn(`[FontManager] 실패: ${font.key}`, err); resolve(); });
+      try {
+        const face = new FontFace(font.family, `url(${font.src})`, {
+          weight: font.weight || 'normal',
+          style:  font.style  || 'normal',
+        });
+        face.load()
+          .then(loaded => { document.fonts.add(loaded); resolve(); })
+          .catch(err   => { console.warn(`[FontManager] 실패: ${font.key}`, err); resolve(); });
+      } catch (err) {
+        console.warn(`[FontManager] FontFace 생성 실패: ${font.key}`, err);
+        resolve();
+      }
     });
   },
 

@@ -157,6 +157,10 @@ const SaveManager = {
     this.deleteStory();
     localStorage.removeItem('settings_font');
     localStorage.removeItem('neural_rust_keybinds');
+    localStorage.removeItem('neural_rust_audio');
+    // 캐릭터 & 탐사대 데이터도 초기화
+    localStorage.removeItem('nr_characters');
+    localStorage.removeItem('nr_squad');
     // 구버전 키 정리
     localStorage.removeItem('project001_keybinds');
     localStorage.removeItem('project001_save');

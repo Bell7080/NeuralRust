@@ -1,6 +1,6 @@
 // ================================================================
 //  Tab_Squad_Slider.js
-//  경로: Games/Codes/Scenes/Atelier/tabs/Tab_Squad_Slider.js
+//  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Squad_Slider.js
 //
 //  역할: 탐사대 탭 — 캐릭터 슬라이더, 필터 바, 드래그, 생명주기
 //  의존: Tab_Squad.js (prototype 확장)
@@ -20,7 +20,7 @@ Object.assign(Tab_Squad.prototype, {
     this._container.add(areaBg);
 
     this._container.add(scene.add.text(aX + 8, aY + 6,
-      '편성할 캐릭터 선택  ·  칸 선택 후 클릭', {
+      '배치할 캐릭터 선택  ·  칸 선택 후 클릭  ·  배치된 칸 클릭으로 회수', {
       fontSize: scaledFontSize(8, scene.scale), fill: '#3a2510', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0));
 
@@ -58,7 +58,13 @@ Object.assign(Tab_Squad.prototype, {
 
   _makeSliderCard(char, x, y, cw, ch) {
     const { scene } = this;
-    const inSquad   = this._squad.includes(char.id);
+
+    // 이 캐릭터가 몇 개 슬롯에 배치됐는지
+    const deployCount = this._squad.reduce((acc, slot) => {
+      return acc + (Array.isArray(slot) ? slot.filter(id => id === char.id).length : 0);
+    }, 0);
+    const inSquad = deployCount > 0;
+
     const JOB_COLOR  = { fisher: 0x1a3050, diver: 0x1a3020, ai: 0x2a1a3a };
     const JOB_BORDER = { fisher: 0x3a6888, diver: 0x3a7050, ai: 0x6a4888 };
     const JOB_SHORT  = { fisher: 'FISH',   diver: 'DIVE',   ai: 'A·I'   };
@@ -75,28 +81,48 @@ Object.assign(Tab_Squad.prototype, {
     drawCbg();
 
     const items = [cbg,
-      scene.add.text(cw/2, ch*0.28, JOB_SHORT[char.job]||'???',
+      scene.add.text(cw/2, ch*0.22, JOB_SHORT[char.job]||'???',
         { fontSize:scaledFontSize(9,scene.scale), fill:'#5a7888', fontFamily:FontManager.MONO }).setOrigin(0.5),
-      scene.add.text(cw/2, ch*0.50, char.name,
+      scene.add.text(cw/2, ch*0.42, char.name,
         { fontSize:scaledFontSize(8,scene.scale), fill:'#c8a060', fontFamily:FontManager.TITLE }).setOrigin(0.5,0),
-      scene.add.text(cw/2, ch*0.72, `Cog${char.cog}`,
+      scene.add.text(cw/2, ch*0.62, `Cog${char.cog}`,
         { fontSize:scaledFontSize(7,scene.scale), fill:'#7a5030', fontFamily:FontManager.MONO }).setOrigin(0.5,0),
     ];
-    if (inSquad) items.push(
-      scene.add.text(cw/2, ch*0.88, '배치됨',
-        { fontSize:scaledFontSize(7,scene.scale), fill:'#c89030', fontFamily:FontManager.MONO }).setOrigin(0.5,0)
-    );
+
+    if (inSquad) {
+      items.push(
+        scene.add.text(cw/2, ch*0.80, `배치 ${deployCount}`,
+          { fontSize:scaledFontSize(7,scene.scale), fill:'#c89030', fontFamily:FontManager.MONO }).setOrigin(0.5,0)
+      );
+    }
     c.add(items);
 
-    const hit = scene.add.rectangle(cw/2, ch/2, cw, ch, 0, 0).setInteractive({ useHandCursor: !inSquad });
-    hit.on('pointerover', () => { if (!inSquad) drawCbg(true); });
+    const hit = scene.add.rectangle(cw/2, ch/2, cw, ch, 0, 0).setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => { if (!this._sliderDragged) drawCbg(true); });
     hit.on('pointerout',  () => drawCbg(false));
     hit.on('pointerup',   () => {
-      if (this._sliderDragged || inSquad) return;
-      if (this._selectedSlot === null) { this._showToast('먼저 배치할 칸을 선택하세요'); return; }
-      this._squad[this._selectedSlot] = char.id;
+      if (this._sliderDragged) return;
+      if (this._selectedSlot === null) {
+        this._showToast('먼저 배치할 칸을 선택하세요');
+        return;
+      }
+      const slot = this._squad[this._selectedSlot] || [];
+      if (slot.length >= 3) {
+        this._showToast('해당 칸은 이미 가득 찼습니다 (최대 3명)');
+        return;
+      }
+      // 같은 슬롯에 같은 캐릭터 중복 배치 방지
+      if (slot.includes(char.id)) {
+        this._showToast('이미 같은 칸에 배치된 캐릭터입니다');
+        return;
+      }
+      slot.push(char.id);
+      this._squad[this._selectedSlot] = slot;
       CharacterManager.saveSquad(this._squad);
-      this._selectedSlot = null;
+
+      // 슬롯이 꽉 찼으면 선택 해제, 아니면 유지
+      if (slot.length >= 3) this._selectedSlot = null;
+      this._updateHint();
       this._rebuildGridFull();
       this._populateSlider();
     });
