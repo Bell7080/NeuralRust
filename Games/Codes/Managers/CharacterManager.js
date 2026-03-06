@@ -52,7 +52,7 @@ const CharacterManager = (() => {
     const cog=calcCog(statSum);
     return{
       id:`c_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
-      name:pick(NAMES), age:18+Math.floor(Math.random()*35),
+      name:pick(NAMES), age:16+Math.floor(Math.random()*10),
       job, jobLabel:JOB_LABEL[job], stats, statSum, cog,
       passive:pick(PASSIVE_POOL[cog]||PASSIVE_POOL[1]),
       skill:pick(SKILL_POOL[cog]||SKILL_POOL[1]),

@@ -34,6 +34,7 @@ function makeStubTab(scene, W, H, title) {
   container.add([panel, label, msg]);
 
   return {
+    _container: container,
     show()    { container.setVisible(true);  },
     hide()    { container.setVisible(false); },
     destroy() { container.destroy(); },
@@ -45,9 +46,6 @@ class Tab_Recruit {
   get _container() { return this._tab._container || null; }
   show()    { this._tab.show();    }
   hide()    { this._tab.hide();    }
-  destroy() { this._tab.destroy(); }
-}
-
   destroy() { this._tab.destroy(); }
 }
 
@@ -96,9 +94,6 @@ class Tab_Memory {
   get _container() { return this._tab._container || null; }
   show()    { this._tab.show();    }
   hide()    { this._tab.hide();    }
-  destroy() { this._tab.destroy(); }
-}
-
   destroy() { this._tab.destroy(); }
 }
 

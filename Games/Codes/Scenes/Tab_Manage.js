@@ -66,10 +66,11 @@ class Tab_Manage {
     this._cardAreaW = panelW - 20;
     this._cardAreaH = parseInt(scaledFontSize(140, scene.scale));
 
-    // 카드 클리핑용 마스크
+    // 카드 클리핑용 마스크 (visible false — 화면에 렌더되지 않음)
     const maskGfx = scene.add.graphics();
     maskGfx.fillStyle(0xffffff, 1);
     maskGfx.fillRect(this._cardAreaX, this._cardAreaY, this._cardAreaW, this._cardAreaH);
+    maskGfx.setVisible(false);
     this._maskGfx = maskGfx;
 
     // 카드 컨테이너 (스크롤될 부분)
@@ -144,10 +145,12 @@ class Tab_Manage {
     portrait.lineStyle(1, border, 0.6);
     portrait.strokeRect(px, py, pw, ph);
     portrait.fillRect(px, py, pw, ph);
-    // 플레이스홀더 아이콘
+    // 직업 약칭 텍스트 (이모지 대체)
+    const JOB_SHORT = { fisher: 'FISH', diver: 'DIVE', ai: 'A·I' };
     const iconTxt = scene.add.text(px + pw / 2, py + ph / 2,
-      char.job === 'fisher' ? '🎣' : char.job === 'diver' ? '🤿' : '🤖', {
-      fontSize: scaledFontSize(18, scene.scale),
+      JOB_SHORT[char.job] || '???', {
+      fontSize: scaledFontSize(13, scene.scale),
+      fill: '#6a8888', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
 
     // 이름
@@ -206,6 +209,7 @@ class Tab_Manage {
   }
 
   // ── 드래그 스크롤 ─────────────────────────────────────────────
+  // dragHit 대신 scene.input 레벨로 처리 → 카드 hit 영역 클릭 차단 방지
   _setupDrag() {
     const { scene } = this;
     const aX = this._cardAreaX;
@@ -213,39 +217,42 @@ class Tab_Manage {
     const aW = this._cardAreaW;
     const aH = this._cardAreaH;
 
-    // 전체 입력 영역 히트박스
-    const dragHit = scene.add.rectangle(
-      aX + aW / 2, aY + aH / 2, aW, aH, 0x000000, 0
-    ).setInteractive({ useHandCursor: true, draggable: true });
-    this._container.add(dragHit);
-
-    let startX = 0;
+    let startX      = 0;
     let startScroll = 0;
-    this._dragged = false;
+    this._dragged   = false;
 
-    dragHit.on('pointerdown', (ptr) => {
+    const inArea = (ptr) =>
+      ptr.x >= aX && ptr.x <= aX + aW &&
+      ptr.y >= aY && ptr.y <= aY + aH;
+
+    this._dragOnDown = (ptr) => {
+      if (!inArea(ptr)) return;
       startX = ptr.x;
       startScroll = this._scrollX;
       this._dragged = false;
-    });
-    dragHit.on('pointermove', (ptr) => {
+    };
+    this._dragOnMove = (ptr) => {
       if (!ptr.isDown) return;
       const dx = ptr.x - startX;
       if (Math.abs(dx) > 5) this._dragged = true;
       if (!this._dragged) return;
+      if (!inArea(ptr) && Math.abs(dx) < 60) return; // 약간 벗어나도 드래그 유지
       this._scrollTo(startScroll + dx);
-    });
-    dragHit.on('pointerup', () => {
-      // 드래그 플래그 짧게 유지 후 리셋 (클릭 이벤트 방지용)
+    };
+    this._dragOnUp = () => {
       scene.time.delayedCall(50, () => { this._dragged = false; });
-    });
+    };
 
-    // 마우스 휠도 지원
-    scene.input.on('wheel', (ptr, objs, dx, dy) => {
-      if (ptr.x < aX || ptr.x > aX + aW) return;
-      if (ptr.y < aY || ptr.y > aY + aH) return;
+    scene.input.on('pointerdown', this._dragOnDown);
+    scene.input.on('pointermove', this._dragOnMove);
+    scene.input.on('pointerup',   this._dragOnUp);
+
+    // 마우스 휠
+    this._dragOnWheel = (ptr, objs, dx, dy) => {
+      if (!inArea(ptr)) return;
       this._scrollTo(this._scrollX - dy * 0.8);
-    });
+    };
+    scene.input.on('wheel', this._dragOnWheel);
   }
 
   _scrollTo(x) {
@@ -268,6 +275,7 @@ class Tab_Manage {
 
     const g = scene.add.container(0, 0).setDepth(100);
     this._popupGroup = g;
+    this._container.add(g);
 
     // 팝업 배경
     const popBg = scene.add.graphics();
@@ -295,11 +303,17 @@ class Tab_Manage {
     portPad.lineStyle(1, 0x4a3010, 0.7);
     portPad.strokeRect(contentX, curY, portW, portH);
     portPad.fillRect(contentX, curY, portW, portH);
-    const portIcon = scene.add.text(contentX + portW/2, curY + portH/2,
-      char.job==='fisher'?'🎣':char.job==='diver'?'🤿':'🤖',{
-      fontSize:scaledFontSize(22,scene.scale)
+    // 직업 약칭 + 이름 첫 글자 (이모지 대체)
+    const JOB_SHORT = { fisher:'FISH', diver:'DIVE', ai:'A·I' };
+    const portJobT = scene.add.text(contentX + portW/2, curY + portH*0.35,
+      JOB_SHORT[char.job] || '???', {
+      fontSize:scaledFontSize(11,scene.scale), fill:'#5a7888', fontFamily:FontManager.MONO,
     }).setOrigin(0.5);
-    g.add([portPad, portIcon]);
+    const portNameT = scene.add.text(contentX + portW/2, curY + portH*0.62,
+      char.name[0], {
+      fontSize:scaledFontSize(18,scene.scale), fill:'#8aaa88', fontFamily:FontManager.TITLE,
+    }).setOrigin(0.5);
+    g.add([portPad, portJobT, portNameT]);
 
     const infoX = contentX + portW + pad;
     const infoW = pw - pad*2 - portW - pad;
@@ -492,7 +506,16 @@ class Tab_Manage {
     this._openCharId = null;
   }
 
-  show()    { this._container.setVisible(true);  if(this._popupGroup) this._popupGroup.setVisible(true); }
-  hide()    { this._container.setVisible(false); if(this._popupGroup) this._popupGroup.setVisible(false); }
-  destroy() { this._closePopup(); this._container.destroy(); }
+  show()    { this._container.setVisible(true);  }
+  hide()    { this._container.setVisible(false); }
+  destroy() {
+    this._closePopup();
+    if (this._maskGfx) { this._maskGfx.destroy(); this._maskGfx = null; }
+    const si = this.scene.input;
+    if (this._dragOnDown) si.off('pointerdown', this._dragOnDown);
+    if (this._dragOnMove) si.off('pointermove', this._dragOnMove);
+    if (this._dragOnUp)   si.off('pointerup',   this._dragOnUp);
+    if (this._dragOnWheel)si.off('wheel',        this._dragOnWheel);
+    this._container.destroy();
+  }
 }
