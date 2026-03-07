@@ -113,10 +113,11 @@ const CharProfile = {
     curY += parseInt(fs(13));
 
     // ── 직업 (툴팁) ──────────────────────────────────────────
+    // 직업 설명 — JobData.js 참조
     const JOB_TIPS = {
-      fisher: '낚시꾼 — 수면 탐색 특화. 자원 수집 효율 +20%, 어획물 판별 능력 보유.',
-      diver:  '잠수부 — 심해 탐색 특화. 수압 저항, 수중 작업 시간 +30%.',
-      ai:     'A.I — 기계 지성체. 연산 속도 탁월, 감정 연산 미탑재.',
+      fisher: getJobDescription('fisher'),
+      diver:  getJobDescription('diver'),
+      ai:     getJobDescription('ai'),
     };
     const jobLbl = scene.add.text(contentX, curY, `직업  :  ${char.jobLabel}`, {
       fontSize: fs(10), fill: '#c8802a', fontFamily: FontManager.MONO,
@@ -241,37 +242,7 @@ const CharProfile = {
     curY += parseInt(fs(6));
 
     // ── 패시브 / 스킬 박스 ───────────────────────────────────
-    const PASSIVE_DESC = {
-      '윗칸 타격':        '자신의 바로 위 칸에 있는 적을 공격합니다.',
-      '앞칸 타격':        '자신의 바로 앞 칸에 있는 적을 공격합니다.',
-      '현재 칸 타격':     '자신이 위치한 칸의 적을 공격합니다.',
-      '대각 타격':        '대각선 방향의 칸에 있는 적을 공격합니다.',
-      '전열 전체 타격':   '앞쪽 세 칸 전체의 적을 동시에 공격합니다.',
-      '후열 타격':        '자신의 뒤쪽 칸에 있는 적을 공격합니다.',
-      '전/후열 동시 타격':'앞열과 뒷열 양쪽을 동시에 공격합니다.',
-      '전체 칸 타격':     '배치판의 모든 칸에 있는 적을 공격합니다.',
-    };
-    const SKILL_DESC = {
-      '기본 일격':    '기본 공격력으로 단일 대상을 타격합니다.',
-      '빠른 찌르기':  '공격 속도가 증가하여 빠르게 단일 대상을 찌릅니다.',
-      '연속 타격':    '같은 대상을 2회 연속으로 타격합니다.',
-      '방어 자세':    '일정 시간 동안 받는 피해를 20% 감소시킵니다.',
-      '강타':         '공격력의 150%로 단일 대상을 강하게 타격합니다.',
-      '회피 기동':    '다음 공격을 1회 회피할 확률이 크게 증가합니다.',
-      '독 도포':      '대상에게 독을 부여해 지속 피해를 입힙니다.',
-      '광역 타격':    '인접한 모든 적에게 피해를 입힙니다.',
-      '강화 독':      '더욱 강력한 독을 부여해 큰 지속 피해를 입힙니다.',
-      '순간 가속':    '민첩이 일시적으로 크게 상승합니다.',
-      '폭발 타격':    '공격력의 200%로 단일 대상을 폭발적으로 타격합니다.',
-      '전방 스캔':    '앞열 전체의 적 정보를 스캔하고 약점을 파악합니다.',
-      '철갑 관통':    '방어를 무시하고 순수 공격력으로 타격합니다.',
-      '심해 압박':    '수압으로 대상의 이동 속도와 공격력을 감소시킵니다.',
-      '전기 충격':    '전기 충격으로 대상을 잠시 경직시키고 피해를 입힙니다.',
-      '철벽 방어':    '받는 피해를 50% 감소시키는 강력한 방어 태세를 취합니다.',
-      '코어 오버로드':'자신의 코어를 과부하시켜 극대 피해를 입히지만 HP가 감소합니다.',
-      '심연의 포효':  '주변 모든 적에게 공포를 부여하고 대미지를 입힙니다.',
-    };
-
+    // 패시브 / 스킬 설명 — PassiveData.js / SkillData.js 참조
     const makeBox = (titleStr, nameStr, descStr, yy) => {
       const nameH2 = parseInt(fs(18));
       const bh     = parseInt(fs(10)) + nameH2 + parseInt(fs(13)) + parseInt(fs(10));
@@ -294,8 +265,8 @@ const CharProfile = {
       return yy + bh + parseInt(fs(6));
     };
 
-    curY = makeBox('PASSIVE', char.passive, PASSIVE_DESC[char.passive] || '', curY);
-    curY = makeBox('SKILL',   char.skill,   SKILL_DESC[char.skill]     || '', curY);
+    curY = makeBox('PASSIVE', char.passive, getPassiveDescription(char.passive), curY);
+    curY = makeBox('SKILL',   char.skill,   getSkillDescription(char.skill),     curY);
 
     // ── 하단 버튼 ────────────────────────────────────────────
     const btnH2   = parseInt(fs(26));

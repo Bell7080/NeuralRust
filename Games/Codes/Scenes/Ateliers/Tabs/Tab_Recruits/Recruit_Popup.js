@@ -17,11 +17,9 @@ Tab_Recruit.prototype._showStatPopup = function (prevStats, nextStats, onConfirm
   const cx = W / 2;
   const cy = H / 2;
 
-  // 씬 레벨에 직접 생성 — _container(depth 51)보다 위인 60/61에 배치
-  // 이렇게 해야 커스텀 화면을 덮는 진짜 오버레이가 된다
   const overlay = scene.add.rectangle(0, 0, W, H, 0x000000, 0.80)
-    .setOrigin(0).setDepth(60).setInteractive(); // 커스텀 UI 클릭 차단
-  const pop = scene.add.container(0, 0).setDepth(61);
+    .setOrigin(0).setDepth(80);
+  const pop = scene.add.container(0, 0).setDepth(81);
 
   const bW  = W * 0.26;
   const bH  = H * 0.48;
@@ -131,62 +129,157 @@ Tab_Recruit.prototype._showStatPopup = function (prevStats, nextStats, onConfirm
 };
 
 // ── 외형/패시브/스킬 선택 팝업 ───────────────────────────────────
+// 스탯 팝업과 동일한 양식: 두 패널, 1클릭→발광, 2클릭→확정
+// mode: 'sprite' | 'passive' | 'skill'
 
 Tab_Recruit.prototype._showChoicePopup = function (title, prevLabel, nextLabel, onConfirm, rawValues) {
   const { scene, W, H } = this;
-  const cx = W/2; const cy = H/2;
-  const pw = W*0.42; const ph = H*0.26;
+  const cx = W / 2;
+  const cy = H / 2;
 
-  const pop = scene.add.container(0, 0).setDepth(50);
-  this._container.add(pop);
+  const overlay = scene.add.rectangle(0, 0, W, H, 0x000000, 0.80)
+    .setOrigin(0).setDepth(80);
+  const pop = scene.add.container(0, 0).setDepth(81);
 
-  pop.add(scene.add.rectangle(cx, cy, W, H, 0x000000, 0.55));
+  // 외형 팝업이면 패널을 크게, 텍스트 팝업이면 기존 크기
+  const isSprite = rawValues &&
+    typeof rawValues[0] === 'string' && rawValues[0].startsWith('char_');
+  const bW  = isSprite ? W * 0.20 : W * 0.26;
+  const bH  = isSprite ? H * 0.52 : H * 0.24;
+  const gap = W * 0.04;
+  const lx  = cx - bW/2 - gap/2;
+  const rx  = cx + bW/2 + gap/2;
+  const bY  = cy;
 
-  const pb = scene.add.graphics();
-  pb.fillStyle(0x120d07, 0.98); pb.lineStyle(1, 0x3a2210, 0.9);
-  pb.fillRect(cx-pw/2, cy-ph/2, pw, ph); pb.strokeRect(cx-pw/2, cy-ph/2, pw, ph);
-  pop.add(pb);
-
-  pop.add(scene.add.text(cx, cy - ph*0.38, title, {
+  // 팝업 타이틀
+  pop.add(scene.add.text(cx, cy - bH/2 - parseInt(this._fs(16)), title, {
     fontSize: this._fs(13), fill: '#c8bfb0', fontFamily: FontManager.MONO,
   }).setOrigin(0.5));
 
-  const bW = pw*0.38; const bH = ph*0.30;
-  const lx = cx - pw*0.23; const rx = cx + pw*0.23; const bY = cy + ph*0.06;
+  let selectedSide = null;
 
-  const makeBtn = (x, topLabel, bodyLabel, isNew, value) => {
-    const cbg = scene.add.graphics();
-    const draw = (h) => {
-      cbg.clear();
-      cbg.fillStyle(h ? (isNew ? 0x3d2010 : 0x1a1008) : (isNew ? 0x2a1a0a : 0x120d07), 1);
-      cbg.lineStyle(1, h ? 0xa05018 : (isNew ? 0x3d2010 : 0x2a1a0a), 1);
-      cbg.fillRect(x-bW/2, bY-bH/2, bW, bH); cbg.strokeRect(x-bW/2, bY-bH/2, bW, bH);
+  const makePanel = (panelX, label, isPrev, rawVal) => {
+    const side   = isPrev ? 'prev' : 'next';
+    const panelG = scene.add.graphics();
+    const glowG  = scene.add.graphics();
+
+    const draw = (state) => {
+      panelG.clear(); glowG.clear();
+      if (state === 'selected') {
+        panelG.fillStyle(isPrev ? 0x1a1206 : 0x0e1a08, 1);
+        panelG.lineStyle(2, isPrev ? 0xc8a030 : 0x40c840, 1);
+        [
+          { pad: 12, a: 0.07, c: isPrev ? 0xc8a030 : 0x30c830 },
+          { pad:  7, a: 0.18, c: isPrev ? 0xc8a030 : 0x30c830 },
+          { pad:  3, a: 0.35, c: isPrev ? 0xb08020 : 0x20b820 },
+          { pad:  1, a: 0.60, c: isPrev ? 0x906010 : 0x10a010 },
+        ].forEach(({ pad, a, c }) => {
+          glowG.lineStyle(2, c, a);
+          glowG.strokeRect(panelX - bW/2 - pad, bY - bH/2 - pad, bW + pad*2, bH + pad*2);
+        });
+      } else if (state === 'hover') {
+        panelG.fillStyle(0x1a1208, 1); panelG.lineStyle(1, 0x5a3010, 0.9);
+      } else {
+        panelG.fillStyle(0x120d07, 1); panelG.lineStyle(1, 0x2a1a08, 0.7);
+      }
+      panelG.fillRect(panelX - bW/2, bY - bH/2, bW, bH);
+      panelG.strokeRect(panelX - bW/2, bY - bH/2, bW, bH);
     };
-    draw(false); pop.add(cbg);
-    pop.add(scene.add.text(x, bY - bH*0.30, topLabel, {
-      fontSize: this._fs(9), fill: isNew ? '#a05018' : '#3d2010', fontFamily: FontManager.MONO,
+
+    draw('normal');
+    pop.add(glowG); pop.add(panelG);
+
+    // 헤더
+    pop.add(scene.add.text(panelX, bY - bH*0.44,
+      isPrev ? '◀  현재' : '새로운  ▶', {
+      fontSize: this._fs(12),
+      fill: isPrev ? '#c8a060' : '#60c860',
+      fontFamily: FontManager.MONO, letterSpacing: 2,
     }).setOrigin(0.5));
-    bodyLabel.split('   ').forEach((line, li) => {
-      pop.add(scene.add.text(x, bY - 4 + li * parseInt(this._fs(12)), line, {
-        fontSize: this._fs(10), fill: '#c8bfb0', fontFamily: FontManager.MONO,
+
+    // 헤더 구분선
+    const hlineG = scene.add.graphics();
+    hlineG.lineStyle(1, 0x2a1808, 0.7);
+    hlineG.lineBetween(panelX - bW*0.42, bY - bH*0.34, panelX + bW*0.42, bY - bH*0.34);
+    pop.add(hlineG);
+
+    if (isSprite) {
+      // 외형 팝업: 초상화 이미지 표시
+      const iSz = bW * 0.80;
+      const iY  = bY + bH * 0.02;
+      const iBg = scene.add.graphics();
+      iBg.fillStyle(0x0a0806, 1); iBg.lineStyle(1, 0x2a1a0a, 0.8);
+      iBg.fillRect(panelX - iSz/2, iY - iSz/2, iSz, iSz);
+      iBg.strokeRect(panelX - iSz/2, iY - iSz/2, iSz, iSz);
+      pop.add(iBg);
+
+      if (rawVal && scene.textures.exists(rawVal)) {
+        const img = scene.add.image(panelX, iY, rawVal).setOrigin(0.5);
+        const sc  = Math.min(iSz / img.width, iSz / img.height) * 0.90;
+        img.setScale(sc);
+        pop.add(img);
+      } else {
+        const num = parseInt((rawVal || '').replace('char_', '')) + 1;
+        pop.add(scene.add.text(panelX, iY, `#${num}`, {
+          fontSize: this._fs(18), fill: '#3d2010', fontFamily: FontManager.MONO,
+        }).setOrigin(0.5));
+      }
+    } else {
+      // 패시브 / 스킬 팝업: 능력명 + 설명
+      const nameY = bY - bH * 0.08;
+      pop.add(scene.add.text(panelX, nameY, label, {
+        fontSize: this._fs(14), fill: '#e8c060',
+        fontFamily: FontManager.TITLE,
       }).setOrigin(0.5));
-    });
-    const chit = scene.add.rectangle(x, bY, bW, bH, 0, 0).setInteractive({ useHandCursor: true });
-    pop.add(chit);
-    chit.on('pointerover', () => draw(true));
-    chit.on('pointerout',  () => draw(false));
-    chit.on('pointerdown', () => { pop.destroy(); onConfirm(value); });
+
+      // 설명 텍스트 (PassiveData / SkillData 연동)
+      const desc = getPassiveDescription(label) || getSkillDescription(label) || '';
+      if (desc) {
+        pop.add(scene.add.text(panelX, nameY + parseInt(this._fs(18)), desc, {
+          fontSize: this._fs(9), fill: '#7a5830',
+          fontFamily: FontManager.MONO,
+          wordWrap: { width: bW * 0.84 }, align: 'center',
+        }).setOrigin(0.5, 0));
+      }
+    }
+
+    // 히트 영역
+    const hit = scene.add.rectangle(panelX, bY, bW, bH, 0, 0)
+      .setInteractive({ useHandCursor: true });
+    pop.add(hit);
+    hit.on('pointerover', () => { if (selectedSide !== side) draw('hover'); });
+    hit.on('pointerout',  () => { if (selectedSide !== side) draw('normal'); });
+
+    return { draw, hit, side };
   };
 
-  makeBtn(lx, '유  지', prevLabel, false, rawValues ? rawValues[0] : prevLabel);
-  makeBtn(rx, '새로운', nextLabel, true,  rawValues ? rawValues[1] : nextLabel);
+  const prevPanel = makePanel(lx, prevLabel, true,  rawValues?.[0]);
+  const nextPanel = makePanel(rx, nextLabel, false, rawValues?.[1]);
+
+  // 1클릭 → 발광, 2클릭 → 확정
+  const onPanelClick = (panel, otherPanel, val) => {
+    panel.hit.on('pointerdown', () => {
+      if (selectedSide === panel.side) {
+        overlay.destroy(); pop.destroy(); onConfirm(val);
+      } else {
+        selectedSide = panel.side;
+        panel.draw('selected');
+        otherPanel.draw('normal');
+      }
+    });
+  };
+  onPanelClick(prevPanel, nextPanel, rawValues?.[0] ?? prevLabel);
+  onPanelClick(nextPanel, prevPanel, rawValues?.[1] ?? nextLabel);
 
   // ✕ 닫기 (유지로 처리)
-  const xt = scene.add.text(cx + pw*0.44, cy - ph*0.42, '✕', {
-    fontSize: this._fs(11), fill: '#4a2a10', fontFamily: FontManager.MONO,
+  const xt = scene.add.text(cx + bW/2 + gap/2 + bW/2 - 8, cy - bH/2 - parseInt(this._fs(14)), '✕', {
+    fontSize: this._fs(12), fill: '#4a2a10', fontFamily: FontManager.MONO,
   }).setOrigin(0.5).setInteractive({ useHandCursor: true });
   pop.add(xt);
   xt.on('pointerover', () => xt.setStyle({ fill: '#c8bfb0' }));
   xt.on('pointerout',  () => xt.setStyle({ fill: '#4a2a10' }));
-  xt.on('pointerdown', () => { pop.destroy(); onConfirm(rawValues ? rawValues[0] : prevLabel); });
+  xt.on('pointerdown', () => {
+    overlay.destroy(); pop.destroy();
+    onConfirm(rawValues?.[0] ?? prevLabel);
+  });
 };
