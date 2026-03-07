@@ -163,13 +163,22 @@ Object.assign(Tab_Squad.prototype, {
     portBg.fillStyle(0x060504, 1);
     portBg.fillRect(pad, portY, portW, portH);
 
-    // 직종 워터마크
-    const watermark = scene.add.text(pad + portW / 2, portY + portH * 0.50,
-      JOB_SHORT[char.job] || '???', {
-      fontSize: scaledFontSize(20, scene.scale),
-      fill: `#${(JOB_BAND[char.job] || 0x1a1410).toString(16).padStart(6,'0')}`,
-      fontFamily: FontManager.MONO,
-    }).setOrigin(0.5);
+    // 캐릭터 스프라이트 (없으면 직종 워터마크 폴백)
+    let watermark;
+    if (char.spriteKey && scene.textures.exists(char.spriteKey)) {
+      const img = scene.add.image(pad + portW / 2, portY + portH * 0.50, char.spriteKey)
+        .setOrigin(0.5);
+      const scale = Math.min(portW / img.width, portH / img.height);
+      img.setScale(scale);
+      watermark = img;
+    } else {
+      watermark = scene.add.text(pad + portW / 2, portY + portH * 0.50,
+        JOB_SHORT[char.job] || '???', {
+        fontSize: scaledFontSize(20, scene.scale),
+        fill: `#${(JOB_BAND[char.job] || 0x1a1410).toString(16).padStart(6,'0')}`,
+        fontFamily: FontManager.MONO,
+      }).setOrigin(0.5);
+    }
 
     // ── ④ HP 바 ───────────────────────────────────────────────
     const hpY   = portY + portH;

@@ -49,6 +49,12 @@ const CharacterManager = (() => {
     for(let i=0;i<remain;i++) b[Math.floor(Math.random()*5)]++;
     return{hp:mins[0]+b[0],health:mins[1]+b[1],attack:mins[2]+b[2],agility:mins[3]+b[3],luck:mins[4]+b[4]};
   }
+  const SPRITE_COUNT = 78; // char_000 ~ char_077
+  function randSpriteKey() {
+    const n = Math.floor(Math.random() * SPRITE_COUNT);
+    return `char_${String(n).padStart(3,'0')}`;
+  }
+
   function createCharacter(job){
     const stats=randStats();
     const statSum=Object.values(stats).reduce((a,v)=>a+v,0);
@@ -60,6 +66,7 @@ const CharacterManager = (() => {
       passive:pick(PASSIVE_POOL[cog]||PASSIVE_POOL[1]),
       skill:pick(SKILL_POOL[cog]||SKILL_POOL[1]),
       currentHp:stats.hp*10, maxHp:stats.hp*10,
+      spriteKey: randSpriteKey(),
     };
   }
 
@@ -72,7 +79,13 @@ const CharacterManager = (() => {
   // 테스트용 30개 캐릭터 생성
   function initIfEmpty(){
     const ex=loadAll();
-    if(ex && ex.length>0) return ex;
+    if(ex && ex.length>0) {
+      // 구버전 데이터에 spriteKey 없으면 채워줌
+      let dirty = false;
+      ex.forEach(c => { if (!c.spriteKey) { c.spriteKey = randSpriteKey(); dirty = true; } });
+      if (dirty) saveAll(ex);
+      return ex;
+    }
     const chars=[];
     // 직업별 10명씩
     for(let i=0;i<10;i++) chars.push(createCharacter('fisher'));

@@ -20,11 +20,12 @@ Object.assign(Tab_Squad.prototype, {
     if (deploySlots.length > 0) {
       const lastSlot = deploySlots[deploySlots.length - 1];
       extraBtns.push({
-        label:   '마지막 배치 회수',
+        label:   '배치 회수',
         danger:  true,
         onClick: () => {
           this._removeLastFromSlot(lastSlot);
           this._squadOpenCharId = null;
+          this._forceCloseCharProfile();
         },
       });
     }

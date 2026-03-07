@@ -98,7 +98,7 @@ class Tab_Manage {
     const { scene }  = this;
     const chars      = CharacterManager.initIfEmpty();
     const { _cardW: cw, _cardH: ch, _cardGap: gap, _gridCols: cols } = this;
-    const totalSlots = Math.max(chars.length, cols * 2);
+    const totalSlots = chars.length;
 
     for (let i = 0; i < totalSlots; i++) {
       const col  = i % cols;
@@ -115,79 +115,116 @@ class Tab_Manage {
     const { scene } = this;
     const c = scene.add.container(x, y);
 
-    const JOB_COLOR  = { fisher: 0x1a3050, diver: 0x1a3020, ai: 0x2a1a3a };
+    const JOB_COLOR  = { fisher: 0x0e1e32, diver: 0x0e1e14, ai: 0x1a0e2a };
     const JOB_BORDER = { fisher: 0x3a6888, diver: 0x3a7050, ai: 0x6a4888 };
+    const JOB_BAND   = { fisher: 0x152a48, diver: 0x152a1c, ai: 0x24143a };
     const JOB_SHORT  = { fisher: 'FISH',   diver: 'DIVE',   ai: 'A·I'   };
 
-    const fill   = char ? (JOB_COLOR[char.job]  || 0x1a1810) : 0x0c0a07;
-    const border = char ? (JOB_BORDER[char.job] || 0x4a3010) : 0x1a1208;
-
-    const bg = scene.add.graphics();
-    const drawBg = (hover = false) => {
-      bg.clear();
-      bg.fillStyle(fill, 1);
-      bg.lineStyle(hover ? 2 : 1, hover ? 0xc8a060 : border, 0.9);
-      bg.strokeRect(0, 0, cw, ch);
-      bg.fillRect(0, 0, cw, ch);
-    };
-    drawBg();
-
-    if (char) {
-      const portH = ch * 0.52;
-      const portW = cw * 0.72;
-      const portX = (cw - portW) / 2;
-      const portY = ch * 0.05;
-
-      const port = scene.add.graphics();
-      port.fillStyle(0x080605, 0.85);
-      port.lineStyle(1, border, 0.5);
-      port.strokeRect(portX, portY, portW, portH);
-      port.fillRect(portX, portY, portW, portH);
-
-      const iconT = scene.add.text(portX + portW / 2, portY + portH / 2,
-        JOB_SHORT[char.job] || '???', {
-        fontSize: scaledFontSize(10, scene.scale), fill: '#3a5566', fontFamily: FontManager.MONO,
-      }).setOrigin(0.5);
-
-      const nameT = scene.add.text(cw / 2,
-        portY + portH + parseInt(scaledFontSize(4, scene.scale)), char.name, {
-        fontSize: scaledFontSize(9, scene.scale), fill: '#c8a060', fontFamily: FontManager.TITLE,
-      }).setOrigin(0.5, 0);
-
-      const jobT = scene.add.text(cw / 2,
-        portY + portH + parseInt(scaledFontSize(14, scene.scale)),
-        `${char.jobLabel}  Cog${char.cog}`, {
-        fontSize: scaledFontSize(7, scene.scale), fill: '#7a5830', fontFamily: FontManager.MONO,
-      }).setOrigin(0.5, 0);
-
-      const barY  = portY + portH - 5;
-      const hpPct = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
-      const hpCol = hpPct > 0.6 ? 0x306030 : hpPct > 0.3 ? 0x806020 : 0x803020;
-      const barBg = scene.add.graphics();
-      barBg.fillStyle(0x050404, 1);
-      barBg.fillRect(portX, barY, portW, 5);
-      const barFg = scene.add.graphics();
-      barFg.fillStyle(hpCol, 1);
-      barFg.fillRect(portX, barY, Math.round(portW * hpPct), 5);
-
-      const hit = scene.add.rectangle(cw / 2, ch / 2, cw, ch, 0, 0)
-        .setInteractive({ useHandCursor: true });
-      hit.on('pointerover', () => drawBg(true));
-      hit.on('pointerout',  () => drawBg(false));
-      hit.on('pointerup',   () => {
-        if (this._dragged) return;
-        if (this._openCharId === char.id) this._closePopup();
-        else this._openPopup(char);
-      });
-
-      c.add([bg, port, iconT, nameT, jobT, barBg, barFg, hit]);
-    } else {
-      const emptyG = scene.add.graphics();
-      emptyG.lineStyle(1, 0x1a1208, 0.4);
-      emptyG.strokeRect(0, 0, cw, ch);
-      c.add([bg, emptyG]);
+    if (!char) {
+      const emptyBg = scene.add.graphics();
+      emptyBg.fillStyle(0x0c0a07, 1);
+      emptyBg.lineStyle(1, 0x1a1208, 0.4);
+      emptyBg.strokeRect(0, 0, cw, ch);
+      emptyBg.fillRect(0, 0, cw, ch);
+      c.add(emptyBg);
+      return c;
     }
 
+    // ── 높이 구성 (탐사대 슬라이더 카드와 동일한 양식) ──────────
+    const pad    = 3;
+    const cogH   = parseInt(scaledFontSize(18, scene.scale));  // ① Cog 등급 띠
+    const nameH  = parseInt(scaledFontSize(16, scene.scale));  // ② 이름
+    const portW  = cw - pad * 2;
+    const portH  = ch - cogH - nameH - 4 - pad;               // ③ 초상화 (나머지)
+    const hpBarH = 4;                                          // ④ HP 바
+
+    // ── 카드 배경 ─────────────────────────────────────────────
+    const cbg = scene.add.graphics();
+    const drawCbg = (hover = false) => {
+      cbg.clear();
+      cbg.fillStyle(JOB_COLOR[char.job] || 0x181410, 1);
+      cbg.lineStyle(hover ? 2 : 1,
+        hover ? 0xc8a060 : (JOB_BORDER[char.job] || 0x3a2010), 0.95);
+      cbg.strokeRect(0, 0, cw, ch);
+      cbg.fillRect(0, 0, cw, ch);
+    };
+    drawCbg();
+
+    // ── ① Cog 등급 띠 ────────────────────────────────────────
+    const bandG = scene.add.graphics();
+    bandG.fillStyle(JOB_BAND[char.job] || 0x1a1410, 1);
+    bandG.fillRect(0, 0, cw, cogH);
+    bandG.lineStyle(1, JOB_BORDER[char.job] || 0x3a2010, 0.4);
+    bandG.lineBetween(0, cogH, cw, cogH);
+
+    const jobLbl = scene.add.text(pad + 2, cogH / 2,
+      JOB_SHORT[char.job] || '???', {
+      fontSize: scaledFontSize(6.5, scene.scale),
+      fill: `#${(JOB_BORDER[char.job] || 0x3a6888).toString(16).padStart(6, '0')}`,
+      fontFamily: FontManager.MONO,
+    }).setOrigin(0, 0.5);
+
+    const cogBadge = scene.add.text(cw / 2, cogH / 2, `Cog  ${char.cog}`, {
+      fontSize: scaledFontSize(11, scene.scale),
+      fill: '#c8a040', fontFamily: FontManager.MONO,
+    }).setOrigin(0.5, 0.5);
+
+    // ── ② 이름 ───────────────────────────────────────────────
+    const nameY = cogH;
+    const nameT = scene.add.text(cw / 2, nameY + nameH / 2, char.name, {
+      fontSize: scaledFontSize(10, scene.scale),
+      fill: '#d8b878', fontFamily: FontManager.TITLE,
+    }).setOrigin(0.5, 0.5);
+
+    // ── ③ 초상화 ─────────────────────────────────────────────
+    const portY  = cogH + nameH;
+    const portBg = scene.add.graphics();
+    portBg.fillStyle(0x060504, 1);
+    portBg.fillRect(pad, portY, portW, portH);
+
+    // 캐릭터 스프라이트 (없으면 직종 워터마크 폴백)
+    let watermark;
+    if (char.spriteKey && scene.textures.exists(char.spriteKey)) {
+      const img = scene.add.image(pad + portW / 2, portY + portH * 0.50, char.spriteKey)
+        .setOrigin(0.5);
+      // 비율 유지하며 portW x portH 안에 맞추기
+      const texW = img.width;
+      const texH = img.height;
+      const scale = Math.min(portW / texW, portH / texH);
+      img.setScale(scale);
+      watermark = img;
+    } else {
+      watermark = scene.add.text(pad + portW / 2, portY + portH * 0.50,
+        JOB_SHORT[char.job] || '???', {
+        fontSize: scaledFontSize(20, scene.scale),
+        fill: `#${(JOB_BAND[char.job] || 0x1a1410).toString(16).padStart(6, '0')}`,
+        fontFamily: FontManager.MONO,
+      }).setOrigin(0.5);
+    }
+
+    // ── ④ HP 바 ──────────────────────────────────────────────
+    const hpY   = portY + portH;
+    const hpPct = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
+    const hpCol = hpPct > 0.6 ? 0x2a6030 : hpPct > 0.3 ? 0x705820 : 0x702020;
+    const hpBg  = scene.add.graphics();
+    hpBg.fillStyle(0x050404, 1);
+    hpBg.fillRect(pad, hpY, portW, hpBarH);
+    const hpFg  = scene.add.graphics();
+    hpFg.fillStyle(hpCol, 1);
+    hpFg.fillRect(pad, hpY, Math.max(1, Math.round(portW * hpPct)), hpBarH);
+
+    // ── 히트 영역 ────────────────────────────────────────────
+    const hit = scene.add.rectangle(cw / 2, ch / 2, cw, ch, 0, 0)
+      .setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => drawCbg(true));
+    hit.on('pointerout',  () => drawCbg(false));
+    hit.on('pointerup',   () => {
+      if (this._dragged) return;
+      if (this._openCharId === char.id) this._closePopup();
+      else this._openPopup(char);
+    });
+
+    c.add([cbg, bandG, jobLbl, cogBadge, nameT, portBg, watermark, hpBg, hpFg, hit]);
     return c;
   }
 
