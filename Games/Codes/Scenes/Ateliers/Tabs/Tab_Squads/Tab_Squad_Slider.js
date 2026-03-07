@@ -100,8 +100,8 @@ Object.assign(Tab_Squad.prototype, {
 
     // ── 높이 구성 계산 ────────────────────────────────────────
     const pad      = 3;
-    const cogH     = parseInt(scaledFontSize(18, scene.scale));  // ① Cog 등급
-    const nameH    = parseInt(scaledFontSize(16, scene.scale));  // ② 이름
+    const cogH     = parseInt(scaledFontSize(24, scene.scale));  // ① Cog 등급 (18→24)
+    const nameH    = parseInt(scaledFontSize(22, scene.scale));  // ② 이름 (16→22)
     const portW    = cw - pad * 2;
     const portH    = Math.floor(cw * 0.68);                      // ③ 초상화
     const hpBarH   = 4;                                          // ④ HP 바
@@ -136,7 +136,7 @@ Object.assign(Tab_Squad.prototype, {
     // 직종 약자 (좌, 작게)
     const jobLbl = scene.add.text(pad + 2, cogH / 2,
       JOB_SHORT[char.job] || '???', {
-      fontSize: scaledFontSize(6.5, scene.scale),
+      fontSize: scaledFontSize(8, scene.scale),
       fill: `#${(JOB_BORDER[char.job] || 0x3a6888).toString(16).padStart(6,'0')}`,
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -144,7 +144,7 @@ Object.assign(Tab_Squad.prototype, {
     // Cog 등급 (중앙, 크고 밝게)
     const cogBadge = scene.add.text(cw / 2, cogH / 2,
       `Cog  ${char.cog}`, {
-      fontSize: scaledFontSize(11, scene.scale),
+      fontSize: scaledFontSize(14, scene.scale),
       fill: inSquad ? '#ffd060' : '#c8a040',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 0.5);
@@ -152,7 +152,7 @@ Object.assign(Tab_Squad.prototype, {
     // ── ② 이름 ────────────────────────────────────────────────
     const nameY = cogH;
     const nameT = scene.add.text(cw / 2, nameY + nameH / 2, char.name, {
-      fontSize: scaledFontSize(10, scene.scale),
+      fontSize: scaledFontSize(13, scene.scale),
       fill: inSquad ? '#ffe090' : '#d8b878',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5, 0.5);

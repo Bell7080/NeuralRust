@@ -69,7 +69,7 @@ const CharProfile = {
     // 캐릭터 스프라이트 (없으면 직종 텍스트 폴백)
     let portIcon;
     if (char.spriteKey && scene.textures.exists(char.spriteKey)) {
-      const img = scene.add.image(contentX + portW / 2, curY + portH / 2, char.spriteKey)
+      const img = scene.add.image(contentX + portW / 2, curY + portH * 0.38, char.spriteKey)
         .setOrigin(0.5);
       const scale = Math.min(portW / img.width, portH / img.height);
       img.setScale(scale);

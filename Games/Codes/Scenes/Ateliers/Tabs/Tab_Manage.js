@@ -76,17 +76,13 @@ class Tab_Manage {
     this._cardRow.setMask(maskGfx.createGeometryMask());
     this._container.add(this._cardRow);
 
-    const sepY = this._cardAreaY + this._cardAreaH + 6;
-    const sep  = scene.add.graphics();
-    sep.lineStyle(1, 0x2a1a08, 0.9);
-    sep.lineBetween(panelX + 10, sepY, panelX + panelW - 10, sepY);
-    this._container.add(sep);
-
-    this._infoText = scene.add.text(panelX + 16, sepY + 10,
+    // 안내 문구 — 패널 하단에 고정 배치 (공백 박스 없이 텍스트만)
+    const infoY = panelY + panelH - parseInt(scaledFontSize(18, scene.scale));
+    this._infoText = scene.add.text(panelX + 16, infoY,
       '캐릭터를 클릭하면 프로필을 볼 수 있습니다', {
       fontSize: scaledFontSize(10, scene.scale),
       fill: '#3a2510', fontFamily: FontManager.MONO,
-    }).setOrigin(0, 0);
+    }).setOrigin(0, 0.5);
     this._container.add(this._infoText);
 
     this._buildCards();
@@ -187,10 +183,7 @@ class Tab_Manage {
     if (char.spriteKey && scene.textures.exists(char.spriteKey)) {
       const img = scene.add.image(pad + portW / 2, portY + portH * 0.50, char.spriteKey)
         .setOrigin(0.5);
-      // 비율 유지하며 portW x portH 안에 맞추기
-      const texW = img.width;
-      const texH = img.height;
-      const scale = Math.min(portW / texW, portH / texH);
+      const scale = Math.min(portW / img.width, portH / img.height);
       img.setScale(scale);
       watermark = img;
     } else {
