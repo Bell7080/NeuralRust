@@ -40,8 +40,8 @@ class AtelierScene extends Phaser.Scene {
 
   // ── 웰컴 팝업 표시 ──────────────────────────────────────────
   _showWelcome() {
-    new Tab_Welcome(this, this.W, this.H, () => {
-      // 팝업이 닫힌 뒤 별도 처리가 필요하면 여기에 추가
+    this._welcomeObj = new Tab_Welcome(this, this.W, this.H, () => {
+      this._welcomeObj = null;
     });
   }
 
@@ -69,7 +69,7 @@ class AtelierScene extends Phaser.Scene {
   }
 
   _switchTab(key, instant = false) {
-    if (!instant && key === this._activeTab) return;
+    if (!instant && key === this._activeTab && !this._welcomeObj) return;
 
     const W = this.W;
     const H = this.H;
@@ -81,6 +81,10 @@ class AtelierScene extends Phaser.Scene {
     };
 
     const build = () => {
+      if (this._welcomeObj) {
+        this._welcomeObj.destroy();
+        this._welcomeObj = null;
+      }
       if (this._currentTabObj) {
         this._currentTabObj.destroy();
         this._currentTabObj = null;

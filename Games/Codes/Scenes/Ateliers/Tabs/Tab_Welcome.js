@@ -1,23 +1,14 @@
 // ================================================================
 //  Tab_Welcome.js
 //  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Welcome.js
-//
-//  역할: 게임 시작 / 복귀 시 공방 진입 환영 화면
-//        "환  영  합  니  다" 타이핑 효과 출력
-//        클릭 또는 타이핑 완료 후 onDone 콜백 호출
-//
-//  사용:
-//    const welcome = new Tab_Welcome(scene, W, H, () => {
-//      // 닫힌 후 처리 (탭 전환 등)
-//    });
 // ================================================================
 
 class Tab_Welcome {
-  constructor(scene, W, H, onDone) {
+  constructor(scene, W, H, onClose) {
     this.scene   = scene;
     this.W       = W;
     this.H       = H;
-    this._onDone = onDone || (() => {});
+    this.onClose = onClose;
     this._timers = [];
     this._tweens = [];
     this._container = scene.add.container(0, 0).setDepth(200);
@@ -26,77 +17,73 @@ class Tab_Welcome {
 
   _build() {
     const { scene, W, H } = this;
-    const fs = n => scaledFontSize(n, scene.scale);
 
-    // ── 배경 오버레이 ─────────────────────────────────────────
-    const overlay = scene.add.rectangle(0, 0, W, H, 0x000000, 0.72)
-      .setOrigin(0).setInteractive();
-    overlay.on('pointerup', () => this._close());
-    this._container.add(overlay);
+    // ── Tab_Explore와 동일한 패널 기준 ───────────────────────────
+    const cx     = W / 2;
+    const cy     = H * 0.52;
+    const panelW = W * 0.60;
+    const panelH = H * 0.55;
 
-    // ── 패널 ─────────────────────────────────────────────────
-    const pw = W * 0.50;
-    const ph = H * 0.36;
-    const px = (W - pw) / 2;
-    const py = (H - ph) / 2;
+    // ── 패널 배경 ───────────────────────────────────────────────
+    const panel = scene.add.graphics();
+    panel.fillStyle(0x120d07, 1);
+    panel.lineStyle(2, 0x7a4018, 0.85);
+    panel.strokeRect(cx - panelW / 2, cy - panelH / 2, panelW, panelH);
+    panel.fillRect  (cx - panelW / 2, cy - panelH / 2, panelW, panelH);
 
-    const panelBg = scene.add.graphics();
-    panelBg.fillStyle(0x080604, 0.99);
-    panelBg.lineStyle(1, 0x3a2010, 0.9);
-    panelBg.strokeRect(px, py, pw, ph);
-    panelBg.fillRect(px, py, pw, ph);
+    // ── 코너 장식 ───────────────────────────────────────────────
+    const deco = scene.add.graphics();
+    deco.lineStyle(1, 0x7a4018, 0.7);
+    const cs  = 14;
+    const px  = cx - panelW / 2 + 8;
+    const py  = cy - panelH / 2 + 8;
+    const px2 = cx + panelW / 2 - 8;
+    const py2 = cy + panelH / 2 - 8;
+    deco.lineBetween(px,  py,  px  + cs, py);
+    deco.lineBetween(px,  py,  px,  py  + cs);
+    deco.lineBetween(px2, py,  px2 - cs, py);
+    deco.lineBetween(px2, py,  px2, py  + cs);
+    deco.lineBetween(px,  py2, px  + cs, py2);
+    deco.lineBetween(px,  py2, px,  py2 - cs);
+    deco.lineBetween(px2, py2, px2 - cs, py2);
+    deco.lineBetween(px2, py2, px2, py2 - cs);
 
-    // 코너 장식
-    panelBg.lineStyle(1, 0x6a3a18, 0.6);
-    const cs = 12;
-    [[px+5, py+5, 1, 1], [px+pw-5, py+5, -1, 1],
-     [px+5, py+ph-5, 1, -1], [px+pw-5, py+ph-5, -1, -1]]
-      .forEach(([ox, oy, sx, sy]) => {
-        panelBg.lineBetween(ox, oy, ox + cs*sx, oy);
-        panelBg.lineBetween(ox, oy, ox, oy + cs*sy);
-      });
-    this._container.add(panelBg);
+    // ── 상단 라벨 ───────────────────────────────────────────────
+    const labelY = cy - panelH / 2 + parseInt(scaledFontSize(26, scene.scale));
+    scene.add.text(cx, labelY, '[ 환  영 ]', {
+      fontSize:      scaledFontSize(13, scene.scale),
+      fill:          '#7a5028',
+      fontFamily:    FontManager.MONO,
+      letterSpacing: 3,
+    }).setOrigin(0.5, 0.5);
 
-    // ── 텍스트 ───────────────────────────────────────────────
-    const cx = px + pw / 2;
+    // ── 구분선 ──────────────────────────────────────────────────
+    const lineY = cy - panelH / 2 + parseInt(scaledFontSize(44, scene.scale));
+    const lineG = scene.add.graphics();
+    lineG.lineStyle(1, 0x4a2a10, 0.9);
+    lineG.lineBetween(cx - panelW / 2 + 20, lineY, cx + panelW / 2 - 20, lineY);
 
-    const txt1 = scene.add.text(cx, py + ph * 0.30, '', {
-      fontSize: fs(22), fill: '#d4a060',
-      fontFamily: FontManager.TITLE, letterSpacing: 6,
+    // ── 환영 텍스트 (타이핑 등장) ──────────────────────────────
+    // 랜덤 표정 선택
+    const faces  = [':)', ':3', ':0'];
+    const face   = faces[Math.floor(Math.random() * faces.length)];
+    const fullTxt = `환영합니다 ${face}`;
+
+    const txt = scene.add.text(cx, cy - panelH * 0.06, '', {
+      fontSize:   scaledFontSize(32, scene.scale),
+      fill:       '#e8c080',
+      fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setAlpha(0);
-    this._container.add(txt1);
 
-    const txt2 = scene.add.text(cx, py + ph * 0.52, '', {
-      fontSize: fs(13), fill: '#5a3818',
-      fontFamily: FontManager.MONO, letterSpacing: 4,
-    }).setOrigin(0.5).setAlpha(0);
-    this._container.add(txt2);
+    // ── container에 추가 ────────────────────────────────────────
+    this._container.add([
+      panel, deco, lineG,
+      txt,
+    ]);
 
-    // 하단 힌트
-    const hint = scene.add.text(cx, py + ph * 0.82, '─  클릭하여 계속  ─', {
-      fontSize: fs(9), fill: '#2a1808', fontFamily: FontManager.MONO,
-    }).setOrigin(0.5).setAlpha(0);
-    this._container.add(hint);
-
-    // ── 타이핑 시퀀스 ─────────────────────────────────────────
-    this._delay(100, () => {
-      this._typeText(txt1, '환  영  합  니  다', 60, () => {
-        this._delay(280, () => {
-          this._typeText(txt2, ': )', 90, () => {
-            this._delay(200, () => {
-              this._tween({ targets: hint, alpha: 0.5, duration: 700 });
-              this._delay(900, () => {
-                this._tween({
-                  targets: hint,
-                  alpha: { from: 0.5, to: 0.15 },
-                  duration: 1100, yoyo: true, repeat: -1,
-                  ease: 'Sine.easeInOut',
-                });
-              });
-            });
-          });
-        });
-      });
+    // ── 타이핑 시퀀스 ──────────────────────────────────────────
+    this._delay(80, () => {
+      this._typeText(txt, fullTxt, 52);
     });
   }
 
@@ -127,22 +114,11 @@ class Tab_Welcome {
     return t;
   }
 
-  _close() {
-    this._tween({
-      targets: this._container, alpha: 0, duration: 300,
-      onComplete: () => {
-        this.destroy();
-        this._onDone();
-      },
-    });
-  }
-
-  show()    { this._container.setVisible(true); }
-  hide()    { this._container.setVisible(false); }
-
   destroy() {
     this._timers.forEach(t => { if (t && t.remove) t.remove(); });
-    this._tweens.forEach(t => { if (t && t.stop) t.stop(); });
-    if (this._container) { this._container.destroy(); this._container = null; }
+    this._tweens.forEach(t => { if (t && t.stop)   t.stop();   });
+    this._timers = [];
+    this._tweens = [];
+    if (this._container) this._container.destroy();
   }
 }

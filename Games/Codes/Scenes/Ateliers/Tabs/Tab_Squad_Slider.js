@@ -105,20 +105,15 @@ Object.assign(Tab_Squad.prototype, {
       fontSize: scaledFontSize(9, scene.scale), fill: '#2a3a44', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
 
-    // 배치된 경우: 초상화 위 어두운 레이어 + 미니맵
-    // graphics는 컨테이너(c) 로컬 좌표로 그려야 함
     let overlayG = null;
     let miniMapObjs = [];
     if (inSquad) {
       overlayG = scene.add.graphics();
       overlayG.fillStyle(0x000000, 0.52);
       overlayG.fillRect(portX, portY, portW, portH);
-      // 로컬 좌표 기준 미니맵 (컨테이너 안에 add되므로 portX/Y 기준)
       miniMapObjs = this._buildMiniMap(scene, portX + portW / 2, portY + portH / 2, deploySlots, portW * 0.72);
     }
 
-    // ── 미니 HP바 ───────────────────────────────────────────────
-    // portH 아래 2px 간격, 높이 4px
     const hpBarY  = portY + portH + 2;
     const hpBarH  = 4;
     const hpPct   = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
@@ -131,7 +126,6 @@ Object.assign(Tab_Squad.prototype, {
     hpFg.fillStyle(hpCol, 1);
     hpFg.fillRect(portX, hpBarY, Math.max(1, Math.round(portW * hpPct)), hpBarH);
 
-    // ── 텍스트 영역 (HP바 아래부터) ──────────────────────────────
     const textStartY = hpBarY + hpBarH + parseInt(scaledFontSize(3, scene.scale));
 
     const nameT = scene.add.text(cw / 2, textStartY, char.name, {
@@ -143,7 +137,6 @@ Object.assign(Tab_Squad.prototype, {
       { fontSize: scaledFontSize(7, scene.scale), fill: '#7a5030', fontFamily: FontManager.MONO }
     ).setOrigin(0.5, 0);
 
-    // 배치 중 표시
     let deployLbl = null;
     if (inSquad) {
       const deployY = cogY + parseInt(scaledFontSize(10, scene.scale));
@@ -158,15 +151,23 @@ Object.assign(Tab_Squad.prototype, {
     if (deployLbl)  items.push(deployLbl);
     c.add(items);
 
-    // ── 히트 영역 (클릭 = 프로필, 드래그 감지) ──────────────────
+    // ── 히트 영역 ───────────────────────────────────────────────
     const hit = scene.add.rectangle(cw / 2, ch / 2, cw, ch, 0, 0)
       .setInteractive({ useHandCursor: true, draggable: true });
 
     let _pointerDownX = 0, _pointerDownY = 0;
     let _isDragging = false;
 
-    hit.on('pointerover', () => { if (!this._sliderDragged && !_isDragging) drawCbg(true); });
-    hit.on('pointerout',  () => { if (!_isDragging) drawCbg(false); });
+    // _isDraggingAny: 어떤 카드라도 드래그 시작하면 true
+    // _dragGhost 보다 먼저 세팅되므로 ghost null 타이밍 문제 해소
+    hit.on('pointerover', () => {
+      if (this._isDraggingAny) return;
+      if (!this._sliderDragged && !_isDragging) drawCbg(true);
+    });
+    hit.on('pointerout',  () => {
+      if (this._isDraggingAny) return;
+      if (!_isDragging) drawCbg(false);
+    });
 
     hit.on('pointerdown', (ptr) => {
       _pointerDownX = ptr.x;
@@ -180,6 +181,7 @@ Object.assign(Tab_Squad.prototype, {
       const dy = Math.abs(ptr.y - _pointerDownY);
       if (!_isDragging && (dx > 6 || dy > 6)) {
         _isDragging = true;
+        this._isDraggingAny = true;   // ← ghost 생성 전에 먼저 플래그
         this._startDrag(char, ptr);
       }
       if (_isDragging) {
@@ -189,10 +191,8 @@ Object.assign(Tab_Squad.prototype, {
 
     hit.on('pointerup', (ptr) => {
       if (_isDragging) {
-        // 드래그 종료는 전역 _sliderOnUp에서 처리
         _isDragging = false;
       } else {
-        // 클릭 = 프로필 팝업
         if (!this._sliderDragged) {
           this._openSquadPopup(char);
         }
@@ -215,21 +215,17 @@ Object.assign(Tab_Squad.prototype, {
     return slots;
   },
 
-  // ── 미니맵 빌드 (3×3 + 잠수정칸) ────────────────────────────
-  // 배치된 슬롯을 □/■ 기호로 표시하는 10칸짜리 미니맵
+  // ── 미니맵 빌드 ──────────────────────────────────────────────
   _buildMiniMap(scene, cx, cy, deploySlots, maxW) {
     const objs = [];
-    // 셀 크기 계산
     const cellSz = Math.max(5, Math.floor(maxW / 4.2));
     const gap    = 1;
-    // 3x3 그리드 + 잠수정(왼쪽 돌출)
-    // 배치: subCell(0칸) [col-1] + 3x3(idx1~9)
     const gridW  = cellSz * 3 + gap * 2;
     const gridH  = cellSz * 3 + gap * 2;
     const subW   = cellSz;
     const totalW = subW + gap + gridW;
     const startX = cx - totalW / 2;
-    const startY = cy - gridH / 2; // 3행 세로 정중앙
+    const startY = cy - gridH / 2;
 
     const draw = (lx, ly, filled, isBlue = false) => {
       const g = scene.add.graphics();
@@ -245,12 +241,10 @@ Object.assign(Tab_Squad.prototype, {
       objs.push(g);
     };
 
-    // 잠수정 칸 (idx=9) — 왼쪽 중간 행
     const subX = startX;
-    const subY = startY + cellSz + gap; // 3행 중 중간(1번째 인덱스) 행
+    const subY = startY + cellSz + gap;
     draw(subX, subY, deploySlots.includes(9), true);
 
-    // 3x3 (idx 0~8)
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
         const idx = row * 3 + col;
@@ -295,8 +289,6 @@ Object.assign(Tab_Squad.prototype, {
     }).setOrigin(0.5, 0);
 
     g.add([bg, icon, nm, cog]);
-
-    // 반투명 효과
     scene.tweens.add({ targets: g, alpha: 0.88, duration: 80 });
 
     this._dragGhost  = g;
@@ -304,18 +296,15 @@ Object.assign(Tab_Squad.prototype, {
     this._dragCharId = char.id;
     this._dragTargetIdx = null;
 
-    // 격자 셀 발광 초기화
     this._clearCellGlow();
   },
 
   _moveDrag(ptr) {
     if (!this._dragGhost) return;
-    const { scene } = this;
     const cw = this._dragGhost.list[0]?.width || 64;
     const ch = this._dragGhost.list[0]?.height || 68;
     this._dragGhost.setPosition(ptr.x - cw / 2, ptr.y - ch * 0.3);
 
-    // 격자 히트 테스트
     const hitIdx = this._hitTestGrid(ptr.x, ptr.y);
     if (hitIdx !== this._dragTargetIdx) {
       this._dragTargetIdx = hitIdx;
@@ -330,7 +319,6 @@ Object.assign(Tab_Squad.prototype, {
     const hitIdx = this._hitTestGrid(ptr.x, ptr.y);
     if (hitIdx === null) return;
 
-    // 배치 가능 여부 검사
     const slot = this._squad[hitIdx] || [];
     if (slot.length >= 3) {
       this._showToast('해당 칸은 이미 가득 찼습니다 (최대 3명)');
@@ -353,6 +341,7 @@ Object.assign(Tab_Squad.prototype, {
       this._dragGhost.destroy();
       this._dragGhost = null;
     }
+    this._isDraggingAny = false;
     this._dragChar   = null;
     this._dragCharId = null;
     this._dragTargetIdx = null;
@@ -362,12 +351,10 @@ Object.assign(Tab_Squad.prototype, {
   _hitTestGrid(px, py) {
     if (!this._gridCells) return null;
     const cs = this._cellSize;
-    // 잠수정 칸(idx=9)
     const subHalf = this._subSize / 2;
     if (Math.abs(px - this._subCx) < subHalf && Math.abs(py - this._subCy) < subHalf) {
       return 9;
     }
-    // 3×3
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
         const cellCx = this._gridX + col * cs + cs / 2;
@@ -386,7 +373,6 @@ Object.assign(Tab_Squad.prototype, {
     if (idx === null) return;
     const { scene } = this;
 
-    // 발광 그래픽 (기존 컨테이너 위 별도 레이어)
     const glowG = scene.add.graphics().setDepth(500);
     this._glowGraphics = glowG;
 
@@ -402,7 +388,6 @@ Object.assign(Tab_Squad.prototype, {
       sz = cs * 0.90;
     }
 
-    // 발광: 바깥 → 안으로 겹겹이
     const layers = [
       { pad: 6, alpha: 0.10, col: 0xffd060 },
       { pad: 3, alpha: 0.22, col: 0xffd060 },
@@ -414,12 +399,9 @@ Object.assign(Tab_Squad.prototype, {
     });
     glowG.lineStyle(2, 0xffd060, 1);
     glowG.strokeRect(cx - sz / 2, cy - sz / 2, sz, sz);
-
-    // 내부 채움
     glowG.fillStyle(0xffd060, 0.08);
     glowG.fillRect(cx - sz / 2, cy - sz / 2, sz, sz);
 
-    // 점멸 트윈
     scene.tweens.add({
       targets: glowG, alpha: { from: 1, to: 0.55 },
       duration: 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
@@ -430,9 +412,6 @@ Object.assign(Tab_Squad.prototype, {
     if (this._glowGraphics) {
       this._glowGraphics.destroy();
       this._glowGraphics = null;
-      if (this.scene && this.scene.tweens) {
-        // 트윈은 타깃 소멸 시 자동 정리됨
-      }
     }
   },
 
@@ -450,7 +429,6 @@ Object.assign(Tab_Squad.prototype, {
       startX = ptr.x; startOff = this._sliderOffset; this._sliderDragged = false;
     };
     this._sliderOnMove  = (ptr) => {
-      // 드래그 고스트 이동은 항상 처리 (영역 밖이어도)
       if (this._dragGhost) {
         this._moveDrag(ptr);
         return;
@@ -503,7 +481,7 @@ Object.assign(Tab_Squad.prototype, {
     scene.input.on('wheel',       this._sliderOnWheel);
   },
 
-  // ── 프로필 팝업 (관리탭 스타일) ──────────────────────────────
+  // ── 프로필 팝업 ───────────────────────────────────────────────
   _openSquadPopup(char) {
     this._closeSquadPopup();
     this._squadOpenCharId = char.id;
@@ -542,7 +520,6 @@ Object.assign(Tab_Squad.prototype, {
     let   curY     = py + pad;
     const fs       = n => scaledFontSize(n, scene.scale);
 
-    // ── 초상화 ──────────────────────────────────────────────────
     const portW   = contentW;
     const portH   = parseInt(fs(90));
     const portBox = scene.add.graphics();
@@ -558,10 +535,6 @@ Object.assign(Tab_Squad.prototype, {
     }).setOrigin(0.5);
     g.add([portBox, portIcon]);
 
-    // 초상화 영역은 나중에 사진/캐릭터로 채울 예정 (미니맵 미표시)
-    const deploySlots = this._getDeploySlots(char.id);
-
-    // HP 바
     const hpBarH2  = 14;
     const hpBarY2  = curY + portH - hpBarH2;
     const hpPct2   = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
@@ -579,25 +552,21 @@ Object.assign(Tab_Squad.prototype, {
     g.add([hpBg2, hpFg2, hpTxt2]);
     curY += portH + parseInt(fs(8));
 
-    // ── 이름 ────────────────────────────────────────────────────
     g.add(scene.add.text(contentX, curY, char.name, {
       fontSize: fs(15), fill: '#e8c070', fontFamily: FontManager.TITLE,
     }).setOrigin(0, 0));
     curY += parseInt(fs(18));
 
-    // ── 나이 ────────────────────────────────────────────────────
     g.add(scene.add.text(contentX, curY, `나이  ${char.age}세`, {
       fontSize: fs(9), fill: '#5a4020', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0));
     curY += parseInt(fs(13));
 
-    // ── 직업 ────────────────────────────────────────────────────
     g.add(scene.add.text(contentX, curY, `직업  :  ${char.jobLabel}`, {
       fontSize: fs(10), fill: '#c8802a', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0));
     curY += parseInt(fs(16));
 
-    // ── Cog ─────────────────────────────────────────────────────
     const cogBg2 = scene.add.graphics();
     cogBg2.fillStyle(0x0e0b07, 1);
     cogBg2.lineStyle(1, 0x4a2a10, 0.8);
@@ -617,7 +586,6 @@ Object.assign(Tab_Squad.prototype, {
     };
     makeSep2(curY); curY += parseInt(fs(6));
 
-    // ── 스탯 ────────────────────────────────────────────────────
     g.add(scene.add.text(contentX, curY, '[ 스  탯 ]', {
       fontSize: fs(10), fill: '#5a3818', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0));
@@ -649,7 +617,6 @@ Object.assign(Tab_Squad.prototype, {
     curY += parseInt(fs(8));
     makeSep2(curY); curY += parseInt(fs(6));
 
-    // ── 패시브 / 스킬 ───────────────────────────────────────────
     const PASSIVE_DESC = {
       '윗칸 타격':'자신의 바로 위 칸에 있는 적을 공격합니다.',
       '앞칸 타격':'자신의 바로 앞 칸에 있는 적을 공격합니다.',
@@ -707,7 +674,6 @@ Object.assign(Tab_Squad.prototype, {
     curY = makeBox2('PASSIVE', char.passive, PASSIVE_DESC[char.passive] || '', curY);
     curY = makeBox2('SKILL',   char.skill,   SKILL_DESC[char.skill]     || '', curY);
 
-    // ── 닫기 버튼 ────────────────────────────────────────────────
     const btnH3    = parseInt(fs(26));
     const btnY3    = py + ph - btnH3 - parseInt(fs(10));
     const closeBg3  = scene.add.graphics();
