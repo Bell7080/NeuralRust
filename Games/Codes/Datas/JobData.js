@@ -13,11 +13,10 @@ const JOB_DATA = {
     id:          'fisher',
     label:       '낚시꾼',
     short:       'FISH',
-    description: '수면 탐색 특화. 자원 수집 효율 +20%, 어획물 판별 능력 보유.',
+    description: '이형에게 입히는 피해 +2. 이형에게 받는 피해 -1.',
     // 추후 구현 — 직업 특성 효과
     traits: [
-      // { id: 'surface_scan', name: '수면 탐색', description: '수면 자원 수집 효율 +20%.', effect: null },
-      // { id: 'catch_identify', name: '어획물 판별', description: '어획물 종류를 즉시 식별한다.', effect: null },
+      // 전투 단계에서 데미지 최후 계산 시 체력에 반영하기 이전 이 수치를 합연산함.
     ],
   },
 
@@ -25,10 +24,9 @@ const JOB_DATA = {
     id:          'diver',
     label:       '잠수부',
     short:       'DIVE',
-    description: '심해 탐색 특화. 수압 저항, 수중 작업 시간 +30%.',
+    description: '이형 처시 시 50% 확률로 아이템 발견. 이형에게 받는 피해 +2.',
     traits: [
-      // { id: 'pressure_resist', name: '수압 저항', description: '심해 환경에서 패널티를 받지 않는다.', effect: null },
-      // { id: 'deep_work', name: '수중 작업', description: '수중 작업 시간 +30%.', effect: null },
+      // 전투 단계에서 이형을 처치 시 캐릭터가 배치되어 살아있다면 아이템 수집, 아이템 개수나 종류는 추후 구체화.
     ],
   },
 
@@ -36,10 +34,9 @@ const JOB_DATA = {
     id:          'ai',
     label:       'A.I',
     short:       'A·I',
-    description: '기계 지성체. 연산 속도 탁월, 감정 연산 미탑재.',
+    description: '이형 처치시 50% 확률로 아크 발견. 이형에게 받는 피해 +2.',
     traits: [
-      // { id: 'compute_speed', name: '고속 연산', description: '행동 계산 속도가 크게 증가한다.', effect: null },
-      // { id: 'no_emotion', name: '감정 없음', description: '공포/혼란 상태이상 면역.', effect: null },
+      // 전투 단계에서 이형을 처치 시 캐릭터가 배치되어 살아있다면 Arc(화폐)를 수집, 수치는 추후 구체화.
     ],
   },
 
