@@ -3,37 +3,38 @@
 //  경로: Games/Codes/Managers/DialogueManager.js
 //
 //  역할: 대화 이벤트 진행 — xlsx 변환 데이터(DialogueData.js) 기반
-//  의존: SaveManager, DialogueData.js
+//  의존: SaveManager, StoryManager, DialogueData.js
+//
+//  로드 순서 (index.html):
+//    DialogueData.js → SaveManager.js → StoryManager.js → DialogueManager.js
 //
 //  사용법:
-//    DialogueManager.play(scene, 'Day_1_1', callbacks);
-//
-//  callbacks: {
-//    onLine(line)       — 대사 한 줄 표시할 때 호출
-//    onChoice(choices)  — 선택지 표시할 때 호출  →  선택 후 choose(index) 호출
-//    onFx(fx)           — FX 연출 실행할 때 호출
-//    onBgm(file)        — BGM 변경 시 호출
-//    onEnd()            — 이벤트 종료 시 호출
-//  }
+//    DialogueManager.play(scene, 'Day_1_1', {
+//      onLine(line)       — { id, char(표시명), expr, text }
+//      onChoice(choices)  — [{ text, char }]  →  선택 후 choose(index) 호출
+//      onFx(fxStr, char)  — FX 예약어 문자열 (parseFx로 파싱)
+//      onBgm(file)        — BGM 파일명
+//      onEnd()            — 이벤트 종료
+//    });
+//    DialogueManager.next();      // 클릭 / 키 입력 시
+//    DialogueManager.choose(i);   // 선택지 선택 시
 // ================================================================
 
 const DialogueManager = {
 
   // ── 내부 상태 ──────────────────────────────────────────────────
-  _scene:       null,
-  _eventId:     '',
-  _lines:       [],
-  _lineMap:     {},
-  _cursor:      0,
-  _callbacks:   null,
-  _playing:     false,
-  _choiceMode:  false,
+  _scene:        null,
+  _eventId:      '',
+  _lines:        [],
+  _lineMap:      {},
+  _cursor:       0,
+  _callbacks:    null,
+  _playing:      false,
+  _choiceMode:   false,
+  _pendingChoices: [],   // choose() 에서 쓸 캐시 — _playLine()에서 저장
 
   // ================================================================
   // play — 이벤트 시작
-  //   scene    : Phaser.Scene (현재 씬)
-  //   eventId  : 시트명과 동일한 이벤트 ID (예: 'Day_1_1')
-  //   callbacks: { onLine, onChoice, onFx, onBgm, onEnd }
   // ================================================================
   play(scene, eventId, callbacks) {
     const data = DIALOGUE_DATA[eventId];
@@ -43,17 +44,17 @@ const DialogueManager = {
       return;
     }
 
-    // flag_check — 이미 본 이벤트 막기 (once 처리는 StoryManager 위임)
-    this._scene     = scene;
-    this._eventId   = eventId;
-    this._lines     = data.lines;
-    this._lineMap   = data.lineMap;
-    this._cursor    = 0;
-    this._callbacks = callbacks;
-    this._playing   = true;
-    this._choiceMode = false;
+    this._scene          = scene;
+    this._eventId        = eventId;
+    this._lines          = data.lines;
+    this._lineMap        = data.lineMap;
+    this._cursor         = 0;
+    this._callbacks      = callbacks;
+    this._playing        = true;
+    this._choiceMode     = false;
+    this._pendingChoices = [];
 
-    // BGM 처리
+    // BGM — BGM_DATA에 이 이벤트 항목 있을 때만
     const bgmFile = BGM_DATA[eventId];
     if (bgmFile) callbacks?.onBgm?.(bgmFile);
 
@@ -62,7 +63,7 @@ const DialogueManager = {
   },
 
   // ================================================================
-  // next — 외부에서 호출 (터치/클릭/키 입력 시)
+  // next — 클릭 / 키 입력 시 외부에서 호출
   // ================================================================
   next() {
     if (!this._playing || this._choiceMode) return;
@@ -72,21 +73,31 @@ const DialogueManager = {
 
   // ================================================================
   // choose — 선택지 선택 후 외부에서 호출
-  //   index: onChoice 에서 받은 choices 배열의 인덱스
+  //   index : onChoice 콜백에서 받은 배열의 인덱스
   // ================================================================
   choose(index) {
     if (!this._choiceMode) return;
-    this._choiceMode = false;
 
-    const choices = this._getChoiceBlock();
-    const selected = choices[index];
-    if (!selected) return;
+    const selected = this._pendingChoices[index];
+    if (!selected) {
+      console.warn(`[DialogueManager] 선택지 인덱스 없음: ${index}`);
+      return;
+    }
 
-    this._processLine(selected);
+    this._choiceMode     = false;
+    this._pendingChoices = [];
+
+    // 선택된 줄의 goto 처리
+    // goto 있으면 점프, 없으면 선택지 블록 바로 다음 줄로
+    if (selected.goto) {
+      this._processGoto(selected.goto);
+    } else {
+      this._playLine();   // _cursor 는 이미 블록 다음을 가리킴
+    }
   },
 
   // ================================================================
-  // isPlaying — 현재 대화 진행 중 여부
+  // isPlaying
   // ================================================================
   isPlaying() {
     return this._playing;
@@ -103,21 +114,16 @@ const DialogueManager = {
 
     const line = this._lines[this._cursor];
 
-    // flag_check — 조건 미충족 시 줄 스킵
+    // flag_check — 미충족 시 이 줄 스킵
     if (line.flag_check && !SaveManager.getFlag(line.flag_check)) {
       this._cursor++;
       this._playLine();
       return;
     }
 
-    // 선택지 블록 시작 여부 확인
+    // 선택지 블록 진입
     if (line.choice) {
-      const choices = this._getChoiceBlock();
-      this._choiceMode = true;
-      this._callbacks?.onChoice?.(choices.map(c => ({
-        text:  c.text,
-        char:  this._resolveName(c.char),
-      })));
+      this._collectChoices();
       return;
     }
 
@@ -125,110 +131,135 @@ const DialogueManager = {
   },
 
   // ================================================================
-  // _processLine — 실제 줄 처리 (flag, sfx, fx, 이동)
+  // _collectChoices — 연속 choice 줄 수집 후 onChoice 콜백
+  // ================================================================
+  _collectChoices() {
+    const choices = [];
+    let i = this._cursor;
+
+    while (i < this._lines.length) {
+      const l = this._lines[i];
+      // flag_check 미충족 선택지는 표시 안 함
+      if (!l.choice) break;
+      if (!l.flag_check || SaveManager.getFlag(l.flag_check)) {
+        choices.push(l);
+      }
+      i++;
+    }
+
+    // 커서를 블록 다음 줄로 — choose()에서 goto 없을 때 여기서 재개
+    this._cursor = i;
+
+    if (choices.length === 0) {
+      // 모든 선택지가 flag_check 에 막힌 경우 — 그냥 계속 진행
+      this._playLine();
+      return;
+    }
+
+    this._pendingChoices = choices;
+    this._choiceMode     = true;
+
+    this._callbacks?.onChoice?.(choices.map(c => ({
+      text: c.text,
+      char: this._resolveName(c.char),
+    })));
+  },
+
+  // ================================================================
+  // _processLine — flag_set / sfx / fx / onLine / goto 처리
   // ================================================================
   _processLine(line) {
-    // flag_set
+    // flag_set — SaveManager.setFlag 직접 사용
     if (line.flag_set) {
       SaveManager.setFlag(line.flag_set, true);
     }
 
-    // SFX
+    // SFX — scene.sound.play (Phaser3)
     if (line.sfx) {
       this._resolveSfx(line.sfx).forEach(file => {
         this._scene?.sound?.play?.(file);
       });
     }
 
-    // FX — onFx 콜백으로 위임 (DialogueScene에서 구현)
+    // FX — DialogueScene에서 처리하도록 콜백 위임
     if (line.fx) {
       this._callbacks?.onFx?.(line.fx, line.char);
     }
 
     // onLine 콜백
     this._callbacks?.onLine?.({
-      id:    line.id,
-      char:  this._resolveName(line.char),
-      expr:  line.expr   || '',    // 공백 = 이전 표정 유지
-      text:  line.text   || '',
+      id:   line.id,
+      char: this._resolveName(line.char),
+      expr: line.expr ?? '',   // 공백 = 이전 표정 유지
+      text: line.text ?? '',
     });
 
-    // goto 처리
+    // goto — 있으면 즉시 처리, 없으면 next() 대기
     if (line.goto) {
       this._processGoto(line.goto);
     }
-    // goto 없으면 커서는 next() 호출 대기
   },
 
   // ================================================================
-  // _processGoto — goto 값 처리
+  // _processGoto
+  //   'END'       → 다음 next() 때 종료
+  //   line_id     → 같은 시트 내 점프
+  //   이벤트 ID   → 다른 시트로 연결 (콜백 유지)
   // ================================================================
-  _processGoto(goto) {
-    if (goto === 'END') {
-      // next() 때 자동 종료되도록 커서를 끝으로
-      this._cursor = this._lines.length;
+  _processGoto(gotoVal) {
+    if (gotoVal === 'END') {
+      this._cursor = this._lines.length;   // next() 때 _end() 호출
       return;
     }
 
-    // 같은 시트 내 line_id 점프
-    if (this._lineMap[goto] !== undefined) {
-      this._cursor = this._lineMap[goto];
+    // 같은 시트 line_id 점프
+    if (this._lineMap[gotoVal] !== undefined) {
+      this._cursor = this._lineMap[gotoVal];
+      // goto는 즉시 진행 (클릭 대기 없음)
+      this._playLine();
       return;
     }
 
-    // 다른 시트(이벤트) 연결
-    if (DIALOGUE_DATA[goto]) {
-      const nextCallbacks = this._callbacks;
-      this._end(false);   // onEnd 없이 종료
-      this.play(this._scene, goto, nextCallbacks);
+    // 다른 이벤트 시트 연결
+    if (DIALOGUE_DATA[gotoVal]) {
+      const savedCallbacks = this._callbacks;
+      const savedScene     = this._scene;
+      this._end(false);   // onEnd 호출 없이 내부 상태만 초기화
+      this.play(savedScene, gotoVal, savedCallbacks);
       return;
     }
 
-    console.warn(`[DialogueManager] goto 대상 없음: ${goto}`);
+    console.warn(`[DialogueManager] goto 대상 없음: '${gotoVal}'`);
   },
 
   // ================================================================
-  // _getChoiceBlock — 현재 커서 위치의 연속 선택지 줄 수집
-  // ================================================================
-  _getChoiceBlock() {
-    const choices = [];
-    let i = this._cursor;
-    while (i < this._lines.length && this._lines[i].choice) {
-      choices.push(this._lines[i]);
-      i++;
-    }
-    // 선택지 블록 이후로 커서 이동 (선택 후 choose에서 goto 처리)
-    this._cursor = i;
-    return choices;
-  },
-
-  // ================================================================
-  // _resolveName — 단축어 → 표시명
+  // _resolveName — 단축어 → CAST_DATA 표시명
   // ================================================================
   _resolveName(alias) {
     if (!alias) return '';
-    return CAST_DATA[alias] || alias;
+    return CAST_DATA[alias] ?? alias;
   },
 
   // ================================================================
-  // _resolveSfx — 별칭(복합 가능) → 파일명 배열
-  //   'Happy|Door' → ['sfx_happy_001', 'sfx_door_open']
+  // _resolveSfx — 'Happy|Door' → ['sfx_happy_001', 'sfx_door_open']
   // ================================================================
   _resolveSfx(sfxStr) {
     return sfxStr.split('|')
       .map(s => s.trim())
       .filter(Boolean)
-      .map(alias => SFX_DATA[alias] || alias);
+      .map(alias => SFX_DATA[alias] ?? alias);
   },
 
   // ================================================================
-  // _end — 이벤트 종료
+  // _end — 종료 처리
+  //   callOnEnd: false → 시트 연결 시 onEnd 안 부름
   // ================================================================
   _end(callOnEnd = true) {
-    this._playing    = false;
-    this._choiceMode = false;
+    this._playing        = false;
+    this._choiceMode     = false;
+    this._pendingChoices = [];
 
-    // StoryManager에 완료 통보
+    // StoryManager.completeScene — _seen 플래그 + log 기록
     if (this._eventId) {
       StoryManager.completeScene(this._eventId);
     }
@@ -240,25 +271,27 @@ const DialogueManager = {
   },
 
   // ================================================================
-  // parseFx — FX 문자열 파싱 (DialogueScene에서 사용)
-  //   'shake_char:intensity=5,duration=300'
-  //   → { key: 'shake_char', params: { intensity: 5, duration: 300 } }
+  // parseFx — FX 문자열 파싱 (DialogueScene._runFx에서 사용)
+  //
+  //   입력: 'shake_char:intensity=5,duration=300'
+  //   출력: [{ key: 'shake_char', params: { intensity: 5, duration: 300 } }]
   //
   //   복합: 'shake_screen|fade_out_char'
-  //   → [{ key: 'shake_screen', params: {} }, { key: 'fade_out_char', params: {} }]
+  //   출력: [{ key: 'shake_screen', params: {} }, { key: 'fade_out_char', params: {} }]
   // ================================================================
   parseFx(fxStr) {
     return fxStr.split('|').map(part => {
-      const [keyRaw, paramRaw] = part.trim().split(':');
-      const key    = keyRaw.trim();
-      const params = {};
-      if (paramRaw) {
-        paramRaw.split(',').forEach(p => {
-          const [k, v] = p.split('=');
-          if (k && v !== undefined) {
-            const num = Number(v);
-            params[k.trim()] = isNaN(num) ? v.trim() : num;
-          }
+      const colonIdx = part.indexOf(':');
+      const key      = (colonIdx < 0 ? part : part.slice(0, colonIdx)).trim();
+      const params   = {};
+      if (colonIdx >= 0) {
+        part.slice(colonIdx + 1).split(',').forEach(p => {
+          const eqIdx = p.indexOf('=');
+          if (eqIdx < 0) return;
+          const k   = p.slice(0, eqIdx).trim();
+          const raw = p.slice(eqIdx + 1).trim();
+          const num = Number(raw);
+          params[k] = isNaN(num) ? raw : num;
         });
       }
       return { key, params };
@@ -266,14 +299,14 @@ const DialogueManager = {
   },
 
   // ================================================================
-  // resolveExpr — expr 번호 → 스프라이트 키
-  //   charAlias: 'B', expr: '001'  →  'Character_Bea_001'
-  //   expr 공백 → null (이전 표정 유지)
+  // resolveExpr — expr 번호 → 스프라이트 텍스처 키
+  //   ('B', '001') → 'Character_Bea_001'
+  //   ('B', '')    → null  (이전 표정 유지)
   // ================================================================
   resolveExpr(charAlias, expr) {
-    if (!expr) return null;   // 공백 = 유지
-    const name = CAST_DATA[charAlias] || charAlias;
-    return `Character_${name}_${expr.padStart(3, '0')}`;
+    if (!expr) return null;
+    const name = CAST_DATA[charAlias] ?? charAlias;
+    return `Character_${name}_${String(expr).padStart(3, '0')}`;
   },
 
   // ================================================================
@@ -285,6 +318,7 @@ const DialogueManager = {
     console.log('커서:', this._cursor, '/', this._lines.length);
     console.log('재생 중:', this._playing);
     console.log('선택지 모드:', this._choiceMode);
+    console.log('대기 선택지:', this._pendingChoices.length, '개');
     console.groupEnd();
   },
 };
