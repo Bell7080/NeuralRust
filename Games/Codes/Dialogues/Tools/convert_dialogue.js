@@ -4,7 +4,7 @@
 //       (빌드 타임 전용 — 게임에 포함 안 됨)
 //
 //  역할: NeuralRust_Dialogue.xlsx → DialogueData.js 변환
-//  실행: node convert_dialogue.js
+//  실행: node Games/Codes/Dialogues/Tools/convert_dialogue.js
 //  의존: npm install xlsx  (최초 1회)
 //
 //  폴더 구조:
