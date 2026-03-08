@@ -113,14 +113,14 @@ class LobbyScene extends Phaser.Scene {
       strokeThickness: 1,
     }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
 
-    const subKo = this.add.text(cx, H * 0.51, '뉴  럴  러  스  트', {
-      fontSize: scaledFontSize(17, this.scale),
+    const subKo = this.add.text(cx, H * 0.48, '뉴  럴  러  스  트', {
+      fontSize: scaledFontSize(19, this.scale),
       fill: '#6b4a28',
       fontFamily: FontManager.MONO,
       letterSpacing: 6,
     }).setOrigin(0.5).setAlpha(0);
 
-    const tagline = this.add.text(cx, H * 0.58, '소프트웨어만 살아남은 세계  —  붕괴 후 102년', {
+    const tagline = this.add.text(cx, H * 0.54, '녹 슨  닻 으 로  전 선 을  끊 어 내 라 .', {
       fontSize: scaledFontSize(14, this.scale),
       fill: '#4a3018',
       fontFamily: FontManager.MONO,
@@ -169,7 +169,7 @@ class LobbyScene extends Phaser.Scene {
     // 0.8s 후 첫 발화, 이후 4.8s 마다 반복
     this.time.delayedCall(800, () => {
       fireGlitch();
-      this.time.addEvent({ delay: 4800, loop: true, callback: fireGlitch });
+      this.time.addEvent({ delay: 3000, loop: true, callback: fireGlitch });
     });
   }
 
