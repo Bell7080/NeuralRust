@@ -98,8 +98,9 @@ Object.assign(Tab_Manage.prototype, {
   // ── 카드 새로고침 ─────────────────────────────────────────────
   _refreshCards() {
     this._cardObjs = [];
+    this._scrollX  = 0;   // ✏️ 필터 변경 시 스크롤 초기화
     this._cardRow.destroy();
-    this._cardRow = this.scene.add.container(this._cardAreaX, this._cardAreaY + this._scrollX);
+    this._cardRow = this.scene.add.container(this._cardAreaX, this._cardAreaY);
     this._cardRow.setMask(this._maskGfx.createGeometryMask());
     this._container.add(this._cardRow);
     this._buildCards();
@@ -135,6 +136,10 @@ Object.assign(Tab_Manage.prototype, {
   destroy() {
     this._closePopup();
     this._hideTooltip();
+    if (this._filterBarObjs) {
+      this._filterBarObjs.forEach(o => { try { o.destroy(); } catch(e){} });
+      this._filterBarObjs = [];
+    }
     if (this._maskGfx) { this._maskGfx.destroy(); this._maskGfx = null; }
     const si = this.scene.input;
     if (this._dragOnDown)  si.off('pointerdown', this._dragOnDown);

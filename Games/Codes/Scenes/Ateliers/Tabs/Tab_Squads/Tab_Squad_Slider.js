@@ -40,10 +40,11 @@ Object.assign(Tab_Squad.prototype, {
 
     const maskGfx = scene.add.graphics();
     maskGfx.fillStyle(0xffffff, 1);
-    // 마스크를 aH 전체가 아닌 충분히 큰 고정값으로 — 카드 높이가 영역보다 클 수 있음
-    maskGfx.fillRect(aX, aY + labelH, aW, aH - labelH + parseInt(scaledFontSize(60, scene.scale)));
+    // 마스크를 슬라이더 영역 정확히 — 패널 아래 잘린 카드가 클릭되는 버그 방지
+    maskGfx.fillRect(aX, aY + labelH, aW, aH - labelH);
     maskGfx.setVisible(false);
     this._sliderRow.setMask(maskGfx.createGeometryMask());
+    this._container.add(maskGfx);         // ✏️ hide()시 컨테이너와 함께 숨겨지도록
     this._container.add(this._sliderRow);
     this._sliderMaskGfx = maskGfx;
 
@@ -141,11 +142,14 @@ Object.assign(Tab_Squad.prototype, {
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    // Cog 등급 (중앙, 크고 밝게)
+    // Cog 등급 (중앙, 크고 밝게) — getCogColor()로 등급별 색상 적용
+    const _cogCol   = (typeof CharacterManager !== 'undefined' && CharacterManager.getCogColor)
+      ? CharacterManager.getCogColor(char.cog)
+      : { css: '#c8a040' };
     const cogBadge = scene.add.text(cw / 2, cogH / 2,
       `Cog  ${char.cog}`, {
       fontSize: scaledFontSize(14, scene.scale),
-      fill: inSquad ? '#ffd060' : '#c8a040',
+      fill: inSquad ? '#ffd060' : _cogCol.css,
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 0.5);
 
@@ -209,24 +213,24 @@ Object.assign(Tab_Squad.prototype, {
 
     let _downX = 0, _downY = 0, _dragging = false;
 
-    hit.on('pointerover', () => {
+    hit.on('pointerover', (ptr) => {
       if (this._isDraggingAny) return;
+      if (ptr.y < this._sliderAreaY || ptr.y > this._sliderAreaY + this._sliderAreaH) return;
       drawCbg(true);
     });
     hit.on('pointerout', () => {
       if (!_dragging) drawCbg(false);
     });
 
-    // pointerdown: 시작 좌표 기록
+    // pointerdown: 슬라이더 영역 밖이면 무시
     hit.on('pointerdown', (ptr) => {
+      if (ptr.y < this._sliderAreaY || ptr.y > this._sliderAreaY + this._sliderAreaH) return;
       _downX    = ptr.x;
       _downY    = ptr.y;
       _dragging = false;
     });
 
     // pointermove: 임계치 초과 시 드래그 시작 신호 발신
-    // 전역 리스너의 pointermove와 중복되지 않도록
-    // _startDrag 호출만 하고 이후는 전역이 담당
     hit.on('pointermove', (ptr) => {
       if (!ptr.isDown || _dragging) return;
       const dx = Math.abs(ptr.x - _downX);
@@ -237,12 +241,13 @@ Object.assign(Tab_Squad.prototype, {
       }
     });
 
-    // pointerup: 드래그 아니면 팝업 오픈
-    hit.on('pointerup', () => {
+    // pointerup: 슬라이더 영역 밖(패널 아래 잘린 부분)이면 무시
+    hit.on('pointerup', (ptr) => {
+      const inBounds = ptr.y >= this._sliderAreaY && ptr.y <= this._sliderAreaY + this._sliderAreaH;
       if (_dragging) {
         _dragging = false;
       } else {
-        if (!this._sliderDragged) this._openSquadPopup(char);
+        if (!this._sliderDragged && inBounds) this._openSquadPopup(char);
       }
       drawCbg(false);
     });
@@ -327,7 +332,7 @@ Object.assign(Tab_Squad.prototype, {
     ];
     const COG = [
       { key: 'all', label: '전체' },
-      ...[1,2,3,4,5,6,7].map(n => ({ key: `${n}`, label: `Cog${n}` })),
+      ...[1,2,3,4,5,6,7,8,9,10].map(n => ({ key: `${n}`, label: `Cog${n}` })),
     ];
     let bx = panelX + 16;
     JOB.forEach(f => {
@@ -352,7 +357,7 @@ Object.assign(Tab_Squad.prototype, {
     ];
     const COG = [
       { key: 'all', label: '전체' },
-      ...[1,2,3,4,5,6,7].map(n => ({ key: `${n}`, label: `Cog${n}` })),
+      ...[1,2,3,4,5,6,7,8,9,10].map(n => ({ key: `${n}`, label: `Cog${n}` })),
     ];
     let bx = panelX + 16;
     JOB.forEach(f => {
@@ -391,8 +396,12 @@ Object.assign(Tab_Squad.prototype, {
     hit2.on('pointerover', () => draw2(true));
     hit2.on('pointerout',  () => draw2(false));
     hit2.on('pointerup',   onClick);
-    if (tracked) { this._filterBarObjs.push(bg2, txt2, hit2); }
-    else         { this._container.add([bg2, txt2, hit2]); }
+    if (tracked) {
+      this._filterBarObjs.push(bg2, txt2, hit2);
+      this._container.add([bg2, txt2, hit2]);  // ✏️ container에 추가해야 hide()시 함께 숨겨짐
+    } else {
+      this._container.add([bg2, txt2, hit2]);
+    }
     return x + bw + 4;
   },
 
@@ -413,13 +422,20 @@ Object.assign(Tab_Squad.prototype, {
   },
 
   // ── 생명주기 ─────────────────────────────────────────────────
-  show()    { this._container.setVisible(true); },
-  hide()    { this._container.setVisible(false); },
+  show() {
+    this._container.setVisible(true);
+    if (this._gridSubContainer) this._gridSubContainer.setVisible(true);
+  },
+  hide() {
+    this._container.setVisible(false);
+    if (this._gridSubContainer) this._gridSubContainer.setVisible(false);
+  },
   destroy() {
     this._clearCellGlow();
     this._destroyDragGhost();
     this._closeSquadPopup();
     if (this._sliderMaskGfx) { this._sliderMaskGfx.destroy(); this._sliderMaskGfx = null; }
+    if (this._gridSubContainer) { this._gridSubContainer.destroy(true); this._gridSubContainer = null; }
     const si = this.scene.input;
     if (this._sliderOnDown)  si.off('pointerdown', this._sliderOnDown);
     if (this._sliderOnMove)  si.off('pointermove', this._sliderOnMove);

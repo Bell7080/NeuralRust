@@ -830,11 +830,8 @@ class Tab_Recruit {
       spriteKey: result.spriteKey,
     });
 
-    this._toast(`${result.name}  영입 완료!`);
-    this._delay(900, () => {
-      this._unlockTabs();
-      this._buildReady();
-    });
+    // 영입 완료 표시는 Recruit_Custom._showHireCompletePopup이 담당
+    this._delay(900, () => this._unlockTabs());
   }
 
   // ════════════════════════════════════════════════════════════════

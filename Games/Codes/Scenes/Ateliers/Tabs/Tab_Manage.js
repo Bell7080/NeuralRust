@@ -20,6 +20,9 @@ class Tab_Manage {
     this._scrollX     = 0;
     this._cardObjs    = [];
     this._tooltip     = null;
+    this._filterJob   = 'all';   // ✏️ 필터 상태
+    this._filterCog   = 'all';
+    this._filterBarObjs = [];
     this._build();
   }
 
@@ -45,6 +48,13 @@ class Tab_Manage {
     }).setOrigin(0, 0);
     this._container.add(hdr);
 
+    // ✏️ 필터 바
+    const filterY = panelY + parseInt(scaledFontSize(36, scene.scale));
+    this._filterPanelX = panelX;
+    this._filterPanelW = panelW;
+    this._filterY      = filterY;
+    this._buildFilters(panelX, panelW, filterY);
+
     const cardW   = parseInt(scaledFontSize(88, scene.scale));
     const cardH   = parseInt(scaledFontSize(88, scene.scale));
     const cardGap = parseInt(scaledFontSize(8,  scene.scale));
@@ -54,7 +64,7 @@ class Tab_Manage {
     this._cardGap = cardGap;
 
     const gridStartX = panelX + 12;
-    const gridStartY = panelY + parseInt(scaledFontSize(40, scene.scale));
+    const gridStartY = panelY + parseInt(scaledFontSize(72, scene.scale));  // ✏️ 필터 바 높이만큼 아래로
     const availW     = panelW - 24;
     const cols       = Math.floor((availW + cardGap) / (cardW + cardGap));
 
@@ -81,6 +91,7 @@ class Tab_Manage {
 
     this._cardRow = scene.add.container(this._cardAreaX, this._cardAreaY);
     this._cardRow.setMask(maskGfx.createGeometryMask());
+    this._container.add(maskGfx);        // ✏️ hide()시 함께 숨겨져야 마스크 밖 클릭 차단
     this._container.add(this._cardRow);
 
     // 안내 문구 — 패널 하단에 고정 배치 (공백 박스 없이 텍스트만)
@@ -99,7 +110,8 @@ class Tab_Manage {
   // ── 카드 그리드 ───────────────────────────────────────────────
   _buildCards() {
     const { scene }  = this;
-    const chars      = CharacterManager.initIfEmpty();
+    const allChars   = CharacterManager.initIfEmpty();
+    const chars      = this._applyFilter(allChars);  // ✏️ 필터 적용
     const { _cardW: cw, _cardH: ch, _cardGap: gap, _gridCols: cols } = this;
     const totalSlots = chars.length;
 
@@ -167,9 +179,17 @@ class Tab_Manage {
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
+    // getCogColor()로 등급별 색상 + special 테두리
+    const _cogCol = (typeof CharacterManager !== 'undefined' && CharacterManager.getCogColor)
+      ? CharacterManager.getCogColor(char.cog) : { css: '#c8a040', special: false };
+    const _cogStroke = _cogCol.special
+      ? (char.cog === 10 ? '#330066' : '#000000') : null;
     const cogBadge = scene.add.text(cw / 2, cogH / 2, `Cog  ${char.cog}`, {
-      fontSize: scaledFontSize(11, scene.scale),
-      fill: '#c8a040', fontFamily: FontManager.MONO,
+      fontSize:        scaledFontSize(11, scene.scale),
+      fill:            _cogCol.css,
+      fontFamily:      FontManager.MONO,
+      stroke:          _cogStroke || _cogCol.css,
+      strokeThickness: _cogCol.special ? 3 : 0,
     }).setOrigin(0.5, 0.5);
 
     // ── ② 이름 ───────────────────────────────────────────────
@@ -226,6 +246,73 @@ class Tab_Manage {
 
     c.add([cbg, bandG, jobLbl, cogBadge, nameT, portBg, watermark, hpBg, hpFg, hit]);
     return c;
+  }
+
+  // ── 필터 ─────────────────────────────────────────────────────
+  _applyFilter(chars) {
+    return chars.filter(c => {
+      const jobOk = this._filterJob === 'all' || c.job === this._filterJob;
+      const cogOk = this._filterCog === 'all' || c.cog === parseInt(this._filterCog);
+      return jobOk && cogOk;
+    });
+  }
+
+  _buildFilters(panelX, panelW, fy) {
+    const JOB = [
+      { key: 'all', label: '전체' }, { key: 'fisher', label: '낚시꾼' },
+      { key: 'diver', label: '잠수부' }, { key: 'ai', label: 'AI' },
+    ];
+    const COG = [
+      { key: 'all', label: '전체' },
+      ...[1,2,3,4,5,6,7,8,9,10].map(n => ({ key: `${n}`, label: `Cog${n}` })),
+    ];
+    let bx = panelX + 16;
+    JOB.forEach(f => {
+      bx = this._makeFilterBtn(bx, fy + 4, f.label,
+        () => { this._filterJob = f.key; this._refreshCards(); this._rebuildFilterBar(); },
+        this._filterJob === f.key);
+    });
+    bx += 12;
+    COG.forEach(f => {
+      bx = this._makeFilterBtn(bx, fy + 4, f.label,
+        () => { this._filterCog = f.key; this._refreshCards(); this._rebuildFilterBar(); },
+        this._filterCog === f.key);
+    });
+  }
+
+  _rebuildFilterBar() {
+    this._filterBarObjs.forEach(o => { try { o.destroy(); } catch(e){} });
+    this._filterBarObjs = [];
+    this._buildFilters(this._filterPanelX, this._filterPanelW, this._filterY);
+  }
+
+  _makeFilterBtn(x, y, label, onClick, active) {
+    const { scene } = this;
+    const fs2 = scaledFontSize(9, scene.scale);
+    const tmp  = scene.add.text(0, -9999, label, { fontSize: fs2, fontFamily: FontManager.MONO });
+    const bw   = tmp.width + 14; tmp.destroy();
+    const bh   = parseInt(scaledFontSize(20, scene.scale));
+    const bg2  = scene.add.graphics();
+    const draw2 = (h) => {
+      bg2.clear();
+      bg2.fillStyle(active ? (h ? 0x3a2810 : 0x2a1c0a) : (h ? 0x1a1208 : 0x0e0a05), 1);
+      bg2.lineStyle(1, active ? 0x8a5820 : (h ? 0x4a2810 : 0x2a1808), 0.9);
+      bg2.strokeRect(x, y, bw, bh);
+      bg2.fillRect(x, y, bw, bh);
+    };
+    draw2(false);
+    const txt2 = scene.add.text(x + bw / 2, y + bh / 2, label, {
+      fontSize: fs2, fill: active ? '#e8a040' : '#5a3818', fontFamily: FontManager.MONO,
+    }).setOrigin(0.5);
+    const hit2 = scene.add.rectangle(x + bw / 2, y + bh / 2, bw, bh, 0, 0)
+      .setInteractive({ useHandCursor: true });
+    hit2.on('pointerover', () => draw2(true));
+    hit2.on('pointerout',  () => draw2(false));
+    hit2.on('pointerup',   onClick);
+    // ✏️ container에 추가해야 hide()시 함께 숨겨짐
+    this._container.add([bg2, txt2, hit2]);
+    this._filterBarObjs.push(bg2, txt2, hit2);
+    return x + bw + 4;
   }
 
   // ── 드래그 스크롤 ─────────────────────────────────────────────

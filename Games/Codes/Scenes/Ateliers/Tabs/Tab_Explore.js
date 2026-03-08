@@ -133,7 +133,18 @@ class Tab_Explore {
       btnTxt.setStyle({ fill: '#ff3311' });
     });
     hit.on('pointerup', () => {
-      scene.scene.start('ExploreScene', { from: 'AtelierScene' });
+      // 버튼 비활성화 (중복 클릭 방지)
+      hit.disableInteractive();
+      drawBtn('down');
+
+      // AtelierScene의 슬라이드아웃 연출 호출 → 완료 후 씬 전환
+      if (scene._slideOutUIThen) {
+        scene._slideOutUIThen(() => {
+          scene.scene.start('ExploreScene', { from: 'AtelierScene' });
+        });
+      } else {
+        scene.scene.start('ExploreScene', { from: 'AtelierScene' });
+      }
     });
 
     // ── 모두 container에 추가 ────────────────────────────────

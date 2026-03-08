@@ -6,7 +6,10 @@
 //        셀 클릭 시 마지막 캐릭터 회수
 //
 //  ✏️ 수정:
-//    - 슬롯 캐릭터 행에 spriteKey 일러스트 표시 (좌측)
+//    - 배치된 캐릭터 스프라이트를 셀 위로 올려 "서 있는" 느낌
+//      (던전메이커 스타일 — 발은 셀 하단, 몸은 셀 밖으로 돌출)
+//    - 이름은 셀 하단 반투명 오버레이 위에 표시
+//    - HP 미니바는 셀 하단에 유지
 //    - 중복 배치 방지: _isCharDeployed() 헬퍼 추가
 //
 //  의존: Tab_Squad.js (prototype 확장)
@@ -17,6 +20,11 @@ Object.assign(Tab_Squad.prototype, {
   _buildGrid(gx, gy, cs) {
     const { scene } = this;
     const chars = CharacterManager.loadAll() || [];
+
+    // 격자 셀 전용 독립 컨테이너 — _container 자식 인덱스와 무관하게 재빌드 가능
+    // _container와 같은 depth로 씬에 직접 추가, show/hide/destroy 시 함께 제어
+    this._gridSubContainer = scene.add.container(0, 0);
+    this._gridSubContainer.setDepth(this._container.depth ?? 0);
 
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
@@ -99,10 +107,10 @@ Object.assign(Tab_Squad.prototype, {
     const HEADER_R = isSub ? 0.28 : 0.0;
     const headerH  = size * HEADER_R;
     const bodyH    = size - headerH;
-    const rowH     = bodyH / MAX;
 
     const L = cx - size / 2;
     const T = cy - size / 2;
+    const B = cy + size / 2;   // 셀 하단 Y
 
     // ── 셀 배경 ─────────────────────────────────────────────────
     const cellBg   = scene.add.graphics();
@@ -120,104 +128,111 @@ Object.assign(Tab_Squad.prototype, {
       cellBg.fillRect(L, T, size, size);
     };
     drawCell();
-    this._container.add(cellBg);
+    this._gridSubContainer.add(cellBg);
 
-    // ── 잠수정 헤더 ─────────────────────────────────────────────
+    // ── 잠수정 헤더 ─────────────────────────────────────────
     if (isSub) {
       const hdrBg = scene.add.graphics();
       hdrBg.fillStyle(0x152d4a, 1);
       hdrBg.fillRect(L + 1, T + 1, size - 2, headerH - 1);
       hdrBg.lineStyle(1, 0x3a6888, 0.9);
       hdrBg.lineBetween(L, T + headerH, L + size, T + headerH);
-      this._container.add(hdrBg);
+      this._gridSubContainer.add(hdrBg);
 
       const fs7 = scaledFontSize(7, scene.scale);
-      this._container.add(
+      this._gridSubContainer.add(
         scene.add.text(cx, T + headerH * 0.32, '잠  수  정', {
           fontSize: fs7, fill: '#7abccc', fontFamily: FontManager.MONO,
         }).setOrigin(0.5, 0.5)
       );
-      this._container.add(
+      this._gridSubContainer.add(
         scene.add.text(cx, T + headerH * 0.72, 'SUB', {
           fontSize: fs7, fill: '#4a7a8a', fontFamily: FontManager.MONO,
         }).setOrigin(0.5, 0.5)
       );
     }
 
-    // ── 캐릭터 행 (일러스트 + 이름) ─────────────────────────────
-    for (let i = 0; i < MAX; i++) {
-      const rowTop = T + headerH + rowH * i;
-      const rowMid = rowTop + rowH / 2;
+    // ── 셀 히트 영역 — 캐릭터보다 먼저 추가해야 img가 위에 그려짐
+    // (컨테이너 내부는 depth 무시, 추가 순서 = 렌더 순서)
+    const hit = scene.add.rectangle(cx, cy, size, size, 0, 0)
+      .setInteractive({ useHandCursor: false });
+    hit.on('pointerover', () => {
+      if (!this._dragGhost) drawCell(true, false);
+    });
+    hit.on('pointerout',  () => drawCell(false, false));
+    this._gridSubContainer.add(hit);
 
-      if (i < count) {
-        const char = slotChars[i];
-        const rowBg = scene.add.graphics();
-        rowBg.fillStyle(JOB_COLOR[char.job] || 0x181410, 0.9);
-        rowBg.fillRect(L + 1, rowTop + 1, size - 2, rowH - 2);
-        this._container.add(rowBg);
+    // ── 캐릭터 배치 — 좌측 세로, 인원수별 위치, 고정 크기, 클릭 제거 ──
+    if (count > 0) {
+      // 고정 크기 (10% 증가)
+      const spriteFixH = size * 0.836;   // 0.76 * 1.10
+      const spriteFixW = size * 0.484;   // 0.44 * 1.10
 
-        if (i > 0) {
-          const sep = scene.add.graphics();
-          sep.lineStyle(1, 0x050403, 0.9);
-          sep.lineBetween(L + 2, rowTop, L + size - 2, rowTop);
-          this._container.add(sep);
-        }
+      // 인원수별 Y 위치 (발 기준, T+size*비율)
+      // 3명: 45%, 70%, 95%
+      // 2명: 두 값의 중간 → 57.5%, 82.5%
+      // 1명: 중단 70%
+      const yByCount = {
+        1: [0.70],
+        2: [0.50, 0.88],
+        3: [0.45,  0.70,  0.95],
+      };
+      const yRatios = yByCount[count] || yByCount[3];
 
-        // HP 미니바
-        const hpPct = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
-        const hpCol = hpPct > 0.6 ? 0x306030 : hpPct > 0.3 ? 0x806020 : 0x803020;
-        const hpBH  = 2;
-        const hpBW  = size - 6;
-        const hpBX  = L + 3;
-        const hpBY  = rowTop + rowH - hpBH - 1;
-        const hpBg2 = scene.add.graphics();
-        hpBg2.fillStyle(0x050404, 1);
-        hpBg2.fillRect(hpBX, hpBY, hpBW, hpBH);
-        const hpFg2 = scene.add.graphics();
-        hpFg2.fillStyle(hpCol, 1);
-        hpFg2.fillRect(hpBX, hpBY, Math.max(1, Math.round(hpBW * hpPct)), hpBH);
-        this._container.add([hpBg2, hpFg2]);
+      // 좌측 X — 더 왼쪽으로 이동 (L 기준 spriteFixW * 0.42)
+      const charCx = L + spriteFixW * 0.42;
 
-        // ── 일러스트 (좌측) ──────────────────────────────────────
-        const iconSize = rowH * 0.82;
-        const iconX    = L + iconSize * 0.55;
-        const iconY    = rowMid - 1;
+      slotChars.forEach((char, i) => {
+        const footY = T + size * yRatios[i];
 
         if (char.spriteKey && scene.textures.exists(char.spriteKey)) {
-          const img = scene.add.image(iconX, iconY, char.spriteKey).setOrigin(0.5);
-          const sc  = Math.min(iconSize / img.width, iconSize / img.height) * 0.92;
+          const img = scene.add.image(charCx, footY, char.spriteKey)
+            .setOrigin(0.5, 1)
+            .setInteractive({ useHandCursor: true });
+
+          const sc = Math.min(spriteFixW / img.width, spriteFixH / img.height);
           img.setScale(sc);
-          this._container.add(img);
+
+          // 호버 시 붉은 틴트 — "클릭하면 제거" 시각 피드백
+          img.on('pointerover', () => {
+            if (!this._dragGhost) img.setTint(0xff8888);
+          });
+          img.on('pointerout', () => img.clearTint());
+
+          // 클릭 시 해당 캐릭터만 슬롯에서 제거
+          img.on('pointerup', () => {
+            if (this._dragGhost) return;
+            this._removeCharFromSlot(idx, char.id);
+          });
+
+          // hit보다 나중에 추가 → 컨테이너 렌더 순서상 위에 그려져 이벤트 우선
+          this._gridSubContainer.add(img);
+
+        } else {
+          const JOB_SHORT = { fisher: 'FISH', diver: 'DIVE', ai: 'A·I' };
+          const fallback = scene.add.text(charCx, footY - spriteFixH * 0.5,
+            JOB_SHORT[char.job] || '???', {
+            fontSize: scaledFontSize(7, scene.scale),
+            fill: '#5a7888', fontFamily: FontManager.MONO,
+          }).setOrigin(0.5, 0.5)
+            .setInteractive({ useHandCursor: true });
+          fallback.on('pointerup', () => {
+            if (this._dragGhost) return;
+            this._removeCharFromSlot(idx, char.id);
+          });
+          this._gridSubContainer.add(fallback);
         }
+      });
 
-        // ── 이름 텍스트 (일러스트 우측) ─────────────────────────
-        const nameX = L + iconSize * 1.15;
-        this._container.add(
-          scene.add.text(nameX, rowMid - 1, char.name, {
-            fontSize: scaledFontSize(6.5, scene.scale),
-            fill: '#c8a060', fontFamily: FontManager.MONO,
-          }).setOrigin(0, 0.5)
-        );
-
-      } else {
-        if (i > 0 || isSub) {
-          const sep = scene.add.graphics();
-          sep.lineStyle(1, 0x160e06, 0.5);
-          sep.lineBetween(L + 4, rowTop, L + size - 4, rowTop);
-          this._container.add(sep);
-        }
-      }
-    }
-
-    // 빈 일반 셀: 슬롯 번호 + 안내
-    if (!isSub && count === 0) {
-      this._container.add(
+    } else if (!isSub) {
+      // 빈 일반 셀: 슬롯 번호 + 안내
+      this._gridSubContainer.add(
         scene.add.text(cx, cy - parseInt(scaledFontSize(4, scene.scale)), `${idx + 1}`, {
           fontSize: scaledFontSize(12, scene.scale),
           fill: '#3a2a14', fontFamily: FontManager.MONO,
         }).setOrigin(0.5, 0.5)
       );
-      this._container.add(
+      this._gridSubContainer.add(
         scene.add.text(cx, cy + parseInt(scaledFontSize(8, scene.scale)), '드롭', {
           fontSize: scaledFontSize(6, scene.scale),
           fill: '#2e2010', fontFamily: FontManager.MONO,
@@ -225,8 +240,8 @@ Object.assign(Tab_Squad.prototype, {
       );
     }
 
-    // 인원 배지
-    this._container.add(
+    // 인원 배지 — 가장 마지막에 추가해 항상 최상단 렌더
+    this._gridSubContainer.add(
       scene.add.text(L + size - 3, T + 3, `${count}/${MAX}`, {
         fontSize: scaledFontSize(6, scene.scale),
         fill: count >= MAX ? '#e8c040' : '#4a6878',
@@ -234,25 +249,25 @@ Object.assign(Tab_Squad.prototype, {
       }).setOrigin(1, 0)
     );
 
-    // ── 히트 영역 ───────────────────────────────────────────────
-    const hit = scene.add.rectangle(cx, cy, size, size, 0, 0)
-      .setInteractive({ useHandCursor: count > 0 });
-    hit.on('pointerover', () => {
-      if (!this._dragGhost) drawCell(true, false);
-    });
-    hit.on('pointerout',  () => drawCell(false, false));
-    hit.on('pointerup',   () => {
-      if (this._dragGhost) return;
-      if (count > 0) this._removeLastFromSlot(idx);
-    });
-    this._container.add(hit);
-
     return { idx, drawCell, cellBg, hit };
   },
 
   // ── 캐릭터가 이미 어딘가에 배치되어 있는지 확인 ──────────────
   _isCharDeployed(charId) {
     return this._squad.some(slot => Array.isArray(slot) && slot.includes(charId));
+  },
+
+  // ── 특정 캐릭터 id를 슬롯에서 제거 (클릭 제거용) ─────────────
+  _removeCharFromSlot(idx, charId) {
+    const slot = this._squad[idx] || [];
+    const pos  = slot.indexOf(charId);
+    if (pos === -1) return;
+    slot.splice(pos, 1);
+    this._squad[idx] = slot;
+    CharacterManager.saveSquad(this._squad);
+    this._updateHint();
+    this._rebuildGridFull();
+    this._populateSlider();
   },
 
   // ── 마지막 캐릭터 회수 ──────────────────────────────────────
@@ -273,9 +288,18 @@ Object.assign(Tab_Squad.prototype, {
   },
 
   // ── 격자 전체 재빌드 ─────────────────────────────────────────
+  // _gridSubContainer(독립 씬 컨테이너)만 교체 → _container 인덱스 무관
   _rebuildGridFull() {
-    this._gridCells.forEach(cell => { cell.cellBg.destroy(); cell.hit.destroy(); });
+    if (this._gridSubContainer) {
+      this._gridSubContainer.destroy(true);
+      this._gridSubContainer = null;
+    }
     this._gridCells = [];
+
+    this._gridSubContainer = this.scene.add.container(0, 0);
+    this._gridSubContainer.setDepth(this._container.depth ?? 0);
+    this._gridSubContainer.setVisible(this._container.visible);
+
     const chars = CharacterManager.loadAll() || [];
     const { _gridX: gx, _gridY: gy, _cellSize: cs } = this;
     for (let row = 0; row < 3; row++) {

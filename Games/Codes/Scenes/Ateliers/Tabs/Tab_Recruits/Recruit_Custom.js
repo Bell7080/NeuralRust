@@ -358,17 +358,21 @@ Tab_Recruit.prototype._confirmHire = function () {
     spriteKey: result.spriteKey,
   });
 
-  // ✏️ 탭 잠금 즉시 해제 + 화면 전환
+  // ✏️ 탭 잠금 즉시 해제
   this._unlockTabs();
-  this._buildReady();
 
-  // ✏️ 화면 중앙 완료 팝업 (투명 배경 위 텍스트)
-  this._showHireCompletePopup(result.name);
+  // ✏️ 완료 팝업을 먼저 띄운 뒤, 커스텀 창 숨김 → 팝업 종료 후 정리 → _buildReady 호출
+  if (this._container) this._container.setVisible(false);
+  this._showHireCompletePopup(result.name, () => {
+    this._clear();                              // 숨겨뒀던 컨테이너 자식 전부 제거
+    this._container.setVisible(true);           // ✏️ 다시 표시 (이걸 빠뜨려서 패널이 안 보였음)
+    this._buildReady();                         // 새 패널 빌드
+  });
 };
 
 // ── 영입 완료 중앙 팝업 ──────────────────────────────────────────
 
-Tab_Recruit.prototype._showHireCompletePopup = function (name) {
+Tab_Recruit.prototype._showHireCompletePopup = function (name, onDone) {
   const { scene, W, H } = this;
   const cx = W / 2;
   const cy = H / 2;
@@ -425,6 +429,7 @@ Tab_Recruit.prototype._showHireCompletePopup = function (name) {
             msgBox.destroy();
             mainTxt.destroy();
             subTxt.destroy();
+            if (onDone) onDone();
           },
         });
       });
