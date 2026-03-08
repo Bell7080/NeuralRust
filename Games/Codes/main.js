@@ -60,7 +60,7 @@ function _initGame() {
       type:            Phaser.AUTO,
       backgroundColor: '#050407',
       parent:          'game-container',
-      scene:           [LobbyScene, LoadingScene, SettingsScene, GameScene, AtelierScene, ExploreScene],
+      scene:           [LobbyScene, LoadingScene, DialogueScene, SettingsScene, GameScene, AtelierScene, ExploreScene],
       scale: {
         mode:       Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
