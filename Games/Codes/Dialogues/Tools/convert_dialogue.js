@@ -111,12 +111,16 @@ function parseKeyword() {
     const [kw, color, bold, italic, underline, effect] = rows[i];
     const k = clean(kw);
     if (!k) continue;
+    // 헤더행·구분행·효과 설명행 스킵
+    // color가 HEX 6자리가 아니면 데이터 행이 아님
+    const c = clean(color);
+    if (!c || !/^[0-9A-Fa-f]{6}$/.test(c)) continue;
     data[k] = {
-      color:     clean(color) || null,
-      bold:      clean(bold)  === 'Y',
-      italic:    clean(italic) === 'Y',
+      color:     c,
+      bold:      clean(bold)      === 'Y',
+      italic:    clean(italic)    === 'Y',
       underline: clean(underline) === 'Y',
-      effect:    clean(effect) || 'none',
+      effect:    clean(effect)    || 'none',
     };
   }
   return data;
@@ -161,14 +165,15 @@ function parseDialogue(sheetName) {
     lines.push(entry);
   }
 
-  // choice 라인 → 다음 연속 choice들 묶기
+  // choice 라인 처리:
+  //   choice:1 인 라인은 직전 일반 라인의 choices[] 에 추가
+  //   lineMap은 processedLines 인덱스 기준으로 재계산
   const processedLines = [];
   const processedMap   = {};
   let i = 0;
   while (i < lines.length) {
     const line = lines[i];
     if (line.choice) {
-      // 이전 일반 라인에 choices 배열 추가
       const prevIdx = processedLines.length - 1;
       if (prevIdx >= 0) {
         if (!processedLines[prevIdx].choices) processedLines[prevIdx].choices = [];
@@ -178,10 +183,26 @@ function parseDialogue(sheetName) {
       i++;
       continue;
     }
+    // processedMap: line_id → processedLines 인덱스
     processedMap[line.id] = processedLines.length;
     processedLines.push({ ...line });
     i++;
   }
+
+  // goto 값도 processedMap 기준으로 재매핑
+  // (choice 라인의 goto가 원본 line_id를 가리키므로 processedMap으로 변환)
+  processedLines.forEach(line => {
+    if (line.goto && line.goto !== 'END' && processedMap[line.goto] !== undefined) {
+      line.gotoIdx = processedMap[line.goto];
+    }
+    if (line.choices) {
+      line.choices.forEach(c => {
+        if (c.goto && c.goto !== 'END' && processedMap[c.goto] !== undefined) {
+          c.gotoIdx = processedMap[c.goto];
+        }
+      });
+    }
+  });
 
   return { lines: processedLines, lineMap: processedMap };
 }

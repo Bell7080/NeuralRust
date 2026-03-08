@@ -68,9 +68,10 @@ class DialogueScene extends Phaser.Scene {
     this._buildScene(W, H);
     this._buildInput();
 
-    // 씬 페이드인
+    // 씬 페이드인 후 첫 라인 시작
+    // cameras.main.fadeIn 콜백 대신 delayedCall 사용 (씬 전환 시 이벤트 누락 방지)
     this.cameras.main.fadeIn(380, 5, 6, 10);
-    this.cameras.main.once('camerafadeincomplete', () => this._showLine());
+    this.time.delayedCall(400, () => this._showLine());
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -78,7 +79,8 @@ class DialogueScene extends Phaser.Scene {
   // ════════════════════════════════════════════════════════════════
 
   _buildScene(W, H) {
-    const fs = n => scaledFontSize(n, this.scale);
+    // scaledFontSize는 '18px' 문자열 반환 → 숫자만 추출
+    const fs = n => parseInt(scaledFontSize(n, this.scale), 10);
     this._fs = fs;
 
     // ── 배경 ──────────────────────────────────────────────────
@@ -156,7 +158,7 @@ class DialogueScene extends Phaser.Scene {
     // 초상화 텍스트 플레이스홀더 (텍스처 없을 때)
     this._portraitLabel = this.add.text(
       CHAR_W / 2, BOX_Y + BOX_H / 2, '', {
-      fontSize:   fs(10),
+      fontSize:   `${fs(10)}px`,
       fill:       '#182535',
       fontFamily: FontManager.MONO,
       align:      'center',
@@ -189,7 +191,7 @@ class DialogueScene extends Phaser.Scene {
 
     this._nameTxt = this.add.text(
       NX + NW / 2, NY + NH / 2, '', {
-      fontSize:        fs(12),
+      fontSize:        `${fs(12)}px`,
       fill:            '#9ab8d8',    // 로보토미 청백색 이름
       fontFamily:      FontManager.TITLE,
       stroke:          '#03060f',
@@ -201,7 +203,7 @@ class DialogueScene extends Phaser.Scene {
     // ── 본문 텍스트 ───────────────────────────────────────────
     this._bodyTxt = this.add.text(
       TEXT_X, TEXT_Y, '', {
-      fontSize:    fs(15),
+      fontSize:    `${fs(15)}px`,
       fill:        '#b8cce0',      // 로보토미: 청백색 계열
       fontFamily:  FontManager.BODY || FontManager.MONO,
       wordWrap:    { width: TEXT_W },
@@ -212,7 +214,7 @@ class DialogueScene extends Phaser.Scene {
     this._nextIcon = this.add.text(
       W - Math.round(fs(20)), H - Math.round(fs(16)),
       '▶', {
-      fontSize:   fs(11),
+      fontSize:   `${fs(11)}px`,
       fill:       '#3a6a9a',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setVisible(false);
@@ -233,7 +235,7 @@ class DialogueScene extends Phaser.Scene {
       W - Math.round(fs(20)),
       H - Math.round(fs(5)),
       'SPACE  /  CLICK', {
-      fontSize:      fs(7),
+      fontSize:      `${fs(7)}px`,
       fill:          '#182535',
       fontFamily:    FontManager.MONO,
       letterSpacing: 2,
@@ -456,7 +458,7 @@ class DialogueScene extends Phaser.Scene {
         bx - BTN_W/2 + Math.round(fs(10)),
         by + BTN_H/2,
         '▷', {
-        fontSize:   fs(10),
+        fontSize:   `${fs(10)}px`,
         fill:       '#2a4a6a',
         fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);
@@ -466,7 +468,7 @@ class DialogueScene extends Phaser.Scene {
         bx - BTN_W/2 + Math.round(fs(26)),
         by + BTN_H/2,
         choice.label, {
-        fontSize:   fs(13),
+        fontSize:   `${fs(13)}px`,
         fill:       '#7aaac8',
         fontFamily: FontManager.BODY || FontManager.MONO,
         wordWrap:   { width: BTN_W - Math.round(fs(34)) },
@@ -487,9 +489,14 @@ class DialogueScene extends Phaser.Scene {
       });
       hit.on('pointerdown', () => {
         this._choiceCont.removeAll(true);
-        this._cursor = (choice.goto && this._lineMap[choice.goto] != null)
-          ? this._lineMap[choice.goto]
-          : this._cursor + 1;
+        // gotoIdx: convert 시 processedMap 기준으로 미리 계산된 인덱스
+        if (choice.gotoIdx != null) {
+          this._cursor = choice.gotoIdx;
+        } else if (choice.goto && this._lineMap[choice.goto] != null) {
+          this._cursor = this._lineMap[choice.goto];
+        } else {
+          this._cursor++;
+        }
         this._showLine();
       });
 

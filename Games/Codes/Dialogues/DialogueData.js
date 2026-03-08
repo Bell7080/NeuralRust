@@ -48,13 +48,6 @@ const SFX_DATA = {
 
 // ── KEYWORD_DATA ──────────────────────────────────────────────────
 const KEYWORD_DATA = {
-  "키워드": {
-    "color": "색상 (HEX)",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "텍스트 효과"
-  },
   "이형": {
     "color": "FF4444",
     "bold": true,
@@ -138,83 +131,6 @@ const KEYWORD_DATA = {
     "italic": false,
     "underline": false,
     "effect": "none"
-  },
-  "[ 텍스트 효과 예약어 — Phaser3 구현 기준 ]": {
-    "color": null,
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "효과": {
-    "color": "구현 방식",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "none": {
-    "color": "setText + style color / bold / italic",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "glow": {
-    "color": "PostFX: GlowFX Pipeline (Phaser 3.60+)",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "blink": {
-    "color": "tweens: alpha 0↔1, repeat:-1, yoyo:true",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "shake": {
-    "color": "tweens: x ±4px, yoyo:true, repeat:3",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "blur": {
-    "color": "PostFX: BlurFX Pipeline (Phaser 3.60+)",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "rainbow": {
-    "color": "tween: setTint 색상 배열 순환",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "wave": {
-    "color": "custom: 글자별 GameObject, sin(time+i) y offset",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "typewriter": {
-    "color": "dialogManager 해당 구간 delay 개별 설정",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "underline": {
-    "color": "Graphics.lineBetween (text 하단 좌표 계산)",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
   }
 };
 
@@ -258,7 +174,8 @@ const DIALOGUE_DATA = {
         "choices": [
           {
             "label": "외각 지부?",
-            "goto": "004"
+            "goto": "004",
+            "gotoIdx": 2
           }
         ],
         "isChoice": true
@@ -289,7 +206,8 @@ const DIALOGUE_DATA = {
         "choices": [
           {
             "label": "부임이라니?",
-            "goto": "007"
+            "goto": "007",
+            "gotoIdx": 4
           }
         ],
         "isChoice": true

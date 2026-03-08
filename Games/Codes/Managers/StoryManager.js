@@ -10,7 +10,7 @@ const STORY_DATA = {
 
   1: [
     {
-      id:    'day1_intro',
+      id:    'Welcome',
       phase: 'start',
       once:  true,
     },
