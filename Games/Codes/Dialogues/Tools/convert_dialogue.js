@@ -12,14 +12,19 @@
 //    A: 단축어  B: 캐릭터명  C: 비고  D: 닉네임 (대화창 표시명)
 //    → 닉네임이 있으면 대화창 이름판에 닉네임 표시
 //    → 없으면 캐릭터명 표시
-//    → ex) A 초반: 닉네임=??? / 이후: 닉네임=Noa
+//
+//  단축어 예시 (엑셀 기준):
+//    A  = Noa, 닉네임=노아  (이름 공개 이후)
+//    AA = Noa, 닉네임=???  (이름 공개 이전 — 동일 캐릭터의 미공개 버전)
+//    단축어는 한 글자 이상 자유롭게 사용 가능 (AA, AB, ... 모두 허용)
 //
 //  CAST_DATA 구조:
-//    { "A": { name: "Noa", nickname: "???" } }
+//    { "A":  { name: "Noa", nickname: "노아" },
+//      "AA": { name: "Noa", nickname: "???" } }
 //    대화창은 nickname이 있으면 nickname, 없으면 name 사용
 //
-//  닉네임 변경 방법:
-//    SaveManager.setFlag('cast_nick_A', 'Noa') 로 런타임 변경 가능
+//  닉네임 런타임 변경 (필요 시):
+//    SaveManager.setFlag('cast_nick_AA', '노아') 로 런타임 오버라이드 가능
 //    → DialogueScene이 자동으로 반영
 // ================================================================
 
@@ -28,9 +33,10 @@ const fs     = require('fs');
 const path   = require('path');
 
 // ── 경로 설정 ────────────────────────────────────────────────────
-const ROOT      = path.resolve(__dirname, '../../../..');   // 프로젝트 루트
-const XLSX_PATH = path.join(ROOT, 'NeuralRust_Dialogue.xlsx');
-const OUT_PATH  = path.join(__dirname, '../DialogueData.js');
+// __dirname = Games/Codes/Dialogues/Tools
+// xlsx, DialogueData.js 는 한 단계 위 Dialogues/ 에 위치
+const XLSX_PATH = path.join(__dirname, '..', 'NeuralRust_Dialogue.xlsx');
+const OUT_PATH  = path.join(__dirname, '..', 'DialogueData.js');
 
 // ── 상수 ─────────────────────────────────────────────────────────
 const HEADER_ROWS   = 4;   // 헤더+주석 행 수 (0-indexed: 행 0~3이 헤더)
