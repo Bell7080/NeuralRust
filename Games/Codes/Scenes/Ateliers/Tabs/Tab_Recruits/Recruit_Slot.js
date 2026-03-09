@@ -268,10 +268,11 @@ Tab_Recruit.prototype._flipToPick = function () {
           fontSize: this._fs(11), fill: '#7a5028', fontFamily: FontManager.MONO,
         }).setOrigin(0.5));
 
-        // 오버클럭 뱃지 (있을 때만)
+        // 오버클럭 뱃지 (있을 때만, 번개 없이)
         if (roll.overclock) {
-          card.add(scene.add.text(0, infoTop + lineH * 3.0, roll.overclock.label, {
-            fontSize: this._fs(9),
+          const ocLabel = (roll.overclock.label || '').replace('⚡ ', '');
+          card.add(scene.add.text(0, infoTop + lineH * 3.6, ocLabel, {
+            fontSize: this._fs(12),
             fill: roll.overclock.color,
             fontFamily: FontManager.MONO,
           }).setOrigin(0.5));

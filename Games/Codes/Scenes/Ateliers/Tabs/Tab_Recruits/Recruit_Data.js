@@ -101,11 +101,11 @@ const RECRUIT_SKILL_POOL = {
 };
 
 // ── 오버클럭 정의 ─────────────────────────────────────────────────
-// · 발생 확률 5% (OVERCLOCK_CHANCE)
+// · 발생 확률 50% (테스트) — 실서비스 시 0.05로 복구
 // · 특정 스탯을 +50% 보정 (Math.floor 적용)
 // · CharacterManager.addCharacter 저장 시 overclock 필드로 전달
 // · UI 표시: overclock.label / overclock.color 참조
-const OVERCLOCK_CHANCE = 0.05;   // 5%
+const OVERCLOCK_CHANCE = 0.50;   // ⚠️ 테스트 50% (실서비스: 0.05)
 
 const OVERCLOCK_POOL = [
   {
