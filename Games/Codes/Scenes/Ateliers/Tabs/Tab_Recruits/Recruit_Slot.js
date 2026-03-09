@@ -5,6 +5,11 @@
 //  역할: Phase 2 — 3개 슬롯머신 동시 가동
 //        슬롯 완료 후 카드 뒤집기 연출로 Phase 3(Pick)로 전환
 //  의존: Recruit_Data.js, Tab_Recruit.js(this)
+//
+//  ✏️ v2 수정
+//    · _rRoll() → _rRollTriple(price) 로 교체 (직업 다양성 보장)
+//    · 슬롯 중 직업 표시: 오버클럭 발생 시 카드에 ⚡ 표시
+//    · 뒤집기 후 카드에 position 필드 표시
 // ================================================================
 
 Tab_Recruit.prototype._buildSlot = function () {
@@ -17,20 +22,18 @@ Tab_Recruit.prototype._buildSlot = function () {
   const cardH = cardW * 1.80;
   const gap   = W * 0.032;
 
-  // 3개 최종 결과 미리 확정
-  this._rolls = [_rRoll(), _rRoll(), _rRoll()];
+  // ── 3개 결과 미리 확정 (직업 다양성 보장 포함) ──────────────
+  this._rolls = _rRollTriple(this.price);
 
   const positions = [cx - cardW - gap, cx, cx + cardW + gap];
   this._slotDisplays = [];
-  this._slotCards    = []; // 뒤집기 연출용 카드 컨테이너 배열
+  this._slotCards    = [];
 
   positions.forEach((x, i) => {
-    // ── 카드 전체를 담는 서브 컨테이너 (scaleX 조작 대상) ────
     const card = scene.add.container(x, cy);
     this._container.add(card);
     this._slotCards.push(card);
 
-    // 카드 배경 (로컬 좌표)
     const bg = scene.add.graphics();
     bg.fillStyle(0x120d07, 0.95);
     bg.lineStyle(1, 0x3a2210, 0.8);
@@ -38,7 +41,6 @@ Tab_Recruit.prototype._buildSlot = function () {
     bg.strokeRect(-cardW/2, -cardH/2, cardW, cardH);
     card.add(bg);
 
-    // 코너 장식
     const dc = scene.add.graphics();
     dc.lineStyle(1, 0x5a3018, 0.6);
     const cs = 8;
@@ -50,30 +52,25 @@ Tab_Recruit.prototype._buildSlot = function () {
     dc.lineBetween(rx2, by2, rx2-cs, by2); dc.lineBetween(rx2, by2, rx2, by2-cs);
     card.add(dc);
 
-    // 카드 번호
     card.add(scene.add.text(0, -cardH * 0.44, `${i + 1}`, {
       fontSize: this._fs(10), fill: '#3a2010', fontFamily: FontManager.MONO,
     }).setOrigin(0.5));
 
-    // 직업 슬롯
     const jobTxt = scene.add.text(0, -cardH * 0.28, '???', {
       fontSize: this._fs(16), fill: '#7a5028', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
     card.add(jobTxt);
 
-    // 구분선
     const sep = scene.add.graphics();
     sep.lineStyle(1, 0x2a1a0a, 0.8);
     sep.lineBetween(-cardW*0.38, -cardH*0.14, cardW*0.38, -cardH*0.14);
     card.add(sep);
 
-    // 스탯합계 슬롯
     const numTxt = scene.add.text(0, cardH * 0.02, '---', {
       fontSize: this._fs(34), fill: '#c8a070', fontStyle: 'bold', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
     card.add(numTxt);
 
-    // 라벨
     card.add(scene.add.text(0, cardH * 0.22, '스 탯  합 계', {
       fontSize: this._fs(9), fill: '#3d2010', fontFamily: FontManager.MONO,
     }).setOrigin(0.5));
@@ -111,7 +108,6 @@ Tab_Recruit.prototype._runSlots = function () {
             numTxt.setText(String(roll.statSum));
             done++;
             if (done === 3) {
-              // 슬롯 완료 → 카드 발광 연출 → 뒤집기
               this._delay(120, () => this._glowCards());
             }
           }
@@ -122,24 +118,24 @@ Tab_Recruit.prototype._runSlots = function () {
   });
 };
 
-// ================================================================
-//  카드 발광 연출 — 슬롯 완료 후 뒤집기 직전
-//  각 카드 테두리가 순서대로 한 번 밝게 번쩍인 뒤 _flipToPick 호출
-// ================================================================
+// ── 카드 발광 연출 ────────────────────────────────────────────────
 
 Tab_Recruit.prototype._glowCards = function () {
   const { scene } = this;
-  const cardW   = this.W * 0.155;
-  const cardH   = cardW * 1.80;
+  const cardW    = this.W * 0.155;
+  const cardH    = cardW * 1.80;
   const STAGGER  = 80;
   const GLOW_IN  = 200;
   const HOLD     = 160;
   const GLOW_OUT = 200;
 
   this._slotDisplays.forEach(({ card }, i) => {
-    const roll = this._rolls[i];
-    const isF  = roll.job === 'fisher';
-    const glowColor = isF ? 0xc8a070 : 0x7ab0c8;
+    const roll     = this._rolls[i];
+    const isF      = roll.job === 'fisher';
+    // 오버클럭이 있으면 해당 색상으로 글로우
+    const glowColor = roll.overclock
+      ? parseInt(roll.overclock.color.replace('#', '0x'))
+      : (isF ? 0xc8a070 : 0x7ab0c8);
 
     const glow = scene.add.graphics();
     card.add(glow);
@@ -175,29 +171,21 @@ Tab_Recruit.prototype._glowCards = function () {
     });
   });
 
-  // 발광 총 시간 후 뒤집기
   const totalGlowTime = STAGGER * 2 + GLOW_IN + HOLD + GLOW_OUT + 80;
   this._delay(totalGlowTime, () => this._flipToPick());
 };
 
-// ================================================================
-//  카드 뒤집기 연출 — 슬롯 → 픽 전환
-//  scaleX 1→0 (전반, Sine.easeIn)
-//  내용 교체 (scaleX=0 순간)
-//  scaleX 0→1 (후반, Sine.easeOut)
-//  카드마다 STAGGER 만큼 시차
-// ================================================================
+// ── 카드 뒤집기 연출 ─────────────────────────────────────────────
 
 Tab_Recruit.prototype._flipToPick = function () {
   const { scene, W, H } = this;
   const cx        = W / 2;
   const cy        = H * 0.50;
   const cardW     = W * 0.155;
-  const pickCardH = cardW * 1.62;
-  const FLIP_DUR  = 330; // 전반/후반 각각 ms
-  const STAGGER   = 160; // 카드 간 시차 ms
+  const pickCardH = cardW * 1.72;   // position 행 추가로 약간 높임
+  const FLIP_DUR  = 330;
+  const STAGGER   = 160;
 
-  // 안내 텍스트 — 첫 카드 뒤집힘과 함께 서서히 등장
   const guideTxt = scene.add.text(cx, cy - pickCardH * 0.60,
     '영입할 동료를 선택하십시오', {
     fontSize: this._fs(12), fill: '#4a2a10', fontFamily: FontManager.MONO,
@@ -209,7 +197,6 @@ Tab_Recruit.prototype._flipToPick = function () {
     const roll = this._rolls[i];
     const isF  = roll.job === 'fisher';
 
-    // 전반: scaleX 1 → 0
     this._tween({
       targets: card,
       scaleX: 0,
@@ -217,37 +204,38 @@ Tab_Recruit.prototype._flipToPick = function () {
       delay: i * STAGGER,
       ease: 'Sine.easeIn',
       onComplete: () => {
-        // ── 내용 교체 ──────────────────────────────────────
         card.removeAll(true);
 
-        // 새 배경 (픽 카드 크기)
         const bg = scene.add.graphics();
         const drawBg = (hover) => {
           bg.clear();
+          // 오버클럭 카드면 특수 테두리
+          const borderColor = roll.overclock
+            ? parseInt(roll.overclock.color.replace('#', '0x'))
+            : (isF ? 0xc8a070 : 0x7ab0c8);
           bg.fillStyle(hover ? 0x1e1408 : 0x120d07, 1);
-          bg.lineStyle(2, isF ? 0xc8a070 : 0x7ab0c8, hover ? 1 : 0.8);
+          bg.lineStyle(hover ? 2 : 1, borderColor, hover ? 1 : (roll.overclock ? 0.9 : 0.8));
           bg.fillRect(-cardW/2, -pickCardH/2, cardW, pickCardH);
           bg.strokeRect(-cardW/2, -pickCardH/2, cardW, pickCardH);
         };
         drawBg(false);
         card.add(bg);
 
-        // 직업명 (상단)
-        card.add(scene.add.text(0, -pickCardH * 0.40, RECRUIT_JOB_LABEL[roll.job], {
+        // 직업명
+        card.add(scene.add.text(0, -pickCardH * 0.43, RECRUIT_JOB_LABEL[roll.job], {
           fontSize: this._fs(14), fontFamily: FontManager.TITLE,
           fill: isF ? '#c8a070' : '#7ab0c8',
         }).setOrigin(0.5));
 
         // 초상화 박스
         const iSz = cardW * 0.72;
-        const iY  = -pickCardH * 0.10;
+        const iY  = -pickCardH * 0.18;
         const iBg = scene.add.graphics();
         iBg.fillStyle(0x1a1008, 1); iBg.lineStyle(1, 0x2a1a0a, 1);
         iBg.fillRect(-iSz/2, iY - iSz/2, iSz, iSz);
         iBg.strokeRect(-iSz/2, iY - iSz/2, iSz, iSz);
         card.add(iBg);
 
-        // 초상화 이미지 또는 번호 텍스트
         if (roll.spriteKey && scene.textures.exists(roll.spriteKey)) {
           const img = scene.add.image(0, iY, roll.spriteKey).setOrigin(0.5);
           const sc  = Math.min(iSz / img.width, iSz / img.height) * 0.92;
@@ -260,27 +248,34 @@ Tab_Recruit.prototype._flipToPick = function () {
           }).setOrigin(0.5));
         }
 
-        // ── 초상화 아래: 이름 / Cog / 합계 스탯 ─────────────
-        const infoTop = iY + iSz/2 + parseInt(this._fs(9));
+        // 이름
+        const infoTop = iY + iSz/2 + parseInt(this._fs(8));
         const lineH   = parseInt(this._fs(13));
 
-        // 이름
         card.add(scene.add.text(0, infoTop, roll.name, {
-          fontSize: this._fs(13), fontFamily: FontManager.TITLE,
-          fill: '#e8c080',
+          fontSize: this._fs(13), fontFamily: FontManager.TITLE, fill: '#e8c080',
         }).setOrigin(0.5));
 
-        // Cog 등급
-        card.add(scene.add.text(0, infoTop + lineH * 1.1, `Cog  ${roll.cog}`, {
+        // Cog
+        card.add(scene.add.text(0, infoTop + lineH * 1.0, `Cog  ${roll.cog}`, {
           fontSize: this._fs(13),
           fill: RECRUIT_COG_COLORS[roll.cog] || '#c8bfb0',
           fontStyle: 'bold', fontFamily: FontManager.MONO,
         }).setOrigin(0.5));
 
         // 합계 스탯
-        card.add(scene.add.text(0, infoTop + lineH * 2.2, `합계 스탯  ${roll.statSum}`, {
+        card.add(scene.add.text(0, infoTop + lineH * 2.0, `합계  ${roll.statSum}`, {
           fontSize: this._fs(11), fill: '#7a5028', fontFamily: FontManager.MONO,
         }).setOrigin(0.5));
+
+        // 오버클럭 뱃지 (있을 때만)
+        if (roll.overclock) {
+          card.add(scene.add.text(0, infoTop + lineH * 3.0, roll.overclock.label, {
+            fontSize: this._fs(9),
+            fill: roll.overclock.color,
+            fontFamily: FontManager.MONO,
+          }).setOrigin(0.5));
+        }
 
         // 히트 영역
         const hit = scene.add.rectangle(0, 0, cardW, pickCardH, 0, 0)
@@ -299,12 +294,10 @@ Tab_Recruit.prototype._flipToPick = function () {
           this._buildCustom();
         });
 
-        // 후반: scaleX 0 → 1
+        // 후반 뒤집기
         this._tween({
-          targets: card,
-          scaleX: 1,
-          duration: FLIP_DUR,
-          ease: 'Sine.easeOut',
+          targets: card, scaleX: 1,
+          duration: FLIP_DUR, ease: 'Sine.easeOut',
         });
       },
     });
