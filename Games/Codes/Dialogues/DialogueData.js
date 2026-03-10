@@ -46,7 +46,7 @@ const BGM_DATA = {
 //
 const BG_DATA = {
   "태그 (bg 컬럼에 입력)": "배경 파일명",
-  "A": "Background001",
+  "A": "Background_003",
   "B": "Background002",
   "C": "Background003"
 };
@@ -87,7 +87,7 @@ const DIALOGUE_DATA = {
         "flag_set": null,
         "flag_check": null,
         "sfx": null,
-        "fx": "fade_in",
+        "fx": null,
         "bg": "A"
       },
       {
@@ -168,7 +168,7 @@ const DIALOGUE_DATA = {
         "flag_set": null,
         "flag_check": null,
         "sfx": null,
-        "fx": "slow_text",
+        "fx": null,
         "bg": null
       },
       {
