@@ -5,6 +5,9 @@
 
 ---
 
+// https://bell7080.github.io/NeuralRust/
+//게임 접속 사이트
+
 ## 📁 저장소 구조
 
 ```
