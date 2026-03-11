@@ -289,8 +289,13 @@ class ExploreScene extends Phaser.Scene {
       targets: flash, alpha: 1, duration: 400, ease: 'Sine.easeIn',
       onComplete: () => {
         console.log('[ExploreScene] 선택:', card);
-        // TODO: card.type / card.cog 에 따라 씬 분기
-        this.scene.start('AtelierScene', { tab: 'explore' });
+        if (card.type === 'combat') {
+          // 전투 카드 → 파티 편성 화면
+          this.scene.start('PartyScene', { cogMax: card.cog, cardType: 'combat' });
+        } else {
+          // 이벤트·수집·휴식 등 → 추후 분기 구현 (현재 공방 복귀)
+          this.scene.start('AtelierScene', { tab: 'explore' });
+        }
       },
     });
   }

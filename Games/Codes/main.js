@@ -50,7 +50,7 @@ function _initGame() {
       type:            Phaser.AUTO,
       backgroundColor: '#050407',
       parent:          'game-container',
-      scene:           [LobbyScene, LoadingScene, DialogueScene, SettingsScene, GameScene, AtelierScene, ExploreScene],
+      scene:           [LobbyScene, LoadingScene, DialogueScene, SettingsScene, GameScene, AtelierScene, ExploreScene, PartyScene],
       scale: {
         // RESIZE: 캔버스가 항상 실제 화면 크기와 동일
         // 배경 이미지를 ENVELOP(cover)로 깔면 와이드 화면에서 배경이 꽉 차고
