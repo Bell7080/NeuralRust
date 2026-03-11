@@ -3,22 +3,8 @@
 //  경로: Games/Codes/Scenes/SettingsScene.js
 //
 //  역할: 설정 화면 껍데기 — 배경 / 제목 / 탭 라우팅 / 뒤로가기
-//        각 탭 내용은 Settings_Tab_*.js 에서 관리
-//
-//  탭 파일 목록:
-//    Settings_Tab_Font.js   — 폰트
-//    Settings_Tab_Video.js  — 비디오
-//    Settings_Tab_Audio.js  — 오디오
-//    Settings_Tab_Keys.js   — 키 설정
-//    Settings_Tab_Save.js   — 저장 / 초기화
-//
-//  공통 헬퍼 (탭 파일에서 scene.makeButton 등으로 호출):
-//    scene.makeButton(x, y, bw, bh, label, onClick, danger)
-//    scene.drawOptionBox(gfx, x, y, w, h, selected, hover)
-//    scene.showConfirmPopup(cx, H, message, onConfirm)
-//    scene.showToast(cx, y, message, onComplete, color)
-//
-//  의존: FontManager, InputManager, AudioManager, utils.js
+//  공통 헬퍼: makeButton / drawOptionBox / showConfirmPopup / showToast
+//  폰트 수치: 1280×720 basePx × 1.5 (가시성 개선)
 // ================================================================
 
 class SettingsScene extends Phaser.Scene {
@@ -84,12 +70,12 @@ class SettingsScene extends Phaser.Scene {
   // ── 제목 ──────────────────────────────────────────────────────
   _buildTitle(W, H, cx) {
     this.add.text(cx, H * 0.09, '설  정', {
-      fontSize: scaledFontSize(30, this.scale),
+      fontSize: scaledFontSize(45, this.scale),   // 30 × 1.5
       fill: '#6b4020',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
-    this.add.text(cx, H * 0.09 + parseInt(scaledFontSize(24, this.scale)), 'SETTINGS', {
-      fontSize: scaledFontSize(12, this.scale),
+    this.add.text(cx, H * 0.09 + parseInt(scaledFontSize(36, this.scale)), 'SETTINGS', {  // 24 × 1.5
+      fontSize: scaledFontSize(18, this.scale),   // 12 × 1.5
       fill: '#2a1508',
       fontFamily: FontManager.MONO,
       letterSpacing: 5,
@@ -99,7 +85,7 @@ class SettingsScene extends Phaser.Scene {
   // ── 탭 바 ─────────────────────────────────────────────────────
   _buildTabBar(W, H, cx) {
     const tabY  = H * 0.20;
-    const tabH  = parseInt(scaledFontSize(38, this.scale));
+    const tabH  = parseInt(scaledFontSize(57, this.scale));   // 38 × 1.5
     const gap   = W * 0.012;
     const tabs  = [
       { key: 'font',  label: '폰트'   },
@@ -118,7 +104,7 @@ class SettingsScene extends Phaser.Scene {
       this._drawTabBg(bg, tx, tabY, tabW, tabH, selected);
 
       this.add.text(tx + tabW / 2, tabY + tabH / 2, tab.label, {
-        fontSize: scaledFontSize(13, this.scale),
+        fontSize: scaledFontSize(20, this.scale),   // 13 × 1.5
         fill: selected ? '#c8a070' : '#3d2010',
         fontFamily: FontManager.TITLE,
       }).setOrigin(0.5);
@@ -154,7 +140,7 @@ class SettingsScene extends Phaser.Scene {
   // ── 뒤로가기 ──────────────────────────────────────────────────
   _buildBackButton(W, H) {
     const btn = this.add.text(W * 0.08, H * 0.93, '← 돌아가기', {
-      fontSize: scaledFontSize(17, this.scale),
+      fontSize: scaledFontSize(26, this.scale),   // 17 × 1.5
       fill: '#3d2010',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
@@ -179,7 +165,9 @@ class SettingsScene extends Phaser.Scene {
     });
   }
 
-  // ── 공통 드로우 헬퍼 (탭 파일에서 scene.xxx() 로 호출) ────────
+  // ════════════════════════════════════════════════════════════════
+  //  공통 헬퍼 — 탭 파일에서 scene.xxx() 로 호출
+  // ════════════════════════════════════════════════════════════════
 
   _drawTabBg(gfx, x, y, w, h, selected, hover = false) {
     gfx.clear();
@@ -214,7 +202,7 @@ class SettingsScene extends Phaser.Scene {
     };
     draw(nc, nb);
     this.add.text(x, y, label, {
-      fontSize: scaledFontSize(12, this.scale),
+      fontSize: scaledFontSize(18, this.scale),   // 12 × 1.5
       fill: danger ? '#8a4030' : '#6b4020',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
@@ -227,7 +215,7 @@ class SettingsScene extends Phaser.Scene {
   showConfirmPopup(cx, H, message, onConfirm) {
     const W    = this.scale.width;
     const popW = W * 0.46;
-    const popH = H * 0.22;
+    const popH = H * 0.24;   // 살짝 크게
     const popX = cx - popW / 2;
     const popY = H * 0.5 - popH / 2;
 
@@ -239,7 +227,7 @@ class SettingsScene extends Phaser.Scene {
     box.fillRect(popX, popY, popW, popH);
 
     const msgText = this.add.text(cx, popY + popH * 0.32, message, {
-      fontSize: scaledFontSize(14, this.scale),
+      fontSize: scaledFontSize(21, this.scale),   // 14 × 1.5
       fill: '#8a6040',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(502);
@@ -253,7 +241,7 @@ class SettingsScene extends Phaser.Scene {
     };
     const makePopBtn = (bx, lbl, color, hcolor, cb) => {
       const t = this.add.text(bx, btnY, lbl, {
-        fontSize: scaledFontSize(14, this.scale),
+        fontSize: scaledFontSize(21, this.scale),   // 14 × 1.5
         fill: color, fontFamily: FontManager.MONO,
       }).setOrigin(0.5).setDepth(502).setInteractive({ useHandCursor: true });
       t.on('pointerover', () => t.setStyle({ fill: hcolor }));
@@ -267,7 +255,7 @@ class SettingsScene extends Phaser.Scene {
 
   showToast(cx, y, message, onComplete, color) {
     const toast = this.add.text(cx, y, message, {
-      fontSize: scaledFontSize(20, this.scale),
+      fontSize: scaledFontSize(30, this.scale),   // 20 × 1.5
       fill: color || '#c8a070',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(200).setAlpha(0);
