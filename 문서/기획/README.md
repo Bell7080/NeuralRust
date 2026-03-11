@@ -122,7 +122,7 @@ neural-rust/
 |-------|--------|------|-----------|
 | `explore` | `Tab_Explore` | `Tab_Explore.js` | ✅ 구현 완료 (탐색 씬 연결) |
 | `manage` | `Tab_Manage` | `Tab_Manage.js` + Popup + Utils | ✅ 구현 완료 (카드 그리드·프로필 팝업·회복) |
-| `squad` | `Tab_Squad` | `Tab_Squad.js` + Grid + Drag + Slider + Popup | ✅ 구현 완료 (3×3 격자·드래그 앤 드롭·슬라이더·필터) |
+| `squad` | ~~`Tab_Squad`~~ | ❌ 삭제 예정 | 전투 방식 변경으로 제거 |
 | `recruit` | `Tab_Recruit` | `Tab_Stubs.js` | 🔲 플레이스홀더 |
 | `facility` | `Tab_Facility` | `Tab_Stubs.js` | 🔲 플레이스홀더 |
 | `outsource` | `Tab_Outsource` | `Tab_Stubs.js` | 🔲 플레이스홀더 |
@@ -184,7 +184,9 @@ neural-rust/
 | `neural_rust_audio` | AudioManager | 볼륨 설정 (마스터·BGM·SFX) |
 | `settings_font` | FontManager | 폰트 선택 |
 | `nr_characters` | CharacterManager | 캐릭터 데이터 (30명) |
-| `nr_squad` | CharacterManager | 탐사대 편성 (슬롯 10개, 각 최대 3명) |
+| `nr_squad` | CharacterManager | ❌ 폐기 (탐사대 탭 삭제) |
+| `nr_record_chips` | CharacterManager | ⬜ 신규 — 기록칩 누적 데이터 |
+| `nr_party` | PartyManager | ⬜ 신규 — 탐사 파티 편성 결과 |
 
 ---
 
@@ -243,7 +245,7 @@ neural-rust/
 - [x] SettingsScene — 5개 탭 전체 (폰트·비디오·오디오·키설정·저장)
 - [x] Tab_Explore — 탐색 탭 진입 UI
 - [x] Tab_Manage — 카드 그리드·드래그 스크롤·프로필 팝업·HP 회복
-- [x] Tab_Squad — 3×3 격자·드래그 앤 드롭·슬라이더·필터·미니맵
+- [x] ~~Tab_Squad~~ — 탐사대 탭 삭제 (크로노 아크 방식 전투 UI로 전환)
 - [x] CharacterSpriteManager — 스프라이트 시트 2장 → 72종 텍스처 자동 추출
 - [x] CharacterManager — 캐릭터 30명 생성·Cog 등급·스킬/패시브 부여
 - [ ] StoryManager — 씬 데이터(STORY_DATA) 작성 필요
