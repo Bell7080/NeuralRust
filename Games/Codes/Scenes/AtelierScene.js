@@ -2,11 +2,11 @@
 //  AtelierScene.js
 //  경로: Games/Codes/Scenes/AtelierScene.js
 //
-//  ✏️ 버그 수정:
-//    - _exitManageFull: `_activeTab = 'explore'` 하드코딩 제거
-//      → _preManageTab (진입 직전 탭) 으로 복귀
-//    - _enterManageFull: 진입 전 현재 activeTab을 _preManageTab에 저장
-//    - _exitManageFull: 복귀 탭 인스턴스 생성 후 컨테이너 페이드인
+//  수정 내역:
+//    - _makeTopButton 중복 코드 제거 (파싱 오류 수정)
+//    - 버튼 위치: HUD 우측 바깥(W*0.683~)으로 이동
+//    - Graphics → setPosition 불가 버그 수정 (txt/hit만 tween 등록)
+//    - 사이드버튼 언더라인 완전 제거 (hover/active/explore 전부)
 // ================================================================
 
 class AtelierScene extends Phaser.Scene {
@@ -17,7 +17,7 @@ class AtelierScene extends Phaser.Scene {
     this._activeTab    = null;
     this._fromScene    = data.from || 'LobbyScene';
     this._skipWelcome  = data.skipWelcome || false;
-    this._preManageTab = null;   // ✏️ 관리탭 진입 전 탭 기억
+    this._preManageTab = null;
   }
 
   create() {
@@ -48,14 +48,8 @@ class AtelierScene extends Phaser.Scene {
 
   // ── 웰컴 팝업 ────────────────────────────────────────────────
   _showWelcome() {
-    if (this._sideButtonRefs) {
-      this._sideButtonRefs.forEach(({ underline }) => {
-        if (underline) underline.setAlpha(0);
-      });
-    }
     this._welcomeObj = new Tab_Welcome(this, this.W, this.H, () => {
       this._animateUIIn(false);
-      this.time.delayedCall(400, () => this._rebuildSideButtonColors());
     });
   }
 
@@ -120,19 +114,15 @@ class AtelierScene extends Phaser.Scene {
       shop: Tab_Shop, storage: Tab_Storage, codex: Tab_Codex, memory: Tab_Memory,
     };
 
-    if (this._sideButtonRefs) {
-      this._sideButtonRefs.forEach(({ underline, drawUnderline }) => {
-        if (underline)     underline.setAlpha(0);
-        if (drawUnderline) drawUnderline(false);
-      });
-    }
-
     const build = () => {
       this._tabSwitching = false;
 
       if (this._welcomeObj) {
         const wo = this._welcomeObj; this._welcomeObj = null;
-        this.tweens.add({ targets: wo._container, alpha: 0, duration: 200, ease: 'Sine.easeIn', onComplete: () => wo.destroy() });
+        this.tweens.add({
+          targets: wo._container, alpha: 0, duration: 200, ease: 'Sine.easeIn',
+          onComplete: () => wo.destroy(),
+        });
       }
       if (this._currentTabObj) { this._currentTabObj.destroy(); this._currentTabObj = null; }
 
@@ -160,7 +150,10 @@ class AtelierScene extends Phaser.Scene {
           build();
           if (key !== 'manage' && this._currentTabObj?._container) {
             this._currentTabObj._container.setAlpha(0);
-            this.tweens.add({ targets: this._currentTabObj._container, alpha: 1, duration: 160, ease: 'Sine.easeOut' });
+            this.tweens.add({
+              targets: this._currentTabObj._container, alpha: 1,
+              duration: 160, ease: 'Sine.easeOut',
+            });
           }
         },
       });
@@ -171,12 +164,10 @@ class AtelierScene extends Phaser.Scene {
 
   _rebuildSideButtonColors() {
     if (!this._sideButtonRefs) return;
-    this._sideButtonRefs.forEach(({ key, btn, marker, underline, drawUnderline }) => {
+    this._sideButtonRefs.forEach(({ key, btn, marker }) => {
       const active = key === this._activeTab;
       btn.setStyle({ fill: active ? '#e8c080' : '#7a5030' });
       marker.setStyle({ fill: active ? '#c06820' : '#4a2a10' });
-      if (underline) underline.setAlpha(active ? 1 : 0);
-      if (drawUnderline) drawUnderline(active);
     });
   }
 
@@ -236,33 +227,17 @@ class AtelierScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .setAlpha(0);
 
-    const underline = this.add.graphics().setAlpha(0);
-    const sideUW    = parseInt(scaledFontSize(26, this.scale)) * 2.8 + shift + 4;
-
-    const drawUnderline = (on) => {
-      underline.clear();
-      if (!on) return;
-      underline.lineStyle(1, 0x8b4010, 0.9);
-      const ly = y + parseInt(scaledFontSize(17, this.scale));
-      if (alignRight) underline.lineBetween(x - sideUW, ly, x, ly);
-      else            underline.lineBetween(x, ly, x + sideUW, ly);
-    };
-    if (isActive) drawUnderline(true);
-
     btn.on('pointerover', () => {
       if (key === this._activeTab) return;
       this.tweens.add({ targets: btn, x: alignRight ? x - shift : x + shift, duration: 100, ease: 'Sine.easeOut' });
       btn.setStyle({ fill: '#e8c080' });
       marker.setStyle({ fill: '#c06820' });
-      underline.setAlpha(1);
-      drawUnderline(true);
     });
     btn.on('pointerout', () => {
       if (key === this._activeTab) return;
       this.tweens.add({ targets: btn, x, duration: 100, ease: 'Sine.easeOut' });
       btn.setStyle({ fill: '#7a5030' });
       marker.setStyle({ fill: '#4a2a10' });
-      drawUnderline(false);
     });
     btn.on('pointerdown', () => this._switchTab(key));
 
@@ -271,7 +246,7 @@ class AtelierScene extends Phaser.Scene {
     this._uiAnimTargets.push({ obj: btn,    originX: x, originY: y, dir, delay });
     this._uiAnimTargets.push({ obj: marker, originX: alignRight ? x + indent : x - indent, originY: y, dir, delay: delay + 20 });
 
-    return { btn, marker, underline, drawUnderline };
+    return { btn, marker };
   }
 
   _makeExploreButton(x, y) {
@@ -296,33 +271,19 @@ class AtelierScene extends Phaser.Scene {
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(0);
 
-    const exploreUnderline = this.add.graphics().setAlpha(0);
-    const exploreUW = parseInt(scaledFontSize(28, this.scale)) * 3.2 + parseInt(scaledFontSize(8, this.scale)) + 4;
-    const drawExploreUnderline = (on) => {
-      exploreUnderline.clear();
-      if (!on) return;
-      const ly = y + parseInt(scaledFontSize(19, this.scale));
-      exploreUnderline.lineStyle(1, 0x8b4010, 0.9);
-      exploreUnderline.lineBetween(x - exploreUW / 2, ly, x + exploreUW / 2, ly);
-    };
-    if (this._activeTab === 'explore') drawExploreUnderline(true);
-
-    this._sideButtonRefs.push({ key: 'explore', btn, marker, underline: exploreUnderline, drawUnderline: drawExploreUnderline });
+    this._sideButtonRefs.push({ key: 'explore', btn, marker });
 
     btn.on('pointerover', () => {
       if (this._activeTab === 'explore') return;
       this.tweens.add({ targets: btn, x: x + shift, duration: 100, ease: 'Sine.easeOut' });
       btn.setStyle({ fill: '#e8c080' });
       marker.setStyle({ fill: '#c06820' });
-      exploreUnderline.setAlpha(1);
-      drawExploreUnderline(true);
     });
     btn.on('pointerout', () => {
       if (this._activeTab === 'explore') return;
       this.tweens.add({ targets: btn, x, duration: 100, ease: 'Sine.easeOut' });
       btn.setStyle({ fill: '#7a5030' });
       marker.setStyle({ fill: '#4a2a10' });
-      drawExploreUnderline(false);
     });
     btn.on('pointerdown', () => this._switchTab('explore'));
 
@@ -330,46 +291,27 @@ class AtelierScene extends Phaser.Scene {
     this._uiAnimTargets.push({ obj: marker, originX: x - parseInt(scaledFontSize(36, this.scale)), originY: y, dir: 'down', delay: 220 });
   }
 
+  // ── 상단 버튼 (설정 / 로비) ─────────────────────────────────
   _buildTopButtons(W, H) {
     const bh  = Math.round(H * 0.045);
     const bw  = Math.round(W * 0.075);
     const gap = Math.round(W * 0.008);
     const y   = H * 0.04;
 
-    // HUD 우측 끝 계산 (AtelierHUD.js 기준):
-    //   cx   = W / 2
-    //   gap  = W * 0.006
-    //   arcW = W * 0.18
-    //   arcX = cx + gap/2  →  W/2 + W*0.003
-    //   HUD 우측 끝 = arcX + arcW = W*0.5 + W*0.003 + W*0.18 = W * 0.683
-    const hudRight = W * 0.683;
-    const startX   = hudRight + gap;
+    // HUD 우측 끝(W*0.683) 바깥으로 배치
+    const hudRight  = W * 0.683;
+    const settingsX = hudRight + gap + bw / 2;
+    const lobbyX    = settingsX + bw + gap;
 
-    // [설정] 버튼
-    const settingsX = startX + bw / 2;
-    const { bg: settingsBg, hit: settingsHit } = this._makeTopButton(
-      '설  정', settingsX, y, bw, bh,
-      () => this.scene.start('SettingsScene', { from: 'AtelierScene' })
-    );
-
-    // [로비] 버튼
-    const lobbyX = settingsX + bw + gap;
-    const { bg: lobbyBg, hit: lobbyHit } = this._makeTopButton(
-      '로  비', lobbyX, y, bw, bh,
-      () => this._goLobby()
-    );
-
-    this._uiAnimTargets.push(
-      { obj: settingsBg,  originX: settingsX, originY: y, dir: 'up', delay: 100 },
-      { obj: settingsHit, originX: settingsX, originY: y, dir: 'up', delay: 100 },
-      { obj: lobbyBg,     originX: lobbyX,    originY: y, dir: 'up', delay: 130 },
-      { obj: lobbyHit,    originX: lobbyX,    originY: y, dir: 'up', delay: 130 }
-    );
+    this._makeTopButton('설  정', settingsX, y, bw, bh, 100,
+      () => this.scene.start('SettingsScene', { from: 'AtelierScene' }));
+    this._makeTopButton('로  비', lobbyX, y, bw, bh, 130,
+      () => this._goLobby());
   }
 
-
-  _makeTopButton(label, bx, by, bw, bh, onClick) {
-    const bg  = this.add.graphics().setAlpha(0);
+  _makeTopButton(label, bx, by, bw, bh, animDelay, onClick) {
+    // Graphics는 setPosition() 불가 → _uiAnimTargets에 넣지 않고 항상 제자리 표시
+    const bg = this.add.graphics();
     const draw = (hover) => {
       bg.clear();
       bg.fillStyle(hover ? 0x1e1208 : 0x100a04, 1);
@@ -379,19 +321,26 @@ class AtelierScene extends Phaser.Scene {
     };
     draw(false);
 
-    this.add.text(bx, by, label, {
+    const txt = this.add.text(bx, by, label, {
       fontSize: scaledFontSize(13, this.scale),
       fill: '#8a6030',
       fontFamily: FontManager.MONO,
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setAlpha(0);
 
     const hit = this.add.rectangle(bx, by, bw, bh, 0x000000, 0)
       .setInteractive({ useHandCursor: true }).setAlpha(0);
-    hit.on('pointerover', () => draw(true));
-    hit.on('pointerout',  () => draw(false));
+
+    hit.on('pointerover', () => { draw(true);  txt.setStyle({ fill: '#e8c080' }); });
+    hit.on('pointerout',  () => { draw(false); txt.setStyle({ fill: '#8a6030' }); });
     hit.on('pointerdown', onClick);
 
-    return { bg, hit };
+    // txt, hit(Rectangle)만 tween 등록 — Graphics 제외
+    this._uiAnimTargets.push(
+      { obj: txt, originX: bx, originY: by, dir: 'up', delay: animDelay },
+      { obj: hit, originX: bx, originY: by, dir: 'up', delay: animDelay }
+    );
+
+    return { bg, txt, hit };
   }
 
   _goLobby() {
@@ -411,10 +360,6 @@ class AtelierScene extends Phaser.Scene {
     const dur     = 200;
     const stagger = 30;
 
-    // ✏️ 진입 전 현재 탭을 기억 (종료 시 복귀용)
-    // _switchTab → build() 에서 _activeTab = 'manage' 가 이미 세팅된 상태이므로
-    // _preManageTab은 이전 탭(manage 이전)으로 설정해야 함.
-    // → init 또는 _switchTab 에서 _preManageTab 을 미리 저장
     if (!this._preManageTab) this._preManageTab = 'explore';
 
     if (this._currentTabObj && this._currentTabObj._container) {
@@ -433,15 +378,15 @@ class AtelierScene extends Phaser.Scene {
 
     leftBtns.forEach((t, i) => {
       if (!t.obj?.scene) return;
-      this.tweens.add({ targets:t.obj, x:t.originX - W*0.18, alpha:0, duration:dur, delay:i*stagger, ease:'Sine.easeIn' });
+      this.tweens.add({ targets: t.obj, x: t.originX - W * 0.18, alpha: 0, duration: dur, delay: i * stagger, ease: 'Sine.easeIn' });
     });
     rightBtns.forEach((t, i) => {
       if (!t.obj?.scene) return;
-      this.tweens.add({ targets:t.obj, x:t.originX + W*0.18, alpha:0, duration:dur, delay:i*stagger, ease:'Sine.easeIn' });
+      this.tweens.add({ targets: t.obj, x: t.originX + W * 0.18, alpha: 0, duration: dur, delay: i * stagger, ease: 'Sine.easeIn' });
     });
     downBtns.forEach((t, i) => {
       if (!t.obj?.scene) return;
-      this.tweens.add({ targets:t.obj, y:t.originY + H*0.12, alpha:0, duration:dur, delay:i*stagger, ease:'Sine.easeIn' });
+      this.tweens.add({ targets: t.obj, y: t.originY + H * 0.12, alpha: 0, duration: dur, delay: i * stagger, ease: 'Sine.easeIn' });
     });
 
     const allBtns  = [...leftBtns, ...rightBtns, ...downBtns];
@@ -455,26 +400,26 @@ class AtelierScene extends Phaser.Scene {
       if (tab._headerPanel) {
         const oy = tab._headerPanel.y;
         tab._headerPanel.setAlpha(0).setY(oy - 28);
-        this.tweens.add({ targets:tab._headerPanel, y:oy, alpha:1, duration:280, delay:0, ease:'Sine.easeOut' });
+        this.tweens.add({ targets: tab._headerPanel, y: oy, alpha: 1, duration: 280, ease: 'Sine.easeOut' });
       }
       if (tab._listPanel) {
         const ox = tab._listPanel.x;
-        tab._listPanel.setAlpha(0).setX(ox - W*0.16);
-        this.tweens.add({ targets:tab._listPanel, x:ox, alpha:1, duration:320, delay:30, ease:'Back.easeOut' });
+        tab._listPanel.setAlpha(0).setX(ox - W * 0.16);
+        this.tweens.add({ targets: tab._listPanel, x: ox, alpha: 1, duration: 320, delay: 30, ease: 'Back.easeOut' });
       }
       if (tab._rightPanel) {
         const ox = tab._rightPanel.x;
-        tab._rightPanel.setAlpha(0).setX(ox + W*0.16);
-        this.tweens.add({ targets:tab._rightPanel, x:ox, alpha:1, duration:320, delay:60, ease:'Back.easeOut' });
+        tab._rightPanel.setAlpha(0).setX(ox + W * 0.16);
+        this.tweens.add({ targets: tab._rightPanel, x: ox, alpha: 1, duration: 320, delay: 60, ease: 'Back.easeOut' });
       }
       if (tab._backBtn) {
         const oy = tab._backBtn.y;
         tab._backBtn.setAlpha(0).setY(oy + 32);
-        this.tweens.add({ targets:tab._backBtn, y:oy, alpha:1, duration:300, delay:80, ease:'Back.easeOut' });
+        this.tweens.add({ targets: tab._backBtn, y: oy, alpha: 1, duration: 300, delay: 80, ease: 'Back.easeOut' });
       }
       if (tab._centerPanel) {
         tab._centerPanel.setAlpha(0);
-        this.tweens.add({ targets:tab._centerPanel, alpha:1, duration:450, delay:140, ease:'Sine.easeOut' });
+        this.tweens.add({ targets: tab._centerPanel, alpha: 1, duration: 450, delay: 140, ease: 'Sine.easeOut' });
       }
 
       this.time.delayedCall(220, () => {
@@ -495,28 +440,19 @@ class AtelierScene extends Phaser.Scene {
 
     this._currentTabObj = null;
 
-    if (tab._backBtn)    this.tweens.add({ targets:tab._backBtn, x:tab._backBtn.x - W*0.15, alpha:0, duration:200, ease:'Sine.easeIn' });
-    if (tab._centerPanel) this.tweens.add({ targets:tab._centerPanel, alpha:0, duration:220, ease:'Sine.easeIn' });
-    if (tab._headerPanel) this.tweens.add({ targets:tab._headerPanel, y:tab._headerPanel.y - 28, alpha:0, duration:200, ease:'Sine.easeIn' });
-    if (tab._listPanel)  this.tweens.add({ targets:tab._listPanel, x:tab._listPanel.x - W*0.16, alpha:0, duration:220, delay:20, ease:'Sine.easeIn' });
-    if (tab._rightPanel) this.tweens.add({ targets:tab._rightPanel, x:tab._rightPanel.x + W*0.16, alpha:0, duration:220, delay:40, ease:'Sine.easeIn' });
+    if (tab._backBtn)     this.tweens.add({ targets: tab._backBtn,     x: tab._backBtn.x - W * 0.15,  alpha: 0, duration: 200, ease: 'Sine.easeIn' });
+    if (tab._centerPanel) this.tweens.add({ targets: tab._centerPanel, alpha: 0, duration: 220, ease: 'Sine.easeIn' });
+    if (tab._headerPanel) this.tweens.add({ targets: tab._headerPanel, y: tab._headerPanel.y - 28, alpha: 0, duration: 200, ease: 'Sine.easeIn' });
+    if (tab._listPanel)   this.tweens.add({ targets: tab._listPanel,   x: tab._listPanel.x - W * 0.16,  alpha: 0, duration: 220, delay: 20, ease: 'Sine.easeIn' });
+    if (tab._rightPanel)  this.tweens.add({ targets: tab._rightPanel,  x: tab._rightPanel.x + W * 0.16, alpha: 0, duration: 220, delay: 40, ease: 'Sine.easeIn' });
 
     this.time.delayedCall(320, () => {
       try { tab.destroy(); } catch(e) {}
 
-      if (this._sideButtonRefs) {
-        this._sideButtonRefs.forEach(({ underline, drawUnderline }) => {
-          if (underline)     underline.setAlpha(0);
-          if (drawUnderline) drawUnderline(false);
-        });
-      }
-
-      // ✏️ 하드코딩 'explore' → 진입 전 탭으로 복귀 (fallback: explore)
       const returnTab = this._preManageTab || 'explore';
       this._preManageTab = null;
       this._activeTab = returnTab;
 
-      // 복귀 탭 인스턴스 생성
       const TabMap = {
         explore: Tab_Explore, recruit: Tab_Recruit,
         facility: Tab_Facility, outsource: Tab_Outsource, dredge: Tab_Dredge,
