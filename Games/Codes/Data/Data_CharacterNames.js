@@ -1,10 +1,10 @@
 // ================================================================
-//  CharacterNames.js
-//  경로: Games/Codes/Data/CharacterNames.js
+//  Data_CharacterNames.js
+//  경로: Games/Codes/Data/Data_CharacterNames.js
 //
 //  역할: 캐릭터 랜덤 이름 풀 300개 — 스팀펑크 심해 세계관
-//  사용: _rFrom(CHARACTER_NAMES)
-//        또는 CHARACTER_NAMES[Math.floor(Math.random() * CHARACTER_NAMES.length)]
+//  사용: CHARACTER_NAMES[Math.floor(Math.random() * CHARACTER_NAMES.length)]
+//  의존: 없음
 // ================================================================
 
 const CHARACTER_NAMES = [
