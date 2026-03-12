@@ -4,23 +4,24 @@
 //
 //  역할: 영입 탭 전용 상수 + 가챠 유틸 함수
 //  의존: Data_CharacterNames.js (CHARACTER_NAMES)
-//        Data_Overclock.js      (OVERCLOCK_CHANCE, OVERCLOCK_POOL)  ← 분리됨
+//        Data_Overclock.js      (OVERCLOCK_CHANCE, OVERCLOCK_POOL)
 //        PositionData.js        (POSITION_POOL)
 //        PassiveData.js         (PASSIVE_POOL)
-//        SkillData.js           (SKILL_DATA — 키 참조)
 //
-//  ── 변경 이력 ───────────────────────────────────────────────
+//  ── 스탯 저장 방식 ────────────────────────────────────────────
+//    · result.stats  = 순수 기본값 (오버클럭 보정 없음)
+//    · 오버클럭 보정은 CharacterManager.getEffectiveStat() 에서만 계산
+//    · 표시 예: 공격 10 → 오버클럭 +5 → 아이템 +3 → 합계 18
+//
+//  ── 변경 이력 ────────────────────────────────────────────────
 //    v2: 어빌리티 3분리 / 오버클럭 / 스탯 편향 / 직업 다양성 / 가격 연동 가중치
 //    v3: OVERCLOCK_CHANCE / OVERCLOCK_POOL → Data_Overclock.js 로 분리
+//    v4: stats = 순수 기본값으로 변경 (_applyOverclock 제거)
+//        오버클럭 보정은 getEffectiveStat 에서만 적용
 // ================================================================
 
 
 // ── Cog 10등급 체계 ───────────────────────────────────────────────
-//   Cog 1:   7~ 25   Cog 2:  26~ 44   Cog 3:  45~ 63
-//   Cog 4:  64~ 82   Cog 5:  83~100   Cog 6: 101~133
-//   Cog 7: 134~166   Cog 8: 167~200   Cog 9: 201~250
-//   Cog10: 251~300
-
 const RECRUIT_GACHA_BASE = [
   { cog: 1,  baseW: 9490, min:   7, max:  25 },
   { cog: 2,  baseW:  350, min:  26, max:  44 },
@@ -122,22 +123,16 @@ function _rDist(total) {
   return s;
 }
 
-function _rFrom(arr)     { return arr[Math.floor(Math.random() * arr.length)]; }
-function _rSpriteKey()   { return `char_${String(Math.floor(Math.random() * RECRUIT_SPRITE_COUNT)).padStart(3, '0')}`; }
+function _rFrom(arr)   { return arr[Math.floor(Math.random() * arr.length)]; }
+function _rSpriteKey() { return `char_${String(Math.floor(Math.random() * RECRUIT_SPRITE_COUNT)).padStart(3, '0')}`; }
 
-// ── 오버클럭 롤 — Data_Overclock.js 의 OVERCLOCK_CHANCE / OVERCLOCK_POOL 참조 ──
+// ── 오버클럭 롤 ─────────────────────────────────────────────────
 function _rOverclock() {
   if (Math.random() >= OVERCLOCK_CHANCE) return null;
   return OVERCLOCK_POOL[Math.floor(Math.random() * OVERCLOCK_POOL.length)];
 }
 
-function _applyOverclock(stats, overclock) {
-  if (!overclock) return stats;
-  const result = [...stats];
-  result[overclock.statIdx] = Math.floor(result[overclock.statIdx] * (1 + overclock.bonus));
-  return result;
-}
-
+// ── 직업 다양성 강제 ─────────────────────────────────────────────
 function _ensureJobDiversity(rolls) {
   const jobs = rolls.map(r => r.job);
   if (jobs.every(j => j === jobs[0])) {
@@ -148,16 +143,17 @@ function _ensureJobDiversity(rolls) {
   return rolls;
 }
 
+// ── 가챠 1회 결과 생성 ───────────────────────────────────────────
+// · result.stats  = 순수 기본값 (오버클럭 미적용)
+// · 오버클럭 보정 수치는 CharacterManager.getEffectiveStat() 에서 계산
 function _rRoll(currentPrice) {
-  const price      = currentPrice ?? RECRUIT_BASE_PRICE;
-  const entry      = _rWPick(_buildGachaTable(price));
-  const statSum    = _rBiasedInRange(entry.min, entry.max);
-  const cog        = entry.cog;
-  const job        = _rFrom(RECRUIT_JOBS);
-  const baseStats  = _rDist(statSum);
-  const overclock  = _rOverclock();
-  const finalStats = _applyOverclock(baseStats, overclock);
-  const finalSum   = finalStats.reduce((a, b) => a + b, 0);
+  const price     = currentPrice ?? RECRUIT_BASE_PRICE;
+  const entry     = _rWPick(_buildGachaTable(price));
+  const statSum   = _rBiasedInRange(entry.min, entry.max);
+  const cog       = entry.cog;
+  const job       = _rFrom(RECRUIT_JOBS);
+  const baseStats = _rDist(statSum);          // 순수 기본값 배열
+  const overclock = _rOverclock();            // null 또는 OVERCLOCK_POOL 항목
 
   const posPool = (typeof POSITION_POOL !== 'undefined') ? (POSITION_POOL[cog] || POSITION_POOL[1]) : ['앞칸 타격'];
   const pasPool = (typeof PASSIVE_POOL  !== 'undefined') ? (PASSIVE_POOL[cog]  || PASSIVE_POOL[1])  : ['강인한 체질'];
@@ -166,8 +162,8 @@ function _rRoll(currentPrice) {
   return {
     name:      _rFrom(_RECRUIT_NAME_POOL),
     job,
-    stats:     finalStats,
-    statSum:   finalSum,
+    stats:     baseStats,   // ← 순수 기본값, 오버클럭 보정 없음
+    statSum,                 // 기본값 기준 합계
     cog,
     position:  _rFrom(posPool),
     passive:   _rFrom(pasPool),
@@ -175,4 +171,13 @@ function _rRoll(currentPrice) {
     overclock,
     spriteKey: _rSpriteKey(),
   };
+}
+
+// ── 3장 동시 뽑기 ────────────────────────────────────────────────
+function _rRollTriple(currentPrice) {
+  return _ensureJobDiversity([
+    _rRoll(currentPrice),
+    _rRoll(currentPrice),
+    _rRoll(currentPrice),
+  ]);
 }

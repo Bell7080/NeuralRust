@@ -3,11 +3,11 @@
 //  경로: Games/Codes/Managers/CharacterManager.js
 //
 //  [로드 순서 — HTML]
-//    1. Games/Codes/Data/Data_CharacterNames.js   ← CHARACTER_NAMES
-//    2. Games/Codes/Data/Data_Jobs.js              ← JOB_DATA
-//    3. Games/Codes/Data/Data_Positions.js         ← POSITION_DATA, POSITION_POOL, RANGE
-//    4. Games/Codes/Data/Data_Passives.js          ← PASSIVE_DATA, PASSIVE_POOL
-//    5. Games/Codes/Data/Data_Skills.js            ← SKILL_DATA, SKILL_POOL
+//    1. Games/Codes/Data/CharacterNames.js
+//    2. Games/Codes/Data/JobData.js
+//    3. Games/Codes/Data/PositionData.js
+//    4. Games/Codes/Data/PassiveData.js
+//    5. Games/Codes/Data/SkillData.js
 //    6. Games/Codes/Managers/CharacterManager.js
 //
 //  ── 숙련도(Mastery) 시스템 ───────────────────────────────────
@@ -18,15 +18,14 @@
 //    · 플레이어가 Tab_CharProfile의 + 버튼으로 스탯에 직접 배분
 //
 //  ── 오버클럭(Overclock) 적용 순서 ────────────────────────────
-//    · (기본스탯 + mastery 배분) 합산 후 × (1 + bonus)
-//    · 무기/장비는 이 함수 밖에서 별도 가산
-//    · getEffectiveStat(char, key) 로 최종값 계산
+//    · char.stats[key] = 순수 기본값 (보정 없음, 절대 변경 금지)
+//    · getEffectiveStat(char, key) = 기본 + 오버클럭 + 아이템 + 기록칩
+//    · 표시 예: 공격 10 + 오버클럭 5 + 아이템 3 = 18
 // ================================================================
 
 const CharacterManager = (() => {
 
   // ── 스탯 색상 ────────────────────────────────────────────────────
-  // 전역에서 Tab_CharProfile, Recruit_Custom 등이 참조
   const STAT_COLORS = {
     hp:      '#ff88bb',
     health:  '#ff4466',
@@ -40,7 +39,6 @@ const CharacterManager = (() => {
   };
 
   // ── 이름 풀 ──────────────────────────────────────────────────────
-  // Data_CharacterNames.js → CHARACTER_NAMES
   function _getNamePool() {
     return (typeof CHARACTER_NAMES !== 'undefined' && CHARACTER_NAMES.length > 0)
       ? CHARACTER_NAMES
@@ -49,8 +47,6 @@ const CharacterManager = (() => {
          '코그','플럭스','스파크','베인','어비스'];
   }
 
-  // ── 직업 라벨 ────────────────────────────────────────────────────
-  // Data_Jobs.js → JOB_DATA
   function _getJobLabel(jobId) {
     if (typeof JOB_DATA !== 'undefined' && JOB_DATA[jobId])
       return JOB_DATA[jobId].label;
@@ -86,37 +82,23 @@ const CharacterManager = (() => {
 
   function getCogColor(cog) { return COG_COLORS[cog] || COG_COLORS[1]; }
 
-  // ── 어빌리티 풀 폴백 ─────────────────────────────────────────────
-  // Data_Positions.js / Data_Passives.js 로드 실패 시 대비
+  // ── 어빌리티 풀 ──────────────────────────────────────────────────
   const _POSITION_POOL_FALLBACK = {
-    1: ['윗칸 타격', '앞칸 타격'],
-    2: ['앞칸 타격', '현재 칸 타격'],
-    3: ['현재 칸 타격', '대각 타격', '윗칸 타격'],
-    4: ['전열 전체 타격', '대각 타격', '앞칸 타격'],
-    5: ['전열 전체 타격', '현재 칸 타격', '후열 타격'],
-    6: ['전/후열 동시 타격', '후열 타격', '전열 전체 타격'],
-    7: ['전체 칸 타격', '전/후열 동시 타격'],
-    8: ['전체 칸 타격', '전/후열 동시 타격'],
-    9: ['전체 칸 타격', '전/후열 동시 타격'],
-    10: ['전체 칸 타격'],
+    1:['윗칸 타격','앞칸 타격'],          2:['앞칸 타격','현재 칸 타격'],
+    3:['현재 칸 타격','대각 타격'],        4:['대각 타격','윗칸 타격'],
+    5:['전열 전체 타격','후열 타격'],      6:['전열 전체 타격','현재 칸 타격'],
+    7:['전/후열 동시 타격','후열 타격'],   8:['전/후열 동시 타격','전열 전체 타격'],
+    9:['전체 칸 타격','전/후열 동시 타격'],10:['전체 칸 타격'],
   };
 
   const _PASSIVE_POOL_FALLBACK = {
-    1:  ['강인한 체질', '예리한 감각'],
-    2:  ['예리한 감각', '행운아'],
-    3:  ['투지', '빠른 회복'],
-    4:  ['집중력', '도발'],
-    5:  ['강철 피부', '수중 적응'],
-    6:  ['야간 작전', '저격 자세'],
-    7:  ['전술 눈빛', '심해의 숨결'],
-    8:  ['불굴', '반격 본능'],
-    9:  ['절대 의지', '반격 본능'],
-    10: ['절대 의지', '코어 공명'],
+    1:['강인한 체질','예리한 감각'],  2:['예리한 감각','행운아'],
+    3:['투지','빠른 회복'],          4:['집중력','도발'],
+    5:['강철 피부','수중 적응'],     6:['야간 작전','저격 자세'],
+    7:['전술 눈빛','심해의 숨결'],   8:['불굴','반격 본능'],
+    9:['절대 의지','반격 본능'],    10:['절대 의지','코어 공명'],
   };
 
-  // ── SKILL_POOL ────────────────────────────────────────────────────
-  // Data_Skills.js → SKILL_DATA (배열) 로드 시 id 기반 풀 자동 생성
-  // 로드 실패 시 id 기반 폴백으로 대체
   const SKILL_POOL = (() => {
     if (typeof SKILL_DATA !== 'undefined' && Array.isArray(SKILL_DATA)) {
       const pool = {};
@@ -126,71 +108,39 @@ const CharacterManager = (() => {
       });
       return pool;
     }
-    // 폴백 — id 기반
     return {
-      1:  ['basic_strike', 'quick_stab'],
-      2:  ['basic_strike', 'quick_stab', 'combo_hit', 'guard_stance'],
-      3:  ['combo_hit', 'guard_stance', 'heavy_blow', 'evasion', 'poison_coat'],
-      4:  ['heavy_blow', 'evasion', 'poison_coat', 'aoe_strike', 'strong_poison', 'burst_speed'],
-      5:  ['aoe_strike', 'strong_poison', 'burst_speed', 'explosion_hit', 'front_scan', 'armor_pierce'],
-      6:  ['explosion_hit', 'front_scan', 'armor_pierce', 'deep_pressure', 'electric_shock', 'iron_wall'],
-      7:  ['deep_pressure', 'electric_shock', 'iron_wall', 'core_overload', 'abyss_roar'],
-      8:  ['core_overload', 'abyss_roar'],
-      9:  ['core_overload', 'abyss_roar'],
-      10: ['core_overload', 'abyss_roar'],
+      1:['기본 일격','빠른 찌르기'],    2:['연속 타격','방어 자세'],
+      3:['강타','회피 기동'],          4:['독 도포','광역 타격'],
+      5:['강화 독','순간 가속'],       6:['폭발 타격','전방 스캔'],
+      7:['철갑 관통','심해 압박'],     8:['전기 충격','철벽 방어'],
+      9:['코어 오버로드','심연의 포효'],10:['코어 오버로드','심연의 포효'],
     };
   })();
 
-  // ── 포지션 풀 참조 ────────────────────────────────────────────────
-  // Data_Positions.js → POSITION_POOL 우선 참조
   function _getPositionPool(cog) {
     const p = (typeof POSITION_POOL !== 'undefined')
-      ? POSITION_POOL
-      : _POSITION_POOL_FALLBACK;
+      ? POSITION_POOL : _POSITION_POOL_FALLBACK;
     return p[cog] || p[1];
   }
 
-  // ── 패시브 풀 참조 ────────────────────────────────────────────────
-  // Data_Passives.js → PASSIVE_POOL 우선 참조
   function _getPassivePool(cog) {
     if (typeof PASSIVE_POOL !== 'undefined') return PASSIVE_POOL[cog] || PASSIVE_POOL[1];
     return _PASSIVE_POOL_FALLBACK[cog] || _PASSIVE_POOL_FALLBACK[1];
   }
 
-  // ── 풀 유효성 검사 ────────────────────────────────────────────────
-  // 새 파일명 기준: Data_Positions.js → POSITION_DATA
-  //                Data_Passives.js  → PASSIVE_DATA
-  //                Data_Skills.js    → SKILL_DATA (배열)
   function _validatePools() {
-    // POSITION_DATA 검사 (Data_Positions.js)
-    if (typeof POSITION_DATA !== 'undefined') {
-      Object.values(_POSITION_POOL_FALLBACK).flat().forEach(name => {
-        if (!POSITION_DATA[name])
-          console.warn(`[CharacterManager] POSITION_DATA 누락: "${name}"`);
+    if (typeof POSITION_DATA !== 'undefined')
+      Object.values(_POSITION_POOL_FALLBACK).flat().forEach(n => {
+        if (!POSITION_DATA[n]) console.warn(`[CM] PositionData 누락: "${n}"`);
       });
-    }
-    // PASSIVE_DATA 검사 (Data_Passives.js)
-    if (typeof PASSIVE_DATA !== 'undefined') {
-      Object.values(_PASSIVE_POOL_FALLBACK).flat().forEach(name => {
-        if (!PASSIVE_DATA[name])
-          console.warn(`[CharacterManager] PASSIVE_DATA 누락: "${name}"`);
+    if (typeof PASSIVE_DATA !== 'undefined')
+      Object.values(_PASSIVE_POOL_FALLBACK).flat().forEach(n => {
+        if (!PASSIVE_DATA[n]) console.warn(`[CM] PassiveData 누락: "${n}"`);
       });
-    }
-    // SKILL_DATA 검사 (Data_Skills.js) — id 기반
-    if (typeof SKILL_DATA !== 'undefined' && Array.isArray(SKILL_DATA)) {
-      const skillIds = new Set(SKILL_DATA.map(s => s.id));
-      Object.values(SKILL_POOL).flat().forEach(id => {
-        if (!skillIds.has(id))
-          console.warn(`[CharacterManager] SKILL_DATA id 누락: "${id}"`);
+    if (typeof SKILL_DATA !== 'undefined')
+      Object.values(SKILL_POOL).flat().forEach(n => {
+        if (!SKILL_DATA[n]) console.warn(`[CM] SkillData 누락: "${n}"`);
       });
-    }
-    // JOB_DATA 검사 (Data_Jobs.js)
-    if (typeof JOB_DATA !== 'undefined') {
-      ['fisher', 'diver', 'ai'].forEach(jobId => {
-        if (!JOB_DATA[jobId])
-          console.warn(`[CharacterManager] JOB_DATA 누락: "${jobId}"`);
-      });
-    }
   }
 
   // ── 유틸 ─────────────────────────────────────────────────────────
@@ -207,18 +157,13 @@ const CharacterManager = (() => {
     const remain = Math.max(0, total - mins.reduce((a, b) => a + b, 0));
     const b      = [0, 0, 0, 0, 0];
     for (let i = 0; i < remain; i++) b[Math.floor(Math.random() * 5)]++;
-    return {
-      hp:      mins[0] + b[0],
-      health:  mins[1] + b[1],
-      attack:  mins[2] + b[2],
-      agility: mins[3] + b[3],
-      luck:    mins[4] + b[4],
-    };
+    return { hp: mins[0]+b[0], health: mins[1]+b[1], attack: mins[2]+b[2],
+             agility: mins[3]+b[3], luck: mins[4]+b[4] };
   }
 
   function _randStatsBySum(total) {
     const mins = [1, 0, 1, 5, 0];
-    const keys = ['hp', 'health', 'attack', 'agility', 'luck'];
+    const keys = ['hp','health','attack','agility','luck'];
     const rem  = Math.max(0, total - mins.reduce((a, b) => a + b, 0));
     const b    = [0, 0, 0, 0, 0];
     for (let i = 0; i < rem; i++) b[Math.floor(Math.random() * 5)]++;
@@ -228,24 +173,33 @@ const CharacterManager = (() => {
   }
 
   const COG_STAT_RANGE = {
-    1:  { min: 7,   max: 25  },
-    2:  { min: 26,  max: 44  },
-    3:  { min: 45,  max: 63  },
-    4:  { min: 64,  max: 82  },
-    5:  { min: 83,  max: 100 },
-    6:  { min: 101, max: 133 },
-    7:  { min: 134, max: 166 },
-    8:  { min: 167, max: 200 },
-    9:  { min: 201, max: 250 },
-    10: { min: 251, max: 300 },
+    1:{min:7,max:25},   2:{min:26,max:44},  3:{min:45,max:63},
+    4:{min:64,max:82},  5:{min:83,max:100}, 6:{min:101,max:133},
+    7:{min:134,max:166},8:{min:167,max:200},9:{min:201,max:250},
+    10:{min:251,max:300},
   };
 
-  // ── 오버클럭 최종 스탯 계산 ──────────────────────────────────────
+  // ════════════════════════════════════════════════════════════════
+  //  스탯 최종값 계산
+  //
+  //  계산 순서:
+  //    1. base        = char.stats[key]           (순수 기본값)
+  //    2. ocBonus     = Math.floor(base × bonus)  (오버클럭 가산)
+  //    3. itemBonus   = char.itemBonuses?.[key]   (아이템 가산 — 추후)
+  //    4. recordBonus = char.recordBonuses?.[key] (기록칩 가산 — 추후)
+  //    5. 합계        = base + ocBonus + itemBonus + recordBonus
+  // ════════════════════════════════════════════════════════════════
   function getEffectiveStat(char, key) {
     const base = char.stats[key] ?? 0;
-    if (char.overclock && char.overclock.statKey === key)
-      return Math.floor(base * (1 + char.overclock.bonus));
-    return base;
+
+    const ocBonus = (char.overclock && char.overclock.statKey === key)
+      ? Math.floor(base * char.overclock.bonus)
+      : 0;
+
+    const itemBonus   = char.itemBonuses?.[key]   ?? 0;
+    const recordBonus = char.recordBonuses?.[key] ?? 0;
+
+    return base + ocBonus + itemBonus + recordBonus;
   }
 
   function getEffectiveStats(char) {
@@ -255,7 +209,27 @@ const CharacterManager = (() => {
     return r;
   }
 
-  // ── 숙련도(Mastery) 시스템 ───────────────────────────────────────
+  // ── 보너스 항목별 개별 조회 (상세 표시용) ────────────────────────
+  // 반환: { base, overclock, item, record, total }
+  function getStatBreakdown(char, key) {
+    const base        = char.stats[key] ?? 0;
+    const ocBonus     = (char.overclock && char.overclock.statKey === key)
+      ? Math.floor(base * char.overclock.bonus) : 0;
+    const itemBonus   = char.itemBonuses?.[key]   ?? 0;
+    const recordBonus = char.recordBonuses?.[key] ?? 0;
+    return {
+      base,
+      overclock: ocBonus,
+      item:      itemBonus,
+      record:    recordBonus,
+      total:     base + ocBonus + itemBonus + recordBonus,
+    };
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  //  숙련도(Mastery) 시스템
+  // ════════════════════════════════════════════════════════════════
+
   function gainMastery(char, cogLevel) {
     char.mastery      = (char.mastery      || 0) + cogLevel;
     char.pendingStats = (char.pendingStats || 0) + cogLevel;
@@ -281,23 +255,18 @@ const CharacterManager = (() => {
     const statSum = Object.values(stats).reduce((a, v) => a + v, 0);
     const cog     = calcCog(statSum);
     return {
-      id:           `c_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      name:         _pick(_getNamePool()),
-      age:          16 + Math.floor(Math.random() * 10),
-      job,
-      jobLabel:     _getJobLabel(job),
-      stats,
-      statSum,
-      cog,
+      id: `c_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+      name: _pick(_getNamePool()), age: 16 + Math.floor(Math.random() * 10),
+      job, jobLabel: _getJobLabel(job),
+      stats, statSum, cog,
       position:     _pick(_getPositionPool(cog)),
       passive:      _pick(_getPassivePool(cog)),
       skill:        _pick(SKILL_POOL[cog] || SKILL_POOL[1]),
       overclock:    null,
       mastery:      0,
       pendingStats: 0,
-      currentHp:    stats.hp * 10,
-      maxHp:        stats.hp * 10,
-      spriteKey:    _randSpriteKey(),
+      currentHp: stats.hp * 10, maxHp: stats.hp * 10,
+      spriteKey: _randSpriteKey(),
     };
   }
 
@@ -306,23 +275,18 @@ const CharacterManager = (() => {
     const statSum = range.min + Math.floor(Math.random() * (range.max - range.min + 1));
     const stats   = _randStatsBySum(statSum);
     return {
-      id:           `c_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      name:         _pick(_getNamePool()),
-      age:          16 + Math.floor(Math.random() * 10),
-      job,
-      jobLabel:     _getJobLabel(job),
-      stats,
-      statSum,
-      cog,
+      id: `c_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+      name: _pick(_getNamePool()), age: 16 + Math.floor(Math.random() * 10),
+      job, jobLabel: _getJobLabel(job),
+      stats, statSum, cog,
       position:     _pick(_getPositionPool(cog)),
       passive:      _pick(_getPassivePool(cog)),
       skill:        _pick(SKILL_POOL[cog] || SKILL_POOL[1]),
       overclock:    null,
       mastery:      0,
       pendingStats: 0,
-      currentHp:    stats.hp * 10,
-      maxHp:        stats.hp * 10,
-      spriteKey:    _randSpriteKey(),
+      currentHp: stats.hp * 10, maxHp: stats.hp * 10,
+      spriteKey: _randSpriteKey(),
     };
   }
 
@@ -332,23 +296,17 @@ const CharacterManager = (() => {
 
   function saveAll(chars)  { localStorage.setItem(KEY, JSON.stringify(chars)); }
   function loadAll() {
-    try {
-      const r = localStorage.getItem(KEY);
-      return r ? JSON.parse(r) : null;
-    } catch { return null; }
+    try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; }
+    catch { return null; }
   }
 
   function addCharacter(char) {
-    const chars = loadAll() || [];
-    chars.push(char);
-    saveAll(chars);
+    const chars = loadAll() || []; chars.push(char); saveAll(chars);
   }
-
   function removeCharacter(id) {
     saveAll((loadAll() || []).filter(c => c.id !== id));
     saveSquad(loadSquad().map(s => s.filter(x => x !== id)));
   }
-
   function updateCharacter(updated) {
     const chars = loadAll() || [];
     const idx   = chars.findIndex(c => c.id === updated.id);
@@ -362,44 +320,33 @@ const CharacterManager = (() => {
 
     if (ex && ex.length > 0) {
       let dirty = false;
-
-      // 구버전 passive가 포지션 이름이었을 때 이관용 목록
       const oldPosNames = [
-        '윗칸 타격', '앞칸 타격', '현재 칸 타격', '대각 타격',
-        '전열 전체 타격', '후열 타격', '전/후열 동시 타격', '전체 칸 타격',
+        '윗칸 타격','앞칸 타격','현재 칸 타격','대각 타격',
+        '전열 전체 타격','후열 타격','전/후열 동시 타격','전체 칸 타격',
       ];
 
       ex.forEach(c => {
-        // 스프라이트 키 유효성
-        const idx = parseInt((c.spriteKey || '').replace('char_', ''), 10);
-        if (!c.spriteKey || isNaN(idx) || idx >= SPRITE_COUNT) {
-          c.spriteKey = _randSpriteKey(); dirty = true;
-        }
+        const idx = parseInt((c.spriteKey||'').replace('char_',''), 10);
+        if (!c.spriteKey || isNaN(idx) || idx >= SPRITE_COUNT)
+          { c.spriteKey = _randSpriteKey(); dirty = true; }
 
-        // 직업 라벨 동기
         const fl = _getJobLabel(c.job);
         if (c.jobLabel !== fl) { c.jobLabel = fl; dirty = true; }
 
-        // Cog 재계산
         const fc = calcCog(c.statSum || 0);
         if (c.cog !== fc) { c.cog = fc; dirty = true; }
 
-        // position 누락 보정
-        if (!c.position) {
-          c.position = _pick(_getPositionPool(c.cog)); dirty = true;
-        }
+        if (!c.position)
+          { c.position = _pick(_getPositionPool(c.cog)); dirty = true; }
 
-        // overclock 필드 누락 보정
         if (c.overclock === undefined) { c.overclock = null; dirty = true; }
 
-        // 구버전 passive(포지션명) → position 이관
         if (oldPosNames.includes(c.passive)) {
           if (!c.position) c.position = c.passive;
           c.passive = _pick(_getPassivePool(c.cog));
           dirty = true;
         }
 
-        // mastery / pendingStats 누락 보정
         if (c.mastery      === undefined) { c.mastery      = 0; dirty = true; }
         if (c.pendingStats === undefined) { c.pendingStats = 0; dirty = true; }
       });
@@ -408,37 +355,39 @@ const CharacterManager = (() => {
       return ex;
     }
 
-    // 저장 데이터 없음 — 초기 캐릭터 생성
     const chars = [];
-    const sj = ['fisher', 'diver', 'ai'];
+    const sj = ['fisher','diver','ai'];
     for (let cog = 1; cog <= 10; cog++)
-      chars.push(createCharacterOfCog(sj[Math.floor(Math.random() * 3)], cog));
+      chars.push(createCharacterOfCog(sj[Math.floor(Math.random()*3)], cog));
     for (let i = 0; i < 10; i++) chars.push(createCharacter('fisher'));
     for (let i = 0; i < 10; i++) chars.push(createCharacter('diver'));
     saveAll(chars);
     return chars;
   }
 
-  // ── 스쿼드 (폐기 — 하위호환용) ──────────────────────────────────
+  // ── 스쿼드 (폐기 — 하위호환용) ───────────────────────────────────
   function loadSquad() {
     try {
       const r = localStorage.getItem(SQUAD_KEY);
       if (!r) return Array(10).fill(null).map(() => []);
       const raw = JSON.parse(r);
-      return Array(10).fill(null).map((_, i) => {
+      return Array(10).fill(null).map((_,i) => {
         const v = raw[i];
-        return !v ? [] : Array.isArray(v) ? v : [v];
+        return !v ? [] : Array.isArray(v) ? v.filter(Boolean) : [v];
       });
     } catch { return Array(10).fill(null).map(() => []); }
   }
 
-  function saveSquad(grid) {
+  function saveSquad(s) {
     localStorage.setItem(SQUAD_KEY, JSON.stringify(
-      grid.map(v => Array.isArray(v) ? v : [v])
+      Array(10).fill(null).map((_,i) => {
+        const v = s[i];
+        return !v ? [] : Array.isArray(v) ? v : [v];
+      })
     ));
   }
 
-  // ── 파티 (탐사 진입 전 편성) ─────────────────────────────────────
+  // ── 파티 ─────────────────────────────────────────────────────────
   const PARTY_KEY = 'nr_party';
 
   function saveParty(charIds) {
@@ -469,13 +418,12 @@ const CharacterManager = (() => {
   function updateRecordChip(spriteKey, delta) {
     const chips = loadRecordChips();
     if (!chips[spriteKey]) chips[spriteKey] = {
-      expeditions: 0, kills: 0, deaths: 0,
-      highestRegion: '', highestCog: 0,
-      veteran: false, firstDay: 0, deathLog: [],
+      expeditions:0, kills:0, deaths:0,
+      highestRegion:'', highestCog:0, veteran:false, firstDay:0, deathLog:[],
     };
     const c = chips[spriteKey];
-    if (delta.expeditions)   c.expeditions += delta.expeditions;
-    if (delta.kills)         c.kills       += delta.kills;
+    if (delta.expeditions) c.expeditions += delta.expeditions;
+    if (delta.kills)       c.kills       += delta.kills;
     if (delta.highestRegion && delta.highestRegion > c.highestRegion)
       c.highestRegion = delta.highestRegion;
     if (delta.highestCog && delta.highestCog > c.highestCog)
@@ -488,9 +436,8 @@ const CharacterManager = (() => {
   function recordDeath(spriteKey, { day, cog, round, killedBy }) {
     const chips = loadRecordChips();
     if (!chips[spriteKey]) chips[spriteKey] = {
-      expeditions: 0, kills: 0, deaths: 0,
-      highestRegion: '', highestCog: 0,
-      veteran: false, firstDay: 0, deathLog: [],
+      expeditions:0, kills:0, deaths:0,
+      highestRegion:'', highestCog:0, veteran:false, firstDay:0, deathLog:[],
     };
     const c = chips[spriteKey];
     c.deaths += 1;
@@ -502,9 +449,8 @@ const CharacterManager = (() => {
   function recordFirstDay(spriteKey, day) {
     const chips = loadRecordChips();
     if (!chips[spriteKey]) chips[spriteKey] = {
-      expeditions: 0, kills: 0, deaths: 0,
-      highestRegion: '', highestCog: 0,
-      veteran: false, firstDay: 0, deathLog: [],
+      expeditions:0, kills:0, deaths:0,
+      highestRegion:'', highestCog:0, veteran:false, firstDay:0, deathLog:[],
     };
     if (!chips[spriteKey].firstDay) chips[spriteKey].firstDay = day;
     localStorage.setItem(RECORD_KEY, JSON.stringify(chips));
@@ -516,7 +462,7 @@ const CharacterManager = (() => {
     loadAll, saveAll,
     createCharacter, createCharacterOfCog,
     addCharacter, removeCharacter, updateCharacter,
-    loadSquad, saveSquad,           // 폐기 예정 — 하위호환용
+    loadSquad, saveSquad,
     saveParty, loadParty,
     getRecordChip, updateRecordChip, recordDeath, recordFirstDay,
     calcCog, getCogColor, COG_COLORS,
@@ -526,6 +472,7 @@ const CharacterManager = (() => {
     getPassivePool:   _getPassivePool,
     getEffectiveStat,
     getEffectiveStats,
+    getStatBreakdown,
     gainMastery,
     spendStat,
   };
