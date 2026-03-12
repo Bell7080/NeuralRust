@@ -57,18 +57,30 @@ const RECRUIT_COG_COLORS = {
   6:'#ff7700', 7:'#ff4400', 8:'#dd0000', 9:'#ff2255', 10:'#cc44ff',
 };
 
-const RECRUIT_SKILL_POOL = {
-  1:  ['기본 일격', '빠른 찌르기'],
-  2:  ['연속 타격', '방어 자세'],
-  3:  ['강타', '회피 기동'],
-  4:  ['독 도포', '광역 타격'],
-  5:  ['강화 독', '순간 가속'],
-  6:  ['폭발 타격', '전방 스캔'],
-  7:  ['철갑 관통', '심해 압박'],
-  8:  ['전기 충격', '철벽 방어'],
-  9:  ['코어 오버로드', '심연의 포효'],
-  10: ['코어 오버로드', '심연의 포효'],
-};
+// ── 스킬 풀 — Data_Skills.js 로드 시 id 기반 자동 빌드, 실패 시 id 폴백 ─
+const RECRUIT_SKILL_POOL = (() => {
+  if (typeof SKILL_DATA !== 'undefined' && Array.isArray(SKILL_DATA)) {
+    const pool = {};
+    for (let cog = 1; cog <= 10; cog++) pool[cog] = [];
+    SKILL_DATA.forEach(s => {
+      for (let cog = s.cogMin; cog <= 10; cog++) pool[cog].push(s.id);
+    });
+    return pool;
+  }
+  // Data_Skills.js 미로드 시 id 폴백
+  return {
+    1:  ['basic_strike', 'quick_stab'],
+    2:  ['basic_strike', 'quick_stab', 'combo_hit', 'guard_stance'],
+    3:  ['combo_hit', 'guard_stance', 'heavy_blow', 'evasion', 'poison_coat'],
+    4:  ['heavy_blow', 'evasion', 'poison_coat', 'aoe_strike', 'strong_poison', 'burst_speed'],
+    5:  ['aoe_strike', 'strong_poison', 'burst_speed', 'explosion_hit', 'front_scan', 'armor_pierce'],
+    6:  ['explosion_hit', 'front_scan', 'armor_pierce', 'deep_pressure', 'electric_shock', 'iron_wall'],
+    7:  ['deep_pressure', 'electric_shock', 'iron_wall', 'core_overload', 'abyss_roar'],
+    8:  ['core_overload', 'abyss_roar'],
+    9:  ['core_overload', 'abyss_roar'],
+    10: ['core_overload', 'abyss_roar'],
+  };
+})();
 
 const _RECRUIT_NAME_POOL = (typeof CHARACTER_NAMES !== 'undefined' && CHARACTER_NAMES.length > 0)
   ? CHARACTER_NAMES

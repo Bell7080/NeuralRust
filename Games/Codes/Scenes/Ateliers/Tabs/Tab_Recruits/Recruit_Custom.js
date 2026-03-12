@@ -879,7 +879,7 @@ Tab_Recruit.prototype._rerollSkill = function () {
 Tab_Recruit.prototype._confirmHire = function () {
   const { result, scene, W, H } = this;
   const statObj = {};
-  RECRUIT_STAT_KEYS.forEach((k, i) => { statObj[k] = result.stats[i]; });
+  RECRUIT_STAT_KEYS.forEach((k, i) => { statObj[k] = Math.floor(result.stats[i] ?? 0); });
 
   CharacterManager.addCharacter({
     id:        `c_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,

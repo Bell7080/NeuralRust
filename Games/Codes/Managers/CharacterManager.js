@@ -151,14 +151,20 @@ const CharacterManager = (() => {
     return `char_${String(Math.floor(Math.random() * SPRITE_COUNT)).padStart(3, '0')}`;
   }
 
+  // 모든 스탯은 정수. Math.floor로 소수점 방지.
   function _randStats() {
     const total  = 10 + Math.floor(Math.random() * 41);
     const mins   = [1, 0, 1, 5, 0];
     const remain = Math.max(0, total - mins.reduce((a, b) => a + b, 0));
     const b      = [0, 0, 0, 0, 0];
     for (let i = 0; i < remain; i++) b[Math.floor(Math.random() * 5)]++;
-    return { hp: mins[0]+b[0], health: mins[1]+b[1], attack: mins[2]+b[2],
-             agility: mins[3]+b[3], luck: mins[4]+b[4] };
+    return {
+      hp:      Math.floor(mins[0]+b[0]),
+      health:  Math.floor(mins[1]+b[1]),
+      attack:  Math.floor(mins[2]+b[2]),
+      agility: Math.floor(mins[3]+b[3]),
+      luck:    Math.floor(mins[4]+b[4]),
+    };
   }
 
   function _randStatsBySum(total) {
@@ -168,7 +174,7 @@ const CharacterManager = (() => {
     const b    = [0, 0, 0, 0, 0];
     for (let i = 0; i < rem; i++) b[Math.floor(Math.random() * 5)]++;
     const r = {};
-    keys.forEach((k, i) => { r[k] = mins[i] + b[i]; });
+    keys.forEach((k, i) => { r[k] = Math.floor(mins[i] + b[i]); });
     return r;
   }
 
@@ -249,7 +255,17 @@ const CharacterManager = (() => {
     return true;
   }
 
+  // ── 오버클럭 롤 (초기 캐릭터용, 50%) ─────────────────────────────
+  // OVERCLOCK_POOL은 Data_Overclock.js 전역 상수
+  function _rollInitialOverclock() {
+    if (typeof OVERCLOCK_POOL === 'undefined' || !Array.isArray(OVERCLOCK_POOL)) return null;
+    if (Math.random() >= 0.50) return null;
+    return OVERCLOCK_POOL[Math.floor(Math.random() * OVERCLOCK_POOL.length)];
+  }
+
   // ── 캐릭터 생성 ──────────────────────────────────────────────────
+  // · stats는 순수 기본값 (정수). 오버클럭은 overclock 필드에만 기록.
+  // · 실제 보정 수치는 getEffectiveStat() 에서 계산.
   function createCharacter(job) {
     const stats   = _randStats();
     const statSum = Object.values(stats).reduce((a, v) => a + v, 0);
@@ -262,7 +278,7 @@ const CharacterManager = (() => {
       position:     _pick(_getPositionPool(cog)),
       passive:      _pick(_getPassivePool(cog)),
       skill:        _pick(SKILL_POOL[cog] || SKILL_POOL[1]),
-      overclock:    null,
+      overclock:    _rollInitialOverclock(),
       mastery:      0,
       pendingStats: 0,
       currentHp: stats.hp * 10, maxHp: stats.hp * 10,
@@ -282,7 +298,7 @@ const CharacterManager = (() => {
       position:     _pick(_getPositionPool(cog)),
       passive:      _pick(_getPassivePool(cog)),
       skill:        _pick(SKILL_POOL[cog] || SKILL_POOL[1]),
-      overclock:    null,
+      overclock:    _rollInitialOverclock(),
       mastery:      0,
       pendingStats: 0,
       currentHp: stats.hp * 10, maxHp: stats.hp * 10,
