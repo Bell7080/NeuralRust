@@ -331,28 +331,42 @@ class AtelierScene extends Phaser.Scene {
   }
 
   _buildTopButtons(W, H) {
-    // 버튼 크기: 해상도 비율 기반 (폰트 함수 대신 W/H 직접 사용)
     const bh  = Math.round(H * 0.045);
     const bw  = Math.round(W * 0.075);
     const gap = Math.round(W * 0.008);
     const y   = H * 0.04;
 
+    // HUD 우측 끝 계산 (AtelierHUD.js 기준):
+    //   cx   = W / 2
+    //   gap  = W * 0.006
+    //   arcW = W * 0.18
+    //   arcX = cx + gap/2  →  W/2 + W*0.003
+    //   HUD 우측 끝 = arcX + arcW = W*0.5 + W*0.003 + W*0.18 = W * 0.683
+    const hudRight = W * 0.683;
+    const startX   = hudRight + gap;
+
+    // [설정] 버튼
+    const settingsX = startX + bw / 2;
     const { bg: settingsBg, hit: settingsHit } = this._makeTopButton(
-      '설  정', W * 0.50 - bw / 2 - gap, y, bw, bh,
+      '설  정', settingsX, y, bw, bh,
       () => this.scene.start('SettingsScene', { from: 'AtelierScene' })
     );
+
+    // [로비] 버튼
+    const lobbyX = settingsX + bw + gap;
     const { bg: lobbyBg, hit: lobbyHit } = this._makeTopButton(
-      '로  비', W * 0.50 + bw / 2 + gap, y, bw, bh,
+      '로  비', lobbyX, y, bw, bh,
       () => this._goLobby()
     );
 
     this._uiAnimTargets.push(
-      { obj: settingsBg,  originX: W * 0.50 - bw / 2 - gap, originY: y, dir: 'up', delay: 100 },
-      { obj: settingsHit, originX: W * 0.50 - bw / 2 - gap, originY: y, dir: 'up', delay: 100 },
-      { obj: lobbyBg,     originX: W * 0.50 + bw / 2 + gap, originY: y, dir: 'up', delay: 130 },
-      { obj: lobbyHit,    originX: W * 0.50 + bw / 2 + gap, originY: y, dir: 'up', delay: 130 }
+      { obj: settingsBg,  originX: settingsX, originY: y, dir: 'up', delay: 100 },
+      { obj: settingsHit, originX: settingsX, originY: y, dir: 'up', delay: 100 },
+      { obj: lobbyBg,     originX: lobbyX,    originY: y, dir: 'up', delay: 130 },
+      { obj: lobbyHit,    originX: lobbyX,    originY: y, dir: 'up', delay: 130 }
     );
   }
+
 
   _makeTopButton(label, bx, by, bw, bh, onClick) {
     const bg  = this.add.graphics().setAlpha(0);
