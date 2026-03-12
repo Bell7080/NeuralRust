@@ -11,16 +11,11 @@
 
 // ── 커스터마이징 메인 진입 ────────────────────────────────────────
 
-Tab_Recruit.prototype._buildCustom = function (result) {
-  this.result  = result;
-  this.rerolls = {
-    stat:     RECRUIT_MAX_REROLL,
-    sprite:   RECRUIT_MAX_REROLL,
-    position: RECRUIT_MAX_REROLL,
-    passive:  RECRUIT_MAX_REROLL,
-    skill:    RECRUIT_MAX_REROLL,
-  };
+Tab_Recruit.prototype._buildCustom = function () {
+  // this.result / this.rerolls 는 Recruit_Slot.js 카드 클릭 핸들러에서 이미 세팅됨
   this._statTexts = [];
+
+  const result = this.result;
 
   // result.baseStats 없으면 stats 복사해서 만들어줌
   if (!result.baseStats) {
