@@ -357,7 +357,11 @@ const CharacterManager = (() => {
         if (!c.position)
           { c.position = _pick(_getPositionPool(c.cog)); dirty = true; }
 
-        if (c.overclock === undefined) { c.overclock = null; dirty = true; }
+        // 오버클럭 — undefined거나 null이면 50% 확률로 부여
+        if (c.overclock === undefined || c.overclock === null) {
+          c.overclock = _rollInitialOverclock();
+          dirty = true;
+        }
 
         if (oldPosNames.includes(c.passive)) {
           if (!c.position) c.position = c.passive;
@@ -365,7 +369,11 @@ const CharacterManager = (() => {
           dirty = true;
         }
 
-        if (c.mastery      === undefined) { c.mastery      = 0; dirty = true; }
+        // 숙련도 — 미설정이거나 0이면 절반 확률로 1~40 랜덤 부여
+        if (c.mastery === undefined || c.mastery === 0) {
+          c.mastery = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * 40) : 0;
+          dirty = true;
+        }
         if (c.pendingStats === undefined) { c.pendingStats = 0; dirty = true; }
       });
 

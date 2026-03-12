@@ -14,8 +14,11 @@
 //    - destroy()에 잠금 상태 복구 + _lockOverlay 정리 추가
 //  ✏️ v3 수정:
 //    - _clear()에 _ocGlowTween 중단 추가
-//      → Recruit_Custom.js 오버클럭 glow tween이 destroy 후에도
-//         onUpdate를 호출해 발생하던 "Cannot read properties of null (reading 'cut')" 수정
+//  ✏️ v4 수정:
+//    - _clear()에 _sceneHits 정리 추가
+//      → READY 영입 버튼 hit이 SLOT/PICK에서 살아있어
+//         카드 클릭 시 슬롯 재시작되는 버그 수정
+//    - _clear()에 _tweens / _timers 중단 추가
 // ================================================================
 
 class Tab_Recruit {
@@ -30,7 +33,7 @@ class Tab_Recruit {
     this.result        = null;
     this.rerolls       = {};
     this._lockOverlay  = null;
-    this._ocGlowTween  = null;   // ✏️ 오버클럭 glow tween 참조
+    this._ocGlowTween  = null;
 
     this._container  = scene.add.container(0, 0);
     this._timers     = [];
@@ -62,18 +65,21 @@ class Tab_Recruit {
     this._container.destroy();
   }
 
-  // ── 내부 유틸 ─────────────────────────────────────────────────
-
   _fs(n) { return scaledFontSize(n, this.scene.scale); }
 
   _clear() {
-    // ✏️ 오버클럭 glow tween 먼저 중단 — 컨테이너 정리 전에 반드시 실행
-    //    tween이 살아있는 상태에서 ocTxt가 destroy되면 onUpdate에서
-    //    "Cannot read properties of null (reading 'cut')" 오류 발생
     if (this._ocGlowTween) {
       try { this._ocGlowTween.stop(); this._ocGlowTween.remove(); } catch(e) {}
       this._ocGlowTween = null;
     }
+    this._tweens.forEach(t => { try { t.stop(); } catch(e) {} });
+    this._tweens = [];
+    this._timers.forEach(t => { try { t.remove(); } catch(e) {} });
+    this._timers = [];
+    // 핵심: _sceneHits 정리 — 이게 없으면 READY 영입 버튼이 PICK 단계에서도
+    // 살아있어 카드 클릭 시 _buildSlot이 재실행됨
+    this._sceneHits.forEach(h => { try { if (h.active) h.destroy(); } catch(e) {} });
+    this._sceneHits = [];
     this._container.removeAll(true);
   }
 
@@ -89,7 +95,6 @@ class Tab_Recruit {
     return t;
   }
 
-  // ── 탭 버튼 잠금/해제 ─────────────────────────────────────────
   _lockTabs() {
     const refs = this.scene._sideButtonRefs || [];
     refs.forEach(({ btn }) => btn.disableInteractive());
@@ -110,6 +115,4 @@ class Tab_Recruit {
       this._lockOverlay = null;
     }
   }
-
-  // ── 나머지 메서드는 Recruit_*.js 파일에서 prototype으로 주입됨 ──
 }
