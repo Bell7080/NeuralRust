@@ -26,7 +26,7 @@ const OVERCLOCK_POOL = [
   {
     id:          'oc_hp',
     name:        '강화 외피',
-    label:       '⚡ 오버클럭 : 체력',
+    label:       '오버클럭 : 체력',
     description: '체력 스탯이 50% 증가합니다.',
     statKey:     'hp',
     statIdx:     0,       // RECRUIT_STAT_KEYS 인덱스
@@ -36,7 +36,7 @@ const OVERCLOCK_POOL = [
   {
     id:          'oc_health',
     name:        '자가 수복',
-    label:       '⚡ 오버클럭 : 건강',
+    label:       '오버클럭 : 건강',
     description: '건강 스탯이 50% 증가합니다.',
     statKey:     'health',
     statIdx:     1,
@@ -46,7 +46,7 @@ const OVERCLOCK_POOL = [
   {
     id:          'oc_attack',
     name:        '분노 회로',
-    label:       '⚡ 오버클럭 : 공격',
+    label:       '오버클럭 : 공격',
     description: '공격 스탯이 50% 증가합니다.',
     statKey:     'attack',
     statIdx:     2,
@@ -56,7 +56,7 @@ const OVERCLOCK_POOL = [
   {
     id:          'oc_agility',
     name:        '가속 구동계',
-    label:       '⚡ 오버클럭 : 민첩',
+    label:       '오버클럭 : 민첩',
     description: '민첩 스탯이 50% 증가합니다.',
     statKey:     'agility',
     statIdx:     3,
@@ -66,7 +66,7 @@ const OVERCLOCK_POOL = [
   {
     id:          'oc_luck',
     name:        '행운 코어',
-    label:       '⚡ 오버클럭 : 행운',
+    label:       '오버클럭 : 행운',
     description: '행운 스탯이 50% 증가합니다.',
     statKey:     'luck',
     statIdx:     4,

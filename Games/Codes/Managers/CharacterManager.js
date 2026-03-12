@@ -369,9 +369,11 @@ const CharacterManager = (() => {
           dirty = true;
         }
 
-        // 숙련도 — 미설정이거나 0이면 절반 확률로 1~40 랜덤 부여
-        if (c.mastery === undefined || c.mastery === 0) {
+        // 숙련도 마이그레이션 — 미설정이거나 0이면 절반 캐릭터에 1~40 랜덤 부여
+        // 주의: mastery >= 1이면 이미 설정된 것으로 보고 건드리지 않음
+        if ((c.mastery === undefined || c.mastery === 0) && !c._masteryMigrated) {
           c.mastery = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * 40) : 0;
+          c._masteryMigrated = true;
           dirty = true;
         }
         if (c.pendingStats === undefined) { c.pendingStats = 0; dirty = true; }
