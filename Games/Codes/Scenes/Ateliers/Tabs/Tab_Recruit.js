@@ -81,6 +81,9 @@ class Tab_Recruit {
     this._sceneHits.forEach(h => { try { if (h.active) h.destroy(); } catch(e) {} });
     this._sceneHits = [];
     this._container.removeAll(true);
+    // _lockOverlay는 _container 소속이므로 removeAll(true)로 이미 destroy됨
+    // 스테일 레퍼런스 방지를 위해 참조 초기화
+    if (this._lockOverlay) { this._lockOverlay = null; }
   }
 
   _delay(ms, fn) {
@@ -111,7 +114,7 @@ class Tab_Recruit {
     refs.forEach(({ btn }) => btn.setInteractive({ useHandCursor: true }));
 
     if (this._lockOverlay) {
-      this._lockOverlay.destroy();
+      try { this._lockOverlay.destroy(); } catch(e) {}
       this._lockOverlay = null;
     }
   }

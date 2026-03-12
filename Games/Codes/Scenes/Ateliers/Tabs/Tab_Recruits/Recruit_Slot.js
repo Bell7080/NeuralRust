@@ -284,7 +284,7 @@ Tab_Recruit.prototype._flipToPick = function () {
           card.add(ocTxt);
           // pulse glow
           const _ocP = { v: 0 };
-          scene.tweens.add({
+          this._tween({
             targets: _ocP, v: { from: 0, to: 1 },
             duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
             onUpdate: () => {

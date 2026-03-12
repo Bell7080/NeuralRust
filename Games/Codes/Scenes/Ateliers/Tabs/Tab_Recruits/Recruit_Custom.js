@@ -13,6 +13,7 @@
 
 Tab_Recruit.prototype._buildCustom = function () {
   // this.result / this.rerolls 는 Recruit_Slot.js 카드 클릭 핸들러에서 이미 세팅됨
+  this._clear();   // PICK 단계 카드 3장 + 가이드 텍스트 제거
   this._statTexts = [];
 
   const result = this.result;
