@@ -11,7 +11,7 @@
 
 // ── 커스터마이징 메인 진입 ────────────────────────────────────────
 
-Tab_Recruit.prototype._buildCustomize = function (result) {
+Tab_Recruit.prototype._buildCustom = function (result) {
   this.result  = result;
   this.rerolls = {
     stat:     RECRUIT_MAX_REROLL,
