@@ -250,11 +250,11 @@ const TM_RightPanel = {
     const plusW  = parseInt(fs(19));
 
     const STAT_DEFS = [
-      { key:'hp',      label:'체력', tip:'체력 — 최대 HP에 직접 영향.' },
-      { key:'health',  label:'건강', tip:'건강 — 상태이상 저항 및 회복 속도.' },
-      { key:'attack',  label:'공격', tip:'공격 — 기본 전투 피해량 계수.' },
-      { key:'agility', label:'민첩', tip:'민첩 — 행동 순서와 회피율에 영향.' },
-      { key:'luck',    label:'행운', tip:'행운 — 드롭, 크리티컬, 이벤트 결과.' },
+      { key:'hp',      label:'체력', tip: getStatTooltip('hp')      },
+      { key:'health',  label:'건강', tip: getStatTooltip('health')   },
+      { key:'attack',  label:'공격', tip: getStatTooltip('attack')   },
+      { key:'agility', label:'민첩', tip: getStatTooltip('agility')  },
+      { key:'luck',    label:'행운', tip: getStatTooltip('luck')     },
     ];
 
     const statBH  = STAT_DEFS.length * rowH + parseInt(fs(3));

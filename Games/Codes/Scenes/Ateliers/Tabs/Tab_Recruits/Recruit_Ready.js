@@ -105,9 +105,11 @@ Tab_Recruit.prototype._buildReady = function () {
   const hit = scene.add.rectangle(cx, btnY, btnW, btnH, 0, 0)
     .setInteractive({ useHandCursor: true }).setDepth(20);
 
-  hit.on('pointerover', () => { drawBtn('hover');  btnTxt.setStyle({ fill: '#e8c080' }); });
-  hit.on('pointerout',  () => { drawBtn('normal'); btnTxt.setStyle({ fill: '#c8a070' }); });
-  hit.on('pointerdown', () => { drawBtn('down');   btnTxt.setStyle({ fill: '#a07040' }); });
+  // ✏️ _onHire() 후 씬 전환으로 btnTxt가 destroy되어도 이벤트가 발화할 수 있음
+  //    → btnTxt.active 체크로 죽은 객체 접근 차단
+  hit.on('pointerover', () => { if (!btnTxt.active) return; drawBtn('hover');  btnTxt.setStyle({ fill: '#e8c080' }); });
+  hit.on('pointerout',  () => { if (!btnTxt.active) return; drawBtn('normal'); btnTxt.setStyle({ fill: '#c8a070' }); });
+  hit.on('pointerdown', () => { if (!btnTxt.active) return; drawBtn('down');   btnTxt.setStyle({ fill: '#a07040' }); });
   hit.on('pointerup',   () => this._onHire());
 
   this._container.add([panel, deco, recruitLabel, lineG, txt, priceLabel, this._priceTxt, btnGlow, btnBg, btnTxt]);

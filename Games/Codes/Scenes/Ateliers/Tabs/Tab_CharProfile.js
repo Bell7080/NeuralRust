@@ -4,25 +4,16 @@
 //
 //  역할: 캐릭터 프로필 팝업 — 공용 모듈
 //
-//  ✏️ v3 수정사항
-//    · 스탯 행마다 고유 색상 (CharacterManager.STAT_COLORS 참조)
-//    · 오버클럭 스탯: glow 테두리 + ⚡ 아이콘 강조
-//    · 잔여 스탯(pendingStats) 영역: 스탯 블록 하단에 표시
-//    · 잔여 스탯 있을 때 각 스탯 행 우측에 + 버튼 등장
-//      - hover 시 해당 스탯 색상으로 발광
-//      - 클릭 시 파티클 이펙트 + 스탯 수치 즉시 갱신
-//    · POSITION / PASSIVE / SKILL 3박스 유지
-//
-//  사용법:
-//    CharProfile.open(scene, W, H, char, {
-//      onClose:   () => {},
-//      onHeal:    (char, cost) => {},
-//      extraBtns: [{ label:'...', danger:true, onClick:()=>{} }],
-//    });
+//  ✏️ 툴팁 연동
+//    · 스탯 tip       → Data_Tooltips.js getStatTooltip()
+//    · 직업 tip       → Data_Tooltips.js getJobTooltip()
+//    · 포지션 desc    → Data_Tooltips.js getPositionTooltip()
+//    · 패시브 desc    → Data_Tooltips.js getPassiveTooltip()
+//    · 스킬 desc      → Data_Tooltips.js getSkillTooltip()
 //
 //  의존: FontManager, scaledFontSize (utils.js)
 //        CharacterManager (STAT_COLORS, spendStat, getEffectiveStat)
-//        PositionData.js, PassiveData.js, SkillData.js
+//        Data_Tooltips.js
 // ================================================================
 
 const CharProfile = {
@@ -31,12 +22,11 @@ const CharProfile = {
     const { onClose, onHeal, extraBtns = [] } = opts;
 
     const pw = W * 0.42;
-    const ph = H * 0.68;  // ✏️ 74% → 68% (하단 여백 축소)
+    const ph = H * 0.68;
     const px = (W - pw) / 2;
     const py = (H - ph) / 2;
     const fs = n => scaledFontSize(n, scene.scale);
 
-    // ── 스탯 색상 (CharacterManager 없으면 폴백) ─────────────────
     const SC = (typeof CharacterManager !== 'undefined' && CharacterManager.STAT_COLORS)
       ? CharacterManager.STAT_COLORS
       : { hp:'#ff88bb', health:'#ff4466', attack:'#ff3333', agility:'#55ccff', luck:'#88ff88' };
@@ -106,7 +96,6 @@ const CharProfile = {
       }).setOrigin(0.5));
     }
 
-    // 정리가 필요한 repeat:-1 tween 참조 목록
     const _persistTweens = [];
 
     // ════════════════════════════════════════════════════════════
@@ -152,7 +141,7 @@ const CharProfile = {
     };
 
     // ════════════════════════════════════════════════════════════
-    //  상단 우: 이름 / 나이 / 직업 / HP바
+    //  상단 우: 이름 / 숙련도 / 직업 / 오버클럭 / HP바
     // ════════════════════════════════════════════════════════════
     const infoX = portX + portW + pad * 0.8;
     const infoW = px + pw - pad - infoX;
@@ -163,7 +152,6 @@ const CharProfile = {
     }).setOrigin(0,0));
     infoY += parseInt(fs(32));
 
-    // ── 숙련도 (나이 대신) ───────────────────────────────────────
     const masteryLv = char.mastery || 0;
     g.add(scene.add.text(infoX, infoY, `숙련도  Lv.${masteryLv}`, {
       fontSize: fs(13), fill: masteryLv > 0 ? '#b8a060' : '#5a4a28',
@@ -171,31 +159,24 @@ const CharProfile = {
     }).setOrigin(0, 0));
     infoY += parseInt(fs(18));
 
-    const JOB_TIPS = {
-      fisher:(typeof getJobDescription==='function')?getJobDescription('fisher'):'',
-      diver: (typeof getJobDescription==='function')?getJobDescription('diver') :'',
-      ai:    (typeof getJobDescription==='function')?getJobDescription('ai')    :'',
-    };
+    // ✏️ 직업 툴팁 → Data_Tooltips.js getJobTooltip()
     const jobLbl = scene.add.text(infoX, infoY, `직업  :  ${char.jobLabel}`, {
       fontSize:fs(14), fill:'#c8802a', fontFamily:FontManager.MONO,
     }).setOrigin(0,0);
     const jobHit = scene.add.rectangle(
       infoX, infoY+parseInt(fs(9)), jobLbl.width, parseInt(fs(18)), 0, 0
     ).setInteractive({useHandCursor:false}).setOrigin(0,0.5).setDepth(402);
-    jobHit.on('pointerover',(ptr)=>_showTip(ptr.x,ptr.y,JOB_TIPS[char.job]||char.jobLabel));
+    jobHit.on('pointerover',(ptr)=>_showTip(ptr.x,ptr.y, getJobTooltip(char.job)));
     jobHit.on('pointermove',(ptr)=>_moveTip(ptr.x,ptr.y));
     jobHit.on('pointerout', ()=>_hideTip());
     g.add([jobLbl, jobHit]);
     infoY += parseInt(fs(20));
 
-    // ── 오버클럭 (직업 아래, 텍스트 glow만 - 박스 없음) ──────────
+    // ── 오버클럭 ────────────────────────────────────────────────
     if (char.overclock) {
       const ocColor  = char.overclock.color || '#ff4400';
-      const ocHexNum = parseInt(ocColor.replace('#', '0x'));
-      // label에서 번개 기호 제거
       const statName = (char.overclock.label || '')
-        .replace('⚡ 오버클럭 : ', '')
-        .replace('⚡ ', '');
+        .replace('⚡ 오버클럭 : ', '').replace('⚡ ', '');
 
       const ocLine = scene.add.text(infoX, infoY,
         `오버클럭  :  ${statName}`, {
@@ -204,7 +185,6 @@ const CharProfile = {
       }).setOrigin(0, 0);
       g.add(ocLine);
 
-      // 호버 툴팁 히트 영역
       const ocHitBox = scene.add.rectangle(
         infoX + ocLine.width/2, infoY + parseInt(fs(7)),
         ocLine.width + 10, parseInt(fs(16)), 0, 0
@@ -215,7 +195,6 @@ const CharProfile = {
       ocHitBox.on('pointerout',  () => _hideTip());
       g.add(ocHitBox);
 
-      // 텍스트 자체 발광 — shadow 트윈으로 처리
       const _ocPulse = { v: 0 };
       const _applyGlow = (v) => {
         if (!ocLine.active) return;
@@ -227,7 +206,6 @@ const CharProfile = {
         onUpdate: () => _applyGlow(_ocPulse.v),
       });
       _persistTweens.push(_ocTw);
-
       infoY += parseInt(fs(18));
     }
 
@@ -271,15 +249,14 @@ const CharProfile = {
         ? CharacterManager.getCogColor(char.cog).css : '#e8c040',
       fontFamily:FontManager.MONO,
     }).setOrigin(0.5));
-    curY += cogBarH + parseInt(fs(6));  // ✏️ cogBarH 기준으로 통일
+    curY += cogBarH + parseInt(fs(6));
 
-    // ── 2컬럼 레이아웃 설정 ──────────────────────────────────────
-    const colGap   = parseInt(fs(8));
-    const colW     = (bodyW - colGap) / 2;
-    const leftColX = bodyX;
-    const rightColX= bodyX + colW + colGap;
+    // ── 2컬럼 레이아웃 ───────────────────────────────────────────
+    const colGap    = parseInt(fs(8));
+    const colW      = (bodyW - colGap) / 2;
+    const leftColX  = bodyX;
+    const rightColX = bodyX + colW + colGap;
 
-    // ── 스탯 블록 헤더 (좌측 컬럼) ──────────────────────────────
     const pendingStats = char.pendingStats || 0;
 
     g.add(scene.add.text(leftColX, curY, '[ 스  탯 ]', {
@@ -287,12 +264,13 @@ const CharProfile = {
     }).setOrigin(0,0));
     curY += parseInt(fs(14));
 
+    // ✏️ tip 텍스트 → Data_Tooltips.js getStatTooltip() 참조
     const STAT_DEFS = [
-      { key:'hp',      label:'체력', tip:'체력 — 최대 HP에 직접 영향. 높을수록 오래 버팁니다.' },
-      { key:'health',  label:'건강', tip:'건강 — 상태이상 저항 및 자연 회복 속도에 영향.' },
-      { key:'attack',  label:'공격', tip:'공격 — 기본 전투 피해량 계수. 무기 보정과 곱연산.' },
-      { key:'agility', label:'민첩', tip:'민첩 — 행동 순서와 회피율에 영향. 높을수록 선공 확률 증가.' },
-      { key:'luck',    label:'행운', tip:'행운 — 아이템 드롭, 크리티컬 확률, 이벤트 결과에 영향.' },
+      { key:'hp',      label:'체력', tip: getStatTooltip('hp')      },
+      { key:'health',  label:'건강', tip: getStatTooltip('health')   },
+      { key:'attack',  label:'공격', tip: getStatTooltip('attack')   },
+      { key:'agility', label:'민첩', tip: getStatTooltip('agility')  },
+      { key:'luck',    label:'행운', tip: getStatTooltip('luck')     },
     ];
 
     const rowH   = parseInt(fs(20));
@@ -317,7 +295,6 @@ const CharProfile = {
 
     const statStartY = curY + parseInt(fs(2));
 
-    // 파티클 이펙트
     const _burstEffect = (x, y, color) => {
       const hc = parseInt(color.replace('#','0x'));
       for (let k = 0; k < 8; k++) {
@@ -336,10 +313,8 @@ const CharProfile = {
       }
     };
 
-    // + 버튼 전역 참조 (pendingStats=0 되면 일괄 숨김)
-    const _plusButtons = [];  // { bg, txt, hit }
+    const _plusButtons = [];
     const _valTxts = {};
-    // 잔여스탯 카운터 텍스트 참조 (아래에서 생성)
     let _pendingTxt = null;
 
     STAT_DEFS.forEach(({ key, label, tip }, i) => {
@@ -361,7 +336,6 @@ const CharProfile = {
 
       if (isOc) {
         const glowBar = scene.add.graphics();
-        // 좌→우 알파 페이드: 여러 슬라이스로 그라디언트 시뮬레이션
         const slices  = 24;
         const barX    = leftColX + 1;
         const barY    = sy + 1;
@@ -369,12 +343,10 @@ const CharProfile = {
         const barH    = rowH - 2;
         const sliceW  = barW / slices;
         for (let s = 0; s < slices; s++) {
-          // 왼쪽 0.28 → 오른쪽 0.02 로 선형 감소
           const alpha = 0.28 - (0.26 * s / (slices - 1));
           glowBar.fillStyle(ocHex, alpha);
           glowBar.fillRect(barX + s * sliceW, barY, Math.ceil(sliceW), barH);
         }
-        // 좌측 강조선은 진하게 유지
         glowBar.fillStyle(ocHex, 0.85);
         glowBar.fillRect(leftColX + 1, sy + 1, 2, rowH - 2);
         g.add(glowBar);
@@ -386,13 +358,9 @@ const CharProfile = {
         fontFamily:FontManager.MONO,
       }).setOrigin(0,0.5);
 
-      // 오버클럭 수치: 번개 없이 "기본 → 유효값" 만
-      let valStr;
-      if (isOc) {
-        valStr = `${char.stats[key] || 0}  →  ${effVal}`;
-      } else {
-        valStr = `${effVal}`;
-      }
+      const valStr = isOc
+        ? `${char.stats[key] || 0}  →  ${effVal}`
+        : `${effVal}`;
 
       const valT = scene.add.text(
         pendingStats > 0 ? leftColX+colW-plusW-16 : leftColX+colW-10,
@@ -414,7 +382,6 @@ const CharProfile = {
       statHit.on('pointerout', ()=>_hideTip());
       g.add([statT, valT, statHit]);
 
-      // + 버튼 (pendingStats > 0 초기에만 생성, 이후 visible로 제어)
       const btnX = leftColX + colW - plusW/2 - 4;
       const plusBg  = scene.add.graphics();
       const plusTxt = scene.add.text(btnX, midY, '+', {
@@ -440,14 +407,12 @@ const CharProfile = {
         }
       };
 
-      // 초기 가시성
       const initVisible = pendingStats > 0;
       plusBg.setVisible(initVisible);
       plusTxt.setVisible(initVisible);
       _drawPlus(false);
 
-      const plusHit = scene.add.rectangle(btnX, midY, plusW, rowH-4, 0, 0)
-        .setDepth(403);
+      const plusHit = scene.add.rectangle(btnX, midY, plusW, rowH-4, 0, 0).setDepth(403);
       if (initVisible) plusHit.setInteractive({useHandCursor:true});
 
       plusHit.on('pointerover', () => { _drawPlus(true);  plusTxt.setStyle({fill:'#ffffff'}); });
@@ -456,10 +421,7 @@ const CharProfile = {
         const ok = (typeof CharacterManager !== 'undefined')
           ? CharacterManager.spendStat(char, key) : false;
         if (!ok) return;
-
         _burstEffect(btnX, midY, statCol);
-
-        // 수치 갱신 (번개 없이)
         const newEff = (typeof CharacterManager !== 'undefined')
           ? CharacterManager.getEffectiveStat(char, key)
           : (char.stats[key] || 0);
@@ -468,19 +430,12 @@ const CharProfile = {
         } else {
           _valTxts[key].setText(`${newEff}`);
         }
-
-        // 잔여스탯 카운터 갱신
         if (_pendingTxt) {
-          const rem = char.pendingStats || 0;
-          _pendingTxt.setText(`잔여 스탯  +${rem}`);
+          _pendingTxt.setText(`잔여 스탯  +${char.pendingStats || 0}`);
         }
-
-        // 포인트 소진 시 모든 + 버튼 일괄 숨김
         if ((char.pendingStats || 0) <= 0) {
           _plusButtons.forEach(({bg, txt, hit}) => {
-            bg.setVisible(false);
-            txt.setVisible(false);
-            hit.disableInteractive();
+            bg.setVisible(false); txt.setVisible(false); hit.disableInteractive();
           });
           if (_pendingTxt) _pendingTxt.setVisible(false);
           const pendingRow = _pendingTxt ? _pendingTxt.getData('rowBg') : null;
@@ -494,10 +449,10 @@ const CharProfile = {
 
     curY += statBH + parseInt(fs(4));
 
-    // ── 잔여스탯 행 (스탯 블록 바로 아래, 좌측 컬럼) ────────────
+    // ── 잔여스탯 행 ──────────────────────────────────────────────
     if (pendingStats > 0) {
-      const pendH   = parseInt(fs(18));
-      const pendBg  = scene.add.graphics();
+      const pendH  = parseInt(fs(18));
+      const pendBg = scene.add.graphics();
       pendBg.fillStyle(0x0e0b07,1);
       pendBg.lineStyle(1,0x2a1a08,0.5);
       pendBg.strokeRect(leftColX,curY,colW,pendH);
@@ -540,18 +495,16 @@ const CharProfile = {
       return yy + bh + parseInt(fs(5));
     };
 
-    let rightY = botAreaY + cogBarH + parseInt(fs(8));  // ✏️ Cog 바 아래부터 시작
+    let rightY = botAreaY + cogBarH + parseInt(fs(8));
 
-    const posDesc = (typeof getPositionDescription==='function')
-      ? getPositionDescription(char.position) : (char.position||'');
+    // ✏️ POSITION / PASSIVE / SKILL → Data_Tooltips.js 참조
+    const posDesc = getPositionTooltip(char.position);
     rightY = makeAbilBox('POSITION', char.position||'—', posDesc, rightY, '#c8a060', rightColX, colW);
 
-    const pasDesc = (typeof getPassiveDescription==='function')
-      ? getPassiveDescription(char.passive) : (char.passive||'');
+    const pasDesc = getPassiveTooltip(char.passive);
     rightY = makeAbilBox('PASSIVE', char.passive||'—', pasDesc, rightY, '#a0d080', rightColX, colW);
 
-    const sklDesc = (typeof getSkillDescription==='function')
-      ? getSkillDescription(char.skill) : (char.skill||'');
+    const sklDesc = getSkillTooltip(char.skill);
     rightY = makeAbilBox('SKILL', char.skill||'—', sklDesc, rightY, '#80b0e0', rightColX, colW);
 
     // ── 하단 버튼 ────────────────────────────────────────────────
@@ -596,7 +549,6 @@ const CharProfile = {
 
     function _close() {
       _hideTip();
-      // repeat:-1 트윈 먼저 중단 (destroy 후 onUpdate 참조 오류 방지)
       _persistTweens.forEach(tw => { try { tw.stop(); tw.remove(); } catch(e){} });
       scene.tweens.killTweensOf(g);
       overlay.destroy();
