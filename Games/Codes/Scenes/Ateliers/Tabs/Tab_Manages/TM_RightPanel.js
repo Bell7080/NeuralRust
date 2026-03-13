@@ -10,10 +10,13 @@
 //    2. 우측 패널 각 섹션 — 패널 전체 크기 비례 폰트/여백 확대
 //       스탯 블록 / 어빌리티 블록 각 패널 영역에 꽉 차도록 배치
 //    3. _buildStats 시그니처에 addHit 추가 (ReferenceError 수정 유지)
-//    4. + 버튼 hover/out 글로우 이펙트 추가 (Tab_CharProfile 패턴 이식)
-//       · pointerover → 스탯 고유색 다층 글로우 + '+' 텍스트 흰색
-//       · pointerout  → 기본 상태 복원
-//       · pointerup   → _burst() 파티클 + 수치 갱신 (기존 동작 유지)
+//    4. + 버튼 hover/out 글로우 이펙트 + depth 버그 수정
+//       · plusBg/plusTxt → 씬 직접 배치 depth 18/19 (컨테이너 안에 있으면 글로우가 pH 뒤에 가려지는 버그)
+//       · pointerover → 스탯 고유색 다층 글로우 + '+' 흰색
+//       · pointerout  → 기본 상태 복원 ('+' 색 statCol 복원)
+//       · pointerup   → _burst() 파티클 + 수치 갱신
+//    5. SC 폴백 — 지정 STAT_COLORS 기준으로 통일
+//       hp:#ff88bb / health:#88ddaa / attack:#ff3333 / agility:#55ccff / luck:#ddcc44
 // ================================================================
 
 const TM_RightPanel = {
@@ -468,10 +471,21 @@ const TM_RightPanel = {
 
       // + 버튼 (pendingStats > 0 시)
       if (pendingStats > 0) {
-        const btnX   = colX + colW - plusW;
-        const plusBg = scene.add.graphics();
+        const btnX = colX + colW - plusW;
 
-        // ── hover 상태 드로우 함수 (Tab_CharProfile 패턴 이식) ──
+        // ── plusBg / plusTxt : 씬 직접 배치 + depth 맞춤 ──────────
+        // ✏️ addR(컨테이너 depth≈10) 대신 씬에 직접 올려서
+        //    pH(depth 20) 바로 아래에 렌더되도록 함.
+        //    컨테이너 안에 넣으면 글로우가 pH 뒤에 가려져 보이지 않는 버그 수정.
+        const plusBg  = scene.add.graphics().setDepth(18);
+        const plusTxt = scene.add.text(btnX + (plusW - 1) / 2, midY, '+', {
+          fontSize: rfs(16), fill: statCol, fontFamily: FontManager.MONO,
+        }).setOrigin(0.5).setDepth(19);
+
+        // 파괴 추적에만 등록 (컨테이너에는 넣지 않음)
+        tab._rightDetailObjs.push(plusBg, plusTxt);
+
+        // ── hover 상태 드로우 함수 ──────────────────────────────
         const _drawPlus = (hover) => {
           plusBg.clear();
           if (hover) {
@@ -493,12 +507,10 @@ const TM_RightPanel = {
         };
         _drawPlus(false);
 
-        const plusTxt = scene.add.text(btnX + (plusW - 1) / 2, midY, '+', {
-          fontSize: rfs(16), fill: '#6a9050', fontFamily: FontManager.MONO,
-        }).setOrigin(0.5);
-
+        // ── hit rectangle : depth 20 (pH가 plusTxt 위) ──────────
         const pH = scene.add.rectangle(btnX + (plusW - 1) / 2, midY, plusW, rowH, 0, 0)
-          .setInteractive({ useHandCursor: true });
+          .setDepth(20).setInteractive({ useHandCursor: true });
+        tab._rightDetailObjs.push(pH);
 
         // ── hover / out 이벤트 ──
         pH.on('pointerover', () => {
@@ -507,7 +519,7 @@ const TM_RightPanel = {
         });
         pH.on('pointerout', () => {
           _drawPlus(false);
-          plusTxt.setStyle({ fill: '#6a9050' });
+          plusTxt.setStyle({ fill: statCol });
         });
 
         // ── 클릭: spendStat + burst + 수치 갱신 ──
@@ -537,9 +549,6 @@ const TM_RightPanel = {
           }
         });
 
-        addR(plusBg);
-        addR(plusTxt);
-        addHit(pH);
         _plusButtons.push({ bg: plusBg, txt: plusTxt, hit: pH });
       }
     });

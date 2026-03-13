@@ -15,6 +15,10 @@
 //    Recruit_Data.js  → _rollOverclock()
 //    Recruit_Custom.js → result.overclock
 //    Tab_CharProfile.js, CharacterManager → overclock 필드
+//
+//  ✏️ PATCH — 오버클럭 color를 CharacterManager.STAT_COLORS 기준으로 통일
+//    스탯 색보다 한 단계 밝게 처리 (오버클럭 강조 표현)
+//    hp:#ffaad0 / health:#aaeecc / attack:#ff6655 / agility:#88ddff / luck:#ffee66
 // ================================================================
 
 // ── 발생 확률 ────────────────────────────────────────────────────
@@ -29,9 +33,9 @@ const OVERCLOCK_POOL = [
     label:       '오버클럭 : 체력',
     description: '체력 스탯이 50% 증가합니다.',
     statKey:     'hp',
-    statIdx:     0,       // RECRUIT_STAT_KEYS 인덱스
+    statIdx:     0,
     bonus:       0.50,
-    color:       '#44dd44',
+    color:       '#ffaad0',   // STAT_COLORS hp:#ff88bb 기준 → 밝게
   },
   {
     id:          'oc_health',
@@ -41,7 +45,7 @@ const OVERCLOCK_POOL = [
     statKey:     'health',
     statIdx:     1,
     bonus:       0.50,
-    color:       '#aaffaa',
+    color:       '#aaeecc',   // STAT_COLORS health:#88ddaa 기준 → 밝게
   },
   {
     id:          'oc_attack',
@@ -51,7 +55,7 @@ const OVERCLOCK_POOL = [
     statKey:     'attack',
     statIdx:     2,
     bonus:       0.50,
-    color:       '#ff4400',
+    color:       '#ff6655',   // STAT_COLORS attack:#ff3333 기준 → 밝게
   },
   {
     id:          'oc_agility',
@@ -61,7 +65,7 @@ const OVERCLOCK_POOL = [
     statKey:     'agility',
     statIdx:     3,
     bonus:       0.50,
-    color:       '#44ccff',
+    color:       '#88ddff',   // STAT_COLORS agility:#55ccff 기준 → 밝게
   },
   {
     id:          'oc_luck',
@@ -71,7 +75,7 @@ const OVERCLOCK_POOL = [
     statKey:     'luck',
     statIdx:     4,
     bonus:       0.50,
-    color:       '#ffdd00',
+    color:       '#ffee66',   // STAT_COLORS luck:#ddcc44 기준 → 밝게
   },
 ];
 
