@@ -52,6 +52,8 @@ const TM_Layout = {
     };
 
     if (!scene.textures.exists(BG_KEY)) {
+      // _bgLoadCb에 저장하여 destroy() 시 리스너 제거 가능하게 함
+      tab._bgLoadCb = applyBg;
       scene.load.once('complete', applyBg);
       scene.load.image(BG_KEY, BG_PATH);
       scene.load.start();
@@ -131,14 +133,19 @@ const TM_Layout = {
       .setInteractive({ useHandCursor: true }).setDepth(20);
 
     hit.on('pointerover', () => {
-      scene.tweens.add({ targets: btn, x: origX + shift, duration: 100, ease: 'Sine.easeOut' });
+      // hover 트윈을 _layoutTweens에 추적하여 destroy() 시 강제 중단 가능
+      tab._layoutTweens.push(
+        scene.tweens.add({ targets: btn, x: origX + shift, duration: 100, ease: 'Sine.easeOut' })
+      );
       btn.setStyle({ fill: '#e8c080' });
       marker.setStyle({ fill: '#c06820' });
       ulG.setAlpha(1);
       drawUL(true);
     });
     hit.on('pointerout', () => {
-      scene.tweens.add({ targets: btn, x: origX, duration: 100, ease: 'Sine.easeOut' });
+      tab._layoutTweens.push(
+        scene.tweens.add({ targets: btn, x: origX, duration: 100, ease: 'Sine.easeOut' })
+      );
       btn.setStyle({ fill: '#7a5030' });
       marker.setStyle({ fill: '#4a2a10' });
       ulG.setAlpha(0);

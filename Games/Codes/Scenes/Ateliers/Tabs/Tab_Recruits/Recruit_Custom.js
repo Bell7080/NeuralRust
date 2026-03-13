@@ -775,6 +775,10 @@ Tab_Recruit.prototype._confirmHire = function () {
 };
 
 // ── 영입 완료 팝업 ────────────────────────────────────────────────
+//
+//  ✏️ v4 수정: _tween() / _delay() 사용으로 트윈·타이머 추적
+//              _popupObjs 에 오브젝트 등록 → _clear() 시 강제 정리 가능
+//              (탭 전환 중 팝업 잔류 방지, issue 4)
 
 Tab_Recruit.prototype._showHireCompletePopup = function (name, onDone) {
   const { scene, W, H } = this;
@@ -809,18 +813,26 @@ Tab_Recruit.prototype._showHireCompletePopup = function (name, onDone) {
   msgBox.lineStyle(1, 0x3a2010, 0.4);
   msgBox.strokeRoundedRect(cx - boxW/2 + 4, boxCy - boxH/2 + 4, boxW - 8, boxH - 8, 7);
 
-  scene.tweens.add({ targets: overlay, alpha: 0.55, duration: 200, ease: 'Sine.easeOut' });
-  scene.tweens.add({
+  // scene 직접 추가 오브젝트 추적 → _clear() 시 강제 정리 가능
+  this._popupObjs = [overlay, msgBox, mainTxt, subTxt];
+
+  const _cleanup = () => {
+    this._popupObjs.forEach(o => { try { o.destroy(); } catch(e){} });
+    this._popupObjs = [];
+  };
+
+  // this._tween() / this._delay() 사용 → _tweens / _timers 배열에 자동 추적
+  this._tween({ targets: overlay, alpha: 0.55, duration: 200, ease: 'Sine.easeOut' });
+  this._tween({
     targets: [msgBox, mainTxt, subTxt], alpha: 1,
     duration: 220, ease: 'Sine.easeOut',
     onComplete: () => {
-      scene.time.delayedCall(1400, () => {
-        scene.tweens.add({
+      this._delay(1400, () => {
+        this._tween({
           targets: [overlay, msgBox, mainTxt, subTxt],
           alpha: 0, duration: 380, ease: 'Sine.easeIn',
           onComplete: () => {
-            overlay.destroy(); msgBox.destroy();
-            mainTxt.destroy(); subTxt.destroy();
+            _cleanup();
             if (onDone) onDone();
           },
         });

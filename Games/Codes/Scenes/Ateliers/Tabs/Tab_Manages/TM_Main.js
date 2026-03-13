@@ -41,6 +41,10 @@ class Tab_Manage_Full {
     this._rightDetailObjs   = [];  // TM_RightPanel.buildDetail 추적용
     this._centerDetailObjs  = [];  // TM_Center.buildDetail 추적용
     this._bgPlaceholder     = null; // TM_Layout.buildBackground 비동기 플레이스홀더
+    this._bgLoadCb          = null; // TM_Layout.buildBackground 로드 콜백 (리스너 제거용)
+    this._layoutTweens      = [];   // TM_Layout hover 트윈 추적
+    this._dragTimer         = null; // TM_CardList.setupDrag delayedCall 추적
+    this._toastObjs         = [];   // _showToast scene 직접 오브젝트 추적
 
     // AtelierScene 애니메이션용 패널 참조
     this._headerPanel = null;
@@ -117,11 +121,19 @@ class Tab_Manage_Full {
     const t = scene.add.text(W / 2, H * 0.5, msg, {
       fontSize: scaledFontSize(15, scene.scale), fill: '#cc5533', fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(700).setAlpha(0);
+    this._toastObjs.push(t);
     scene.tweens.add({
       targets: t, alpha: 1, duration: 200,
       onComplete: () => {
         scene.time.delayedCall(1200, () => {
-          scene.tweens.add({ targets: t, alpha: 0, duration: 300, onComplete: () => t.destroy() });
+          scene.tweens.add({
+            targets: t, alpha: 0, duration: 300,
+            onComplete: () => {
+              t.destroy();
+              const i = this._toastObjs.indexOf(t);
+              if (i !== -1) this._toastObjs.splice(i, 1);
+            },
+          });
         });
       },
     });
@@ -147,10 +159,34 @@ class Tab_Manage_Full {
   hide()  { this._container.setVisible(false); }
 
   destroy() {
+    // 비동기 BG 로드 콜백 리스너 제거 (로드 중 destroy 시 참조 누수 방지)
+    if (this._bgLoadCb) {
+      try { this.scene.load.off('complete', this._bgLoadCb); } catch(e) {}
+      this._bgLoadCb = null;
+    }
+
     // 비동기 BG 로드 중 destroy 시 플레이스홀더 정리
     if (this._bgPlaceholder) {
       try { this._bgPlaceholder.destroy(); } catch(e) {}
       this._bgPlaceholder = null;
+    }
+
+    // TM_Layout hover 트윈 정리
+    if (this._layoutTweens) {
+      this._layoutTweens.forEach(tw => { try { tw.stop(); } catch(e){} });
+      this._layoutTweens = [];
+    }
+
+    // drag delayedCall 타이머 정리
+    if (this._dragTimer) {
+      try { this._dragTimer.remove(); } catch(e) {}
+      this._dragTimer = null;
+    }
+
+    // 토스트 텍스트 정리 (scene 직접 추가 오브젝트)
+    if (this._toastObjs) {
+      this._toastObjs.forEach(o => { try { o.destroy(); } catch(e){} });
+      this._toastObjs = [];
     }
 
     // 우측 패널 디테일 오브젝트 정리

@@ -291,7 +291,9 @@ const TM_CardList = {
       if (tab._dragged) _scrollTo(tab, startScroll + dy);
     };
     tab._dragUp    = () => {
-      scene.time.delayedCall(50, () => { tab._dragged = false; });
+      // 이전 미완료 타이머 제거 후 새 타이머 추적
+      if (tab._dragTimer) { try { tab._dragTimer.remove(); } catch(e){} }
+      tab._dragTimer = scene.time.delayedCall(50, () => { tab._dragged = false; });
     };
     tab._dragWheel = (ptr, objs, dx, dy) => {
       if (tab._inCardArea(ptr)) _scrollTo(tab, tab._scrollY - dy * 0.8);

@@ -43,13 +43,10 @@ const CharProfile = {
     popBg.lineStyle(1, 0x6a3a10, 0.9);
     popBg.strokeRect(px, py, pw, ph);
     popBg.fillRect(px, py, pw, ph);
-    popBg.lineStyle(1, 0x8a5020, 0.7);
-    const csDec = 10;
-    [[px+4,py+4,1,1],[px+pw-4,py+4,-1,1],[px+4,py+ph-4,1,-1],[px+pw-4,py+ph-4,-1,-1]]
-      .forEach(([ox,oy,sx,sy]) => {
-        popBg.lineBetween(ox, oy, ox+csDec*sx, oy);
-        popBg.lineBetween(ox, oy, ox, oy+csDec*sy);
-      });
+    // 코너 장식 (고정픽셀 10 → scaledFontSize 기반, drawCornerDeco 사용)
+    const csDec = parseInt(fs(10));
+    const cdPad = parseInt(fs(4));
+    drawCornerDeco(popBg, px + cdPad, py + cdPad, pw - cdPad * 2, ph - cdPad * 2, csDec, 0x8a5020, 0.7);
     g.add(popBg);
 
     // ── 레이아웃 ─────────────────────────────────────────────────
@@ -552,7 +549,8 @@ const CharProfile = {
       _persistTweens.forEach(tw => { try { tw.stop(); tw.remove(); } catch(e){} });
       scene.tweens.killTweensOf(g);
       overlay.destroy();
-      g.destroy();
+      // true: 컨테이너 자식(Text, Graphics, hit 박스 등)까지 모두 파기
+      g.destroy(true);
       if (onClose) onClose();
     }
 

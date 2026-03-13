@@ -19,13 +19,17 @@
 //      → READY 영입 버튼 hit이 SLOT/PICK에서 살아있어
 //         카드 클릭 시 슬롯 재시작되는 버그 수정
 //    - _clear()에 _tweens / _timers 중단 추가
+//  ✏️ v5 수정:
+//    - Tab_Base 상속 (issue 7)
+//      → _container, _tweens, _timers, _sceneHits, _tween(), _delay(), _fs() 제거
+//      → show(), hide() 제거 (Tab_Base 상속)
+//      → destroy()를 super.destroy() 기반으로 재구성
+//    - _popupObjs 추가 (_showHireCompletePopup scene 직접 오브젝트 추적용)
 // ================================================================
 
-class Tab_Recruit {
+class Tab_Recruit extends Tab_Base {
   constructor(scene, W, H) {
-    this.scene = scene;
-    this.W = W;
-    this.H = H;
+    super(scene, W, H);
 
     const save = SaveManager.load() || {};
     this.price = save.recruitPrice ?? RECRUIT_BASE_PRICE;
@@ -34,38 +38,30 @@ class Tab_Recruit {
     this.rerolls       = {};
     this._lockOverlay  = null;
     this._ocGlowTween  = null;
-
-    this._container  = scene.add.container(0, 0);
-    this._timers     = [];
-    this._tweens     = [];
-    this._sceneHits  = [];
+    this._popupObjs    = [];   // _showHireCompletePopup scene 직접 오브젝트 추적
 
     this._buildReady();
   }
 
-  show()    { this._container.setVisible(true);  }
-  hide()    { this._container.setVisible(false); }
+  // show() / hide() → Tab_Base 상속
 
   destroy() {
     if (this._lockOverlay) {
       try { this._lockOverlay.destroy(); } catch(e) {}
       this._lockOverlay = null;
     }
+    // 탭 잠금 해제 (side 버튼 복구)
     const refs = this.scene._sideButtonRefs || [];
     refs.forEach(({ btn }) => {
       try { btn.setInteractive({ useHandCursor: true }); } catch(e) {}
     });
-
-    this._timers.forEach(t => { if (t && t.remove) t.remove(); });
-    this._tweens.forEach(t => { if (t && t.stop)   t.stop();   });
-    this._sceneHits.forEach(h => { try { h.destroy(); } catch(e){} });
-    this._timers    = [];
-    this._tweens    = [];
-    this._sceneHits = [];
-    this._container.destroy();
+    // 팝업 오브젝트 정리
+    if (this._popupObjs) {
+      this._popupObjs.forEach(o => { try { o.destroy(); } catch(e){} });
+      this._popupObjs = [];
+    }
+    super.destroy();
   }
-
-  _fs(n) { return scaledFontSize(n, this.scene.scale); }
 
   _clear() {
     if (this._ocGlowTween) {
@@ -80,22 +76,15 @@ class Tab_Recruit {
     // 살아있어 카드 클릭 시 _buildSlot이 재실행됨
     this._sceneHits.forEach(h => { try { if (h.active) h.destroy(); } catch(e) {} });
     this._sceneHits = [];
+    // 팝업 오브젝트 정리 (탭 전환 중 팝업이 남아있을 경우)
+    if (this._popupObjs) {
+      this._popupObjs.forEach(o => { try { o.destroy(); } catch(e){} });
+      this._popupObjs = [];
+    }
     this._container.removeAll(true);
     // _lockOverlay는 _container 소속이므로 removeAll(true)로 이미 destroy됨
     // 스테일 레퍼런스 방지를 위해 참조 초기화
     if (this._lockOverlay) { this._lockOverlay = null; }
-  }
-
-  _delay(ms, fn) {
-    const t = this.scene.time.delayedCall(ms, fn);
-    this._timers.push(t);
-    return t;
-  }
-
-  _tween(cfg) {
-    const t = this.scene.tweens.add(cfg);
-    this._tweens.push(t);
-    return t;
   }
 
   _lockTabs() {

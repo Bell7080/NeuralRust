@@ -1,17 +1,17 @@
 // ================================================================
 //  Tab_Explore.js
 //  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Explore.js
+//
+//  수정:
+//    - Tab_Base 상속 (issue 7): _container/_tweens/_timers/_sceneHits/_tween/_delay/show/hide/destroy 제거
+//    - destroy() 제거 → Tab_Base.destroy(true) 사용 (issue 3: _container.destroy(true))
+//    - cs = 14 고정픽셀 → scaledFontSize 기반으로 변경 (issue 5)
+//    - 코너 장식 8줄 → drawCornerDeco() 단일 호출로 교체 (issue 6)
 // ================================================================
 
-class Tab_Explore {
+class Tab_Explore extends Tab_Base {
   constructor(scene, W, H) {
-    this.scene = scene;
-    this.W = W;
-    this.H = H;
-    this._container = scene.add.container(0, 0);
-    this._timers    = [];
-    this._tweens    = [];
-    this._sceneHits = [];   // 씬 직접 추가한 hit 박스 추적
+    super(scene, W, H);
     this._build();
   }
 
@@ -30,22 +30,16 @@ class Tab_Explore {
     panel.strokeRect(cx - panelW / 2, cy - panelH / 2, panelW, panelH);
     panel.fillRect(cx - panelW / 2, cy - panelH / 2, panelW, panelH);
 
-    // ── 코너 장식 ────────────────────────────────────────────
+    // ── 코너 장식 (drawCornerDeco 사용, 고정픽셀 → scaledFontSize 기반) ──
     const deco = scene.add.graphics();
-    deco.lineStyle(1, 0x7a4018, 0.7);
-    const cs = 14;
-    const px  = cx - panelW / 2 + 8;
-    const py  = cy - panelH / 2 + 8;
-    const px2 = cx + panelW / 2 - 8;
-    const py2 = cy + panelH / 2 - 8;
-    deco.lineBetween(px,  py,  px + cs, py);
-    deco.lineBetween(px,  py,  px,  py + cs);
-    deco.lineBetween(px2, py,  px2 - cs, py);
-    deco.lineBetween(px2, py,  px2, py + cs);
-    deco.lineBetween(px,  py2, px + cs, py2);
-    deco.lineBetween(px,  py2, px,  py2 - cs);
-    deco.lineBetween(px2, py2, px2 - cs, py2);
-    deco.lineBetween(px2, py2, px2, py2 - cs);
+    const cs   = parseInt(scaledFontSize(14, scene.scale));
+    const pad  = parseInt(scaledFontSize(8, scene.scale));
+    drawCornerDeco(
+      deco,
+      cx - panelW / 2 + pad, cy - panelH / 2 + pad,
+      panelW - pad * 2, panelH - pad * 2,
+      cs, 0x7a4018, 0.7
+    );
 
     // ── 상단 라벨 ────────────────────────────────────────────
     const labelY = cy - panelH / 2 + parseInt(scaledFontSize(26, scene.scale));
@@ -154,7 +148,7 @@ class Tab_Explore {
       txt,
       btnGlow, btnBg, btnTxt,
     ]);
-    // ✏️ hit은 씬 직접 추가 — 컨테이너 tween 이동 시 좌표 어긋남 방지
+    // hit은 씬 직접 추가 — 컨테이너 tween 이동 시 좌표 어긋남 방지
     hit.setDepth(20);
     this._sceneHits.push(hit);
 
@@ -170,8 +164,6 @@ class Tab_Explore {
 
   // ── 버튼 등장 애니메이션 ─────────────────────────────────────
   _revealButton(btnBg, btnGlow, btnTxt, drawBtn, drawGlow) {
-    const { scene } = this;
-
     // 버튼 배경 페이드인
     this._tween({ targets: btnBg, alpha: { from: 0, to: 1 }, duration: 220 });
 
@@ -222,28 +214,5 @@ class Tab_Explore {
       }
     };
     this._timers.push(this.scene.time.delayedCall(charDelay, tick));
-  }
-
-  _delay(ms, fn) {
-    this._timers.push(this.scene.time.delayedCall(ms, fn));
-  }
-
-  _tween(cfg) {
-    const t = this.scene.tweens.add(cfg);
-    this._tweens.push(t);
-    return t;
-  }
-
-  show()    { this._container.setVisible(true);  }
-  hide()    { this._container.setVisible(false); }
-
-  destroy() {
-    this._timers.forEach(t => { if (t && t.remove) t.remove(); });
-    this._tweens.forEach(t => { if (t && t.stop)   t.stop();   });
-    this._sceneHits.forEach(h => { try { h.destroy(); } catch(e){} });
-    this._timers    = [];
-    this._tweens    = [];
-    this._sceneHits = [];
-    this._container.destroy();
   }
 }
