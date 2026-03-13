@@ -171,12 +171,11 @@ const CharProfile = {
 
     // ── 오버클럭 ────────────────────────────────────────────────
     if (char.overclock) {
-      const ocColor  = char.overclock.color || '#ff4400';
-      const statName = (char.overclock.label || '')
-        .replace('⚡ 오버클럭 : ', '').replace('⚡ ', '');
+      const ocColor = char.overclock.color || '#ff4400';
+      // ✅ label은 Data_Overclock.js 단일 소스에서 직접 사용 — 하드코딩 제거
+      const ocLabel = char.overclock.label || char.overclock.name || '오버클럭';
 
-      const ocLine = scene.add.text(infoX, infoY,
-        `오버클럭  :  ${statName}`, {
+      const ocLine = scene.add.text(infoX, infoY, ocLabel, {
         fontSize: fs(12), fill: ocColor, fontFamily: FontManager.MONO,
         stroke: ocColor, strokeThickness: 0,
       }).setOrigin(0, 0);

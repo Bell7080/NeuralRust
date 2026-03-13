@@ -229,12 +229,11 @@ const TM_RightPanel = {
 
     // ── 오버클럭 ────────────────────────────────────────────
     if (char.overclock) {
-      const ocColor  = char.overclock.color || '#ff4400';
-      const statName = (char.overclock.label || '')
-        .replace('⚡ 오버클럭 : ', '').replace('⚡ ', '');
+      const ocColor = char.overclock.color || '#ff4400';
+      // ✅ label은 Data_Overclock.js 단일 소스에서 직접 사용 — 하드코딩 제거
+      const ocLabel = char.overclock.label || char.overclock.name || '오버클럭';
 
-      const ocLine = addR(scene.add.text(colX, curY,
-        `오버클럭  :  ${statName}`, {
+      const ocLine = addR(scene.add.text(colX, curY, ocLabel, {
         fontSize: rfs(13), fill: ocColor, fontFamily: FontManager.MONO,
         stroke: ocColor, strokeThickness: 0,
       }).setOrigin(0, 0));

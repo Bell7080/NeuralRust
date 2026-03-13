@@ -1,5 +1,5 @@
 // ================================================================
-//  Recruit_Popup.js  (v5 — Single Source of Truth)
+//  Recruit_Popup.js  (v6 — base 기준 증감 표기)
 //  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Recruits/Recruit_Popup.js
 //
 //  역할: 재설정 팝업 두 종류
@@ -15,8 +15,12 @@
 //  · onConfirm 콜백 인자 변경
 //      이전: onConfirm(chosenStatsArray)
 //      이후: onConfirm(chosenIsNext: boolean)
-//  · 증감 표시: prevSnap.eff vs nextSnap.eff 비교 (base 기준 아님)
 //  · _showChoicePopup 변경 없음
+//
+//  ── v6 변경사항 ───────────────────────────────────────────────
+//  · 증감 배경·화살표: eff 기준 → base 기준으로 변경
+//      오버클럭 보정 노이즈 제거 — 재설정으로 실제 스탯이 얼마나 바뀌었는지만 표시
+//      dispStr("base → eff")는 유지, 증감 판정만 base 기준
 // ================================================================
 
 // ── 스탯 재설정 팝업 ─────────────────────────────────────────────
@@ -139,11 +143,11 @@ Tab_Recruit.prototype._showStatPopup = function (prevSnap, nextSnap, onConfirm) 
         pop.add(ocSlice);
       }
 
-      // 새로운 탭 — 증감 배경 (eff 기준 비교)
+      // 새로운 탭 — 증감 배경 (base 기준 비교 — 오버클럭 보정 노이즈 제거)
       if (!isPrev) {
-        const prevEff = prevResolved[i].eff;
-        const nextEff = nextResolved[i].eff;
-        const diff    = nextEff - prevEff;
+        const prevBase = prevResolved[i].base;
+        const nextBase = nextResolved[i].base;
+        const diff     = nextBase - prevBase;
         if (diff !== 0) {
           const boxCol  = diff > 0 ? 0x204820 : 0x481010;
           const lineCol = diff > 0 ? 0x30a030 : 0xa03030;
@@ -169,9 +173,9 @@ Tab_Recruit.prototype._showStatPopup = function (prevSnap, nextSnap, onConfirm) 
         fontFamily: FontManager.MONO, fontStyle: 'bold',
       }).setOrigin(0.5, 0.5));
 
-      // 증감 화살표 (새로운 탭만)
+      // 증감 화살표 (새로운 탭만) — base 기준: 재설정으로 실제 스탯이 얼마나 바뀌었는지
       if (!isPrev) {
-        const diff = nextResolved[i].eff - prevResolved[i].eff;
+        const diff = nextResolved[i].base - prevResolved[i].base;
         if (diff !== 0) {
           pop.add(scene.add.text(sbX + sbW - 4, midY,
             `${diff > 0 ? '▲' : '▼'}${Math.abs(diff)}`, {
