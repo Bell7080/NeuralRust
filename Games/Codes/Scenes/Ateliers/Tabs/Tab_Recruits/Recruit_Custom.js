@@ -690,7 +690,7 @@ Tab_Recruit.prototype._confirmHire = function () {
       scene.tweens.add({
         targets: overlay, alpha: 0,
         duration: 300, delay: 600,
-        onComplete: () => { overlay.destroy(); this._buildSlot(); },
+        onComplete: () => { overlay.destroy(); this._buildReady(); },
       });
     },
   });
