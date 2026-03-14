@@ -377,9 +377,10 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   const botY = cy + bh/2 - pad;
   let   curY = topY;
 
-  const _cfPreH  = parseInt(this._fs(36));
-  const _cfPreY  = botY - _cfPreH;
-  const usable   = _cfPreY - pad * 0.6 - topY;
+  // ── 고정 높이 요소들을 먼저 확정 ──────────────────────────────
+  const cfH2     = parseInt(this._fs(34));   // 영입 확정 버튼 높이
+  const cfGap    = pad * 0.6;               // 확정 버튼 위 여백
+  const cfY      = botY - cfH2;             // 확정 버튼 상단 Y (절대좌표)
 
   const btnH       = 24;
   const abilDescH  = parseInt(this._fs(10));
@@ -389,8 +390,20 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   const abilBoxH   = abilInner + abilTitleH + 3 + abilNameH + abilDescH + 2 + 4 + btnH + abilInner;
 
   const gapSm  = pad * 0.45;
-  const fixedH = btnH * 2 + gapSm * 3 + abilBoxH * 3 + gapSm * 2 + parseInt(this._fs(34)) + pad;
-  const iH     = Math.max(bw * 0.38, usable - fixedH);
+
+  // ── iH 역산: 확정 버튼 위에서 콘텐츠 높이를 거꾸로 빼서 초상화 영역 결정 ──
+  // 순서: [iH] gap [외형btn] gap [스탯btn] gap [POS박스] gap [PAS박스] gap [SKL박스] cfGap [cfBtn]
+  const fixedBelowImg = gapSm                          // 초상화 아래 갭
+    + btnH + gapSm                                     // 외형 재설정 버튼
+    + (btnH + 6) + gapSm                               // 스탯 재설정 버튼 (statBtnH = btnH+6)
+    + abilBoxH + gapSm                                 // POSITION 박스
+    + abilBoxH + gapSm                                 // PASSIVE 박스
+    + abilBoxH + cfGap;                                // SKILL 박스 + 확정 버튼 위 여백
+
+  // 초상화 박스가 차지할 수 있는 실제 공간
+  const availForImg = (cfY - topY) - fixedBelowImg;
+  // 최솟값 보정: 너무 작으면 bw*0.22 확보, 너무 크면 bw*0.45 상한
+  const iH = Math.min(Math.max(availForImg, bw * 0.22), bw * 0.45);
 
   // 초상화 박스
   const iY = curY + iH/2;
@@ -487,10 +500,7 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   this._skillTxtRef = sRef;
   this._skillBtn    = sBtn.ref;
 
-  // 영입 확정 버튼
-  const boxBot  = cy + bh/2 - pad;
-  const cfH2    = parseInt(this._fs(34));
-  const cfY     = boxBot - cfH2;
+  // 영입 확정 버튼 — cfH2, cfY는 _buildCustomBox 상단에서 이미 선언됨
   const cfBg    = scene.add.graphics();
   const cfGlow  = scene.add.graphics();
 
@@ -566,15 +576,37 @@ Tab_Recruit.prototype._renderSpriteBox = function (spriteKey) {
   if (this._spriteImg)    { this._spriteImg.destroy();    this._spriteImg    = null; }
   if (this._spriteKeyTxt) { this._spriteKeyTxt.destroy(); this._spriteKeyTxt = null; }
 
-  if (spriteKey && scene.textures.exists(spriteKey)) {
-    const img = scene.add.image(cx, iY, spriteKey).setOrigin(0.5);
-    const sc  = Math.min(iSz / img.width, iSz / img.height) * 0.92;
+  // ✅ CharacterSpriteManager.getKey()로 키 형식 정규화
+  //    spriteKey가 'char_7' 처럼 패딩 없는 형식이어도 'char_007'로 변환
+  let normalizedKey = spriteKey;
+  if (typeof CharacterSpriteManager !== 'undefined' && CharacterSpriteManager.getKey) {
+    const idNum = parseInt((spriteKey || '').replace('char_', ''), 10);
+    if (!isNaN(idNum)) normalizedKey = CharacterSpriteManager.getKey(idNum);
+  }
+
+  if (normalizedKey && scene.textures.exists(normalizedKey)) {
+    const img = scene.add.image(cx, iY, normalizedKey).setOrigin(0.5);
+
+    // ✅ CELL_W × CELL_H(152×280) 비율 기반 스케일 계산
+    //    박스는 정사각형(iSz×iSz)이므로 세로(CELL_H) 기준으로 맞추되
+    //    가로도 초과하지 않도록 min 적용
+    const cellW = (typeof CharacterSpriteManager !== 'undefined' && CharacterSpriteManager.CELL_W)
+      ? CharacterSpriteManager.CELL_W : (img.width  || 152);
+    const cellH = (typeof CharacterSpriteManager !== 'undefined' && CharacterSpriteManager.CELL_H)
+      ? CharacterSpriteManager.CELL_H : (img.height || 280);
+
+    const scaleX = iSz / cellW;
+    const scaleY = iSz / cellH;
+    const sc     = Math.min(scaleX, scaleY) * 0.92;
     img.setScale(sc);
+
     this._spriteImg = img;
     this._container.add(img);
   } else {
-    const num = parseInt(spriteKey.replace('char_', '')) + 1;
-    this._spriteKeyTxt = scene.add.text(cx, iY, `#${num}`, {
+    // 텍스처 미로드 시 번호 텍스트 표시
+    const idNum = parseInt((spriteKey || '').replace('char_', ''), 10);
+    const displayNum = isNaN(idNum) ? '?' : idNum + 1;
+    this._spriteKeyTxt = scene.add.text(cx, iY, `#${displayNum}`, {
       fontSize: this._fs(11), fill: '#3d2010', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
     this._container.add(this._spriteKeyTxt);
@@ -787,8 +819,9 @@ Tab_Recruit.prototype._confirmHire = function () {
     passive:      result.passive  || '—',
     skill:        result.skill    || '—',
     overclock:    result.overclock || null,
-    // ✅ 폴백을 'char_000'으로 수정 — _rSpriteKey()의 padStart(3,'0') 형식과 일치
-    spriteKey:    result.spriteKey || 'char_000',
+    // ✅ 폴백 키를 CharacterSpriteManager.getKey(0) = 'char_000'으로 통일
+    spriteKey:    result.spriteKey || (typeof CharacterSpriteManager !== 'undefined'
+      ? CharacterSpriteManager.getKey(0) : 'char_000'),
     maxHp:        statObj.hp * 10,
     currentHp:    statObj.hp * 10,
     mastery:      0,
