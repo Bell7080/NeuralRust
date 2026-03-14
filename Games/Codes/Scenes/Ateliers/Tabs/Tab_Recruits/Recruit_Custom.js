@@ -13,6 +13,35 @@
 //    · _showHireCompletePopup: _popupObjs 추적 추가 (탭 전환 시 안전 정리)
 // ================================================================
 
+// ════════════════════════════════════════════════════════════════
+//  _resolveStats — 스탯 표시 데이터의 유일한 생성 함수
+//
+//  input : result 객체 (baseStats, overclock 포함)
+//  output: [{ key, label, base, eff, col, isOc, ocColor, dispStr }] × 5
+//
+//  커스텀 패널·재설정 팝업·setText 갱신 모두 이 배열을 소비한다.
+//  effective 계산 로직은 오직 여기에만 존재한다.
+// ════════════════════════════════════════════════════════════════
+Tab_Recruit.prototype._resolveStats = function (result) {
+  const SC = (typeof CharacterManager !== 'undefined' && CharacterManager.STAT_COLORS)
+    ? CharacterManager.STAT_COLORS
+    : { hp:'#ff88bb', health:'#ff4466', attack:'#ff3333', agility:'#55ccff', luck:'#88ff88' };
+
+  const oc   = result.overclock || null;
+  const base = result.baseStats || result.stats || [0, 0, 0, 0, 0];
+
+  return RECRUIT_STAT_KEYS.map((key, i) => {
+    const baseVal = base[i] || 0;
+    const isOc    = oc ? oc.statKey === key : false;
+    const eff     = isOc ? baseVal + Math.floor(baseVal * oc.bonus) : baseVal;
+    const col     = SC[key] || '#c8bfb0';
+    const ocColor = isOc ? oc.color : null;
+    const dispStr = isOc ? `${baseVal} → ${eff}` : `${eff}`;
+
+    return { key, label: RECRUIT_STAT_LABELS[i], base: baseVal, eff, col, isOc, ocColor, dispStr };
+  });
+};
+
 // ── 커스터마이징 메인 진입 ────────────────────────────────────────
 
 Tab_Recruit.prototype._buildCustom = function () {
@@ -23,15 +52,6 @@ Tab_Recruit.prototype._buildCustom = function () {
   if (!result.baseStats) result.baseStats = [...result.stats];
   if (result.baseSum == null)
     result.baseSum = result.stats ? result.stats.reduce((a, b) => a + b, 0) : 0;
-
-  // result.baseStats 없으면 stats 복사해서 만들어줌
-  if (!result.baseStats) {
-    result.baseStats = [...result.stats];
-  }
-  // result.baseSum 없으면 stats 합으로 초기화
-  if (result.baseSum == null) {
-    result.baseSum = result.stats ? result.stats.reduce((a,b)=>a+b,0) : 0;
-  }
 
   const { W, H } = this;
   const bW    = W * 0.21;
@@ -236,7 +256,7 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
   const hpFg2 = scene.add.graphics();
   hpFg2.fillStyle(0x306030, 1);
   hpFg2.fillRect(innerL+1, hpBarY+1, Math.round((innerW-2)*1), hpBarH-2);
-  const maxHp = (result.stats && result.stats[0]) ? result.stats[0] * 10 : 100;
+  const maxHp = (result.baseStats && result.baseStats[0]) ? result.baseStats[0] * 10 : 100;
   this._container.add([hpBg2, hpFg2,
     scene.add.text(innerL + innerW/2, hpBarY + hpBarH/2,
       `HP  ${maxHp} / ${maxHp}`, {
@@ -264,11 +284,6 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
   }).setOrigin(0, 0));
 
   this._statTexts = [];
-  const ocStatIdx = result.overclock ? result.overclock.statIdx : -1;
-  const SC = (typeof CharacterManager !== 'undefined' && CharacterManager.STAT_COLORS)
-    ? CharacterManager.STAT_COLORS
-    : { hp:'#ff88bb', health:'#ff4466', attack:'#ff3333', agility:'#55ccff', luck:'#88ff88' };
-  const STAT_COLOR_ORDER = ['hp', 'health', 'attack', 'agility', 'luck'];
 
   const statBotY   = cy + bh/2 - pad;
   const totalRows  = RECRUIT_STAT_LABELS.length;
@@ -278,9 +293,13 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
   const statBlockX = innerL;
   const statBlockW = innerW;
 
+  // ✅ _resolveStats() — 오버클럭 포함한 표시 데이터 배열
+  const resolved  = this._resolveStats(result);
+  const ocStatIdx = resolved.findIndex(r => r.isOc);
+
   // 오버클럭 행 외부 glow
   if (ocStatIdx >= 0) {
-    const ocHex2 = parseInt(result.overclock.color.replace('#', '0x'));
+    const ocHex2 = parseInt(resolved[ocStatIdx].ocColor.replace('#', '0x'));
     const glowBg = scene.add.graphics();
     [{p:5,a:0.07},{p:3,a:0.18},{p:1,a:0.38}].forEach(({p,a}) => {
       glowBg.lineStyle(1, ocHex2, a);
@@ -295,13 +314,9 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
   statBgG.fillRect(statBlockX, statStartY, statBlockW, statBH);
   this._container.add(statBgG);
 
-  RECRUIT_STAT_LABELS.forEach((label, i) => {
-    const rowY  = statStartY + i * rowH2;
-    const midY  = rowY + rowH2 * 0.5;
-    const isOc  = i === ocStatIdx;
-    const statCol = SC[STAT_COLOR_ORDER[i]] || '#c8bfb0';
-    const ocColor = isOc ? result.overclock.color : null;
-    const ocHex3  = isOc ? parseInt(ocColor.replace('#', '0x')) : null;
+  resolved.forEach((stat, i) => {
+    const rowY = statStartY + i * rowH2;
+    const midY = rowY + rowH2 * 0.5;
 
     if (i > 0) {
       const sg = scene.add.graphics();
@@ -310,17 +325,15 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
       this._container.add(sg);
     }
 
-    if (isOc) {
+    if (stat.isOc) {
+      const ocHex3 = parseInt(stat.ocColor.replace('#', '0x'));
       const glowG2 = scene.add.graphics();
       const slices = 24;
-      const barX   = statBlockX + 1;
-      const barY   = rowY + 1;
-      const barW   = statBlockW - 2;
-      const barH   = rowH2 - 2;
+      const barX   = statBlockX + 1, barY = rowY + 1;
+      const barW   = statBlockW - 2, barH = rowH2 - 2;
       const sliceW = barW / slices;
       for (let s = 0; s < slices; s++) {
-        const alpha = 0.28 - (0.26 * s / (slices - 1));
-        glowG2.fillStyle(ocHex3, alpha);
+        glowG2.fillStyle(ocHex3, 0.28 - (0.26 * s / (slices - 1)));
         glowG2.fillRect(barX + s * sliceW, barY, Math.ceil(sliceW), barH);
       }
       glowG2.fillStyle(ocHex3, 0.85);
@@ -328,17 +341,16 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
       this._container.add(glowG2);
     }
 
-    const labelT = scene.add.text(statBlockX + 8, midY, label, {
+    const labelT = scene.add.text(statBlockX + 8, midY, stat.label, {
       fontSize: this._fs(10),
-      fill: isOc ? ocColor : statCol + 'cc',
+      fill: stat.isOc ? stat.ocColor : stat.col + 'cc',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    const base   = (isOc && result.baseStats) ? result.baseStats[i] : result.stats[i];
-    const valStr = isOc ? `${base} → ${result.stats[i]}` : `${result.stats[i]}`;
-    const valT   = scene.add.text(statBlockX + statBlockW - 6, midY, valStr, {
+    // ✅ dispStr — "base → eff" 또는 "eff", _resolveStats에서 생성
+    const valT = scene.add.text(statBlockX + statBlockW - 6, midY, stat.dispStr, {
       fontSize: this._fs(11),
-      fill: isOc ? ocColor : statCol,
+      fill: stat.isOc ? stat.ocColor : stat.col,
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5);
 
@@ -624,7 +636,6 @@ Tab_Recruit.prototype._rDistRandom = function (total) {
 Tab_Recruit.prototype._rerollStats = function () {
   if (this.rerolls.stat <= 0) { this._toast('재설정 횟수 소진'); return; }
 
-  const oc      = this.result.overclock;
   const baseSum = this.result.baseSum ?? this.result.statSum;
   const MIN_SUM = 7;
 
@@ -639,38 +650,25 @@ Tab_Recruit.prototype._rerollStats = function () {
     if (totalDiff > 0 || baseSum <= MIN_SUM) break;
   }
 
-  const next = (typeof _applyOverclock === 'function')
-    ? _applyOverclock(newBase, oc)
-    : [...newBase];
+  // ✅ 스냅샷 두 개를 팝업에 전달 — _resolveStats()는 팝업 내부에서 호출
+  const prevSnap = { ...this.result, baseStats: prevBase };
+  const nextSnap = { ...this.result, baseStats: newBase };
 
-  const nextBase = [...newBase];
-  const prev     = [...this.result.stats];
-
-  this._showStatPopup(prev, next, (chosen) => {
-    const chosenIsNext = chosen === next || JSON.stringify(chosen) === JSON.stringify(next);
-    if (oc && chosenIsNext) {
-      this.result.baseStats = nextBase;
-    }
-    this.result.stats = chosen;
+  this._showStatPopup(prevSnap, nextSnap, (chosenIsNext) => {
+    // ✅ chosenIsNext: boolean — true면 새 스탯, false면 이전 유지
+    this.result.baseStats = chosenIsNext ? [...newBase] : [...prevBase];
     this.rerolls.stat--;
 
-    const ocIdx = oc ? oc.statIdx : -1;
-    const SC2   = (typeof CharacterManager !== 'undefined' && CharacterManager.STAT_COLORS)
-      ? CharacterManager.STAT_COLORS
-      : { hp:'#ff88bb', health:'#ff4466', attack:'#ff3333', agility:'#55ccff', luck:'#88ff88' };
-    const SCO = ['hp','health','attack','agility','luck'];
-    chosen.forEach((v, i) => {
-      const isOc    = i === ocIdx;
-      const ocColor = isOc ? oc.color : null;
-      const statCol = SC2[SCO[i]] || '#c8bfb0';
-      const base    = (isOc && this.result.baseStats) ? this.result.baseStats[i] : v;
-      const str     = isOc ? `${base}→${v}` : `${v}`;
-      this._statTexts[i].setText(str);
-      this._statTexts[i].setStyle({ fill: isOc ? ocColor : statCol });
+    // ✅ setText 갱신도 _resolveStats() 소비
+    const updated = this._resolveStats(this.result);
+    updated.forEach((stat, i) => {
+      this._statTexts[i].setText(stat.dispStr);
+      this._statTexts[i].setStyle({ fill: stat.isOc ? stat.ocColor : stat.col });
     });
+
     if (this.rerolls.stat <= 0) this._disableBtn(this._statBtn, '스탯 재설정  ✕');
     else this._statBtn.txt.setText(`스탯 재설정  🎲  ${this.rerolls.stat}`);
-  }, oc, prevBase, nextBase);
+  });
 };
 
 Tab_Recruit.prototype._rerollSprite = function () {
