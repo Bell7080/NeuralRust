@@ -13,6 +13,18 @@
 //  레이아웃 원칙:
 //    모든 위치·크기는 W / H 비율 기반 — 하드코딩 없음.
 //    optionBoxH, sliderH 등 높이값도 H 비례로 계산.
+//
+//  ✏️ 수정 내역
+//    · hintY: optionBoxH * 0.05 뺄셈 → + optionBoxH * 0.55 로 변경
+//      (마지막 옵션박스 아래로 충분히 내려가도록 — 박스 겹침 버그 수정)
+//    · _buildShaderSlider: 오디오 탭(_makeSlider) 스타일로 전면 재작성
+//      - scene.add.circle → Graphics 기반 knob (오디오와 동일)
+//      - knobR: H * 0.013 → H * 0.014 (오디오와 동일)
+//      - sliderH: H * 0.006 → H * 0.007 (오디오와 동일)
+//      - 슬라이더 폰트 크기 16/18 (오디오와 동일)
+//      - 섹션 라벨 폰트 18 (오디오와 동일)
+//      - section2Y: dividerY + H * 0.04 → dividerY + H * 0.05
+//        프리셋 버튼까지 포함한 전체 높이 계산으로 뒤로가기 버튼 겹침 방지
 // ================================================================
 
 const Settings_Tab_Video = {
@@ -21,16 +33,16 @@ const Settings_Tab_Video = {
     const isFullscreen = !!document.fullscreenElement;
 
     // ── 공통 레이아웃 상수 ─────────────────────────────────────
-    const marginX    = W * 0.08;           // 좌우 여백
-    const contentW   = W * 0.84;           // 콘텐츠 폭
-    const optionBoxH = Math.round(H * 0.10);  // 옵션 박스 높이 (H 비례)
-    const labelSize  = 16;                 // scaledFontSize 기준값
+    const marginX    = W * 0.08;
+    const contentW   = W * 0.84;
+    const optionBoxH = Math.round(H * 0.10);
+    const labelSize  = 16;
     const titleSize  = 20;
 
     // ── 섹션 1: 화면 모드 ─────────────────────────────────────
-    const section1Y  = H * 0.30;
-    const option1Y   = H * 0.41;          // 첫 옵션 박스 중앙 Y
-    const optionGap  = optionBoxH + H * 0.025;  // 박스 간격
+    const section1Y = H * 0.30;
+    const option1Y  = H * 0.41;
+    const optionGap = optionBoxH + H * 0.025;
 
     scene.add.text(marginX, section1Y, '[ 화면 모드 ]', {
       fontSize: scaledFontSize(labelSize, scene.scale),
@@ -50,35 +62,31 @@ const Settings_Tab_Video = {
       const box        = scene.add.graphics();
       scene.drawOptionBox(box, marginX, boxTop, contentW, optionBoxH, isSelected);
 
-      // 아이콘 마커
       scene.add.text(marginX + contentW * 0.055, y, isSelected ? '▶' : '·', {
         fontSize: scaledFontSize(labelSize, scene.scale),
         fill: isSelected ? '#a05018' : '#251508',
         fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);
 
-      // 옵션명
       const nameText = scene.add.text(marginX + contentW * 0.09, y - optionBoxH * 0.16, opt.label, {
         fontSize: scaledFontSize(titleSize, scene.scale),
         fill: isSelected ? '#c8a070' : '#3d2010',
         fontFamily: FontManager.TITLE,
       }).setOrigin(0, 0.5);
 
-      // 설명
       scene.add.text(marginX + contentW * 0.09, y + optionBoxH * 0.20, opt.desc, {
         fontSize: scaledFontSize(14, scene.scale),
-        fill: isSelected ? '#4a2810' : '#251508',
+        fill: isSelected ? '#5a3820' : '#2a1508',
         fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);
 
-      // 히트 영역
       const hit = scene.add.rectangle(cx, y, contentW, optionBoxH, 0x000000, 0)
         .setInteractive({ useHandCursor: true });
 
       hit.on('pointerover', () => {
         if (!isSelected) {
           scene.drawOptionBox(box, marginX, boxTop, contentW, optionBoxH, false, true);
-          nameText.setStyle({ fill: '#8a6040' });
+          nameText.setStyle({ fill: '#9a7040' });
         }
       });
       hit.on('pointerout', () => {
@@ -88,14 +96,21 @@ const Settings_Tab_Video = {
         }
       });
       hit.on('pointerdown', () => {
-        if (isSelected) return;
         if (opt.key === 'fullscreen') document.documentElement.requestFullscreen?.().catch(() => {});
         else                          document.exitFullscreen?.().catch(() => {});
       });
     });
 
-    // 안내 텍스트 — 옵션 박스들 바로 아래
-    const hintY = option1Y + optionGap * options.length - optionBoxH * 0.05;
+    // ── 안내 텍스트 — 마지막 옵션박스 아래로 충분히 내려서 배치 ──
+    // ✏️ 수정: - optionBoxH * 0.05 → + optionBoxH * 0.55
+    //    이전: option1Y + optionGap * 2 - optionBoxH * 0.05
+    //          ≈ H*0.41 + (optionBoxH+H*0.025)*2 - optionBoxH*0.05
+    //          마지막 박스 중앙 + optionGap - optionBoxH*0.05
+    //          = 마지막 박스 하단보다 위 → 박스 안에 겹침
+    //    이후: option1Y + optionGap * (options.length - 1) + optionBoxH * 0.55
+    //          마지막 박스 중앙 + 박스 높이의 55% = 박스 하단 + 여유 5%
+    const lastOptY = option1Y + optionGap * (options.length - 1);
+    const hintY    = lastOptY + optionBoxH * 0.55;
     scene.add.text(cx, hintY, 'F11 키로도 전체화면을 전환할 수 있습니다', {
       fontSize: scaledFontSize(13, scene.scale),
       fill: '#2a1508',
@@ -109,118 +124,152 @@ const Settings_Tab_Video = {
     divider.lineBetween(marginX, dividerY, marginX + contentW, dividerY);
 
     // ── 섹션 2: 심해 필터 ─────────────────────────────────────
-    const section2Y = dividerY + H * 0.04;
-    this._buildShaderSlider(scene, W, H, cx, marginX, contentW, section2Y, labelSize);
+    // ✏️ 수정: H * 0.04 → H * 0.05 (구분선과의 여백 소폭 확보)
+    const section2Y = dividerY + H * 0.05;
+    this._buildShaderSlider(scene, W, H, cx, marginX, contentW, section2Y);
   },
 
-  // ── 쉐이더 슬라이더 ───────────────────────────────────────────
-  _buildShaderSlider(scene, W, H, cx, marginX, contentW, startY, labelSize) {
+  // ── 쉐이더 슬라이더 — 오디오 탭 _makeSlider 스타일로 통일 ─────
+  // ✏️ 전면 재작성:
+  //   · scene.add.circle → Graphics knob (오디오와 동일한 방식)
+  //   · knobR H * 0.014, sliderH H * 0.007 (오디오와 동일)
+  //   · 라벨/값 폰트: 18 / 16 (오디오와 동일)
+  //   · 섹션 라벨 폰트: 18 (오디오와 동일)
+  //   · sliderX: cx - sliderW/2 중앙 정렬 (오디오와 동일)
+  //   · valueX: sliderX + sliderW + W * 0.018 (오디오와 동일)
+  //   · 프리셋 버튼을 sliderY 기준으로 배치해 뒤로가기 버튼 겹침 방지
+  _buildShaderSlider(scene, W, H, cx, marginX, contentW, startY) {
 
-    // 섹션 제목
+    // ── 섹션 라벨 (오디오와 동일한 크기 18) ──────────────────
     scene.add.text(marginX, startY, '[ 심해 필터 ]', {
-      fontSize: scaledFontSize(labelSize, scene.scale),
-      fill: '#3d2010',
+      fontSize: scaledFontSize(18, scene.scale),
+      fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    // 설명
-    scene.add.text(marginX, startY + H * 0.038, '화면 톤·비네팅·스캔라인 강도를 조절합니다', {
-      fontSize: scaledFontSize(13, scene.scale),
-      fill: '#251508',
-      fontFamily: FontManager.MONO,
+    // ── 슬라이더 레이아웃 (오디오 _makeSlider와 동일한 수치) ──
+    const sliderW        = contentW * 0.60;
+    const sliderH        = Math.max(5, Math.round(H * 0.007));
+    const knobR          = Math.max(9, Math.round(H * 0.014));
+    const sliderX        = cx - sliderW / 2;
+    const sliderY        = startY + H * 0.095;   // 섹션 라벨 아래 여백
+    const labelOffsetUp  = H * 0.025;
+    const labelOffsetDown = H * 0.015;
+    const valueX         = sliderX + sliderW + W * 0.018;
+
+    // 라벨 (위) — 오디오와 동일 스타일
+    scene.add.text(marginX, sliderY - labelOffsetUp, '심해 필터 강도', {
+      fontSize: scaledFontSize(18, scene.scale),
+      fill: '#8a5a30',
+      fontFamily: FontManager.TITLE,
     }).setOrigin(0, 0.5);
 
-    // ── 슬라이더 레이아웃 (H 비례) ────────────────────────────
-    const sliderY    = startY + H * 0.10;
-    const sliderW    = contentW * 0.65;
-    const sliderH    = Math.max(4, Math.round(H * 0.006));  // 트랙 두께
-    const knobR      = Math.max(8, Math.round(H * 0.013));  // 노브 반지름
-    const sliderX    = marginX;                              // 트랙 시작 X
+    // 서브 라벨 (아래) — 오디오와 동일 스타일
+    scene.add.text(marginX, sliderY + labelOffsetDown, 'SHADER', {
+      fontSize: scaledFontSize(12, scene.scale),
+      fill: '#3a2010',
+      fontFamily: FontManager.MONO,
+      letterSpacing: 3,
+    }).setOrigin(0, 0.5);
 
-    // 트랙 배경
-    const trackBg = scene.add.graphics();
-    trackBg.fillStyle(0x1a0e06, 1);
-    trackBg.fillRoundedRect(sliderX, sliderY - sliderH / 2, sliderW, sliderH, sliderH / 2);
+    // 설명 — 서브 라벨 아래
+    scene.add.text(marginX, sliderY + labelOffsetDown + H * 0.032,
+      '화면 톤·비네팅·스캔라인 강도를 조절합니다', {
+        fontSize: scaledFontSize(13, scene.scale),
+        fill: '#3d2810',
+        fontFamily: FontManager.MONO,
+      }).setOrigin(0, 0.5);
 
-    // 트랙 채움 (진행 부분)
-    const trackFill = scene.add.graphics();
+    // ── 그래픽 레이어 (오디오와 동일한 Graphics 방식) ──────────
+    const track  = scene.add.graphics();
+    const filled = scene.add.graphics();
+    const knob   = scene.add.graphics();
 
-    // 노브
-    const knob = scene.add.circle(0, sliderY, knobR, 0xa05018)
-      .setStrokeStyle(1, 0x6b3010)
+    const drawAll = (pct, hover = false) => {
+      // 트랙 배경
+      track.clear();
+      track.fillStyle(0x1e1208, 1);
+      track.lineStyle(1, 0x3a2010, 0.7);
+      track.strokeRect(sliderX, sliderY - sliderH / 2, sliderW, sliderH);
+      track.fillRect(sliderX, sliderY - sliderH / 2, sliderW, sliderH);
+
+      // 틱 마크 (오디오와 동일)
+      [0, 25, 50, 75, 100].forEach(tp => {
+        const tx = sliderX + sliderW * (tp / 100);
+        track.lineStyle(1, (tp === 0 || tp === 100) ? 0x4a2810 : 0x2a1808, 0.6);
+        track.lineBetween(tx, sliderY - sliderH / 2 - 4, tx, sliderY + sliderH / 2 + 4);
+      });
+
+      // 채움
+      filled.clear();
+      filled.fillStyle(0x8a4820, 1);
+      filled.fillRect(sliderX, sliderY - sliderH / 2, sliderW * pct, sliderH);
+
+      // 노브
+      knob.clear();
+      knob.fillStyle(hover ? 0xf0c880 : 0xd0a858, 1);
+      knob.lineStyle(1.5, hover ? 0xffd890 : 0x9a5820, 1);
+      const kx = sliderX + sliderW * pct;
+      knob.strokeCircle(kx, sliderY, knobR);
+      knob.fillCircle(kx, sliderY, knobR);
+    };
+
+    // 값 텍스트 (오디오와 동일 스타일: 16)
+    const valueTxt = scene.add.text(valueX, sliderY - labelOffsetUp * 0.4,
+      `${Math.round(ShaderManager.getIntensity() * 100)}%`, {
+        fontSize: scaledFontSize(16, scene.scale),
+        fill: '#c8a070',
+        fontFamily: FontManager.MONO,
+      }).setOrigin(0, 0.5);
+
+    const refresh = (pct, hover = false) => {
+      drawAll(pct, hover);
+      valueTxt.setText(`${Math.round(pct * 100)}%`);
+    };
+
+    refresh(ShaderManager.getIntensity());
+
+    // ── 히트 영역 (오디오와 동일) ────────────────────────────
+    const hitH    = Math.max(knobR * 3, 40);
+    const hitArea = scene.add.rectangle(cx, sliderY, sliderW + knobR * 2, hitH, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
 
-    // 퍼센트 텍스트 (슬라이더 오른쪽)
-    const pctText = scene.add.text(sliderX + sliderW + W * 0.02, sliderY, '', {
-      fontSize: scaledFontSize(labelSize, scene.scale),
-      fill: '#a05018',
-      fontFamily: FontManager.MONO,
-    }).setOrigin(0, 0.5);
+    const pctFromX = (px) => Math.max(0, Math.min(1, (px - sliderX) / sliderW));
 
-    // 라벨 텍스트 (슬라이더 위)
-    const subLabel = scene.add.text(sliderX, sliderY - knobR - H * 0.015, '강도', {
-      fontSize: scaledFontSize(13, scene.scale),
-      fill: '#3d2010',
-      fontFamily: FontManager.MONO,
-    }).setOrigin(0, 0.5);
-
-    // ── 그리기 함수 ───────────────────────────────────────────
-    const redraw = () => {
-      const pct = ShaderManager.getIntensity();
-      const kx  = sliderX + pct * sliderW;
-      knob.setPosition(kx, sliderY);
-
-      trackFill.clear();
-      trackFill.fillStyle(0xa05018, 1);
-      trackFill.fillRoundedRect(sliderX, sliderY - sliderH / 2, pct * sliderW, sliderH, sliderH / 2);
-
-      pctText.setText(Math.round(pct * 100) + '%');
-    };
-
-    redraw();
-
-    // ── 드래그 처리 ───────────────────────────────────────────
-    const setByX = (px) => {
-      const pct = Math.max(0, Math.min(1, (px - sliderX) / sliderW));
+    hitArea.on('pointerover', () => refresh(ShaderManager.getIntensity(), true));
+    hitArea.on('pointerout',  () => refresh(ShaderManager.getIntensity(), false));
+    hitArea.on('pointerdown', (ptr) => {
+      const pct = pctFromX(ptr.x);
       ShaderManager.setIntensity(pct);
-      redraw();
-    };
-
-    const onMove = (ptr) => setByX(ptr.x);
-
-    knob.on('pointerdown', () => {
-      scene.input.on('pointermove', onMove);
-      scene.input.once('pointerup', () => scene.input.off('pointermove', onMove));
+      refresh(pct, true);
     });
 
-    // 트랙 히트 영역 (노브보다 큰 클릭 범위)
-    const hitH    = Math.max(knobR * 2 + 8, 32);
-    const hitZone = scene.add.rectangle(
-      sliderX + sliderW / 2, sliderY,
-      sliderW, hitH,
-      0x000000, 0
-    ).setInteractive({ useHandCursor: true });
-
-    hitZone.on('pointerdown', (ptr) => {
-      setByX(ptr.x);
-      scene.input.on('pointermove', onMove);
-      scene.input.once('pointerup', () => scene.input.off('pointermove', onMove));
+    scene.input.on('pointermove', (ptr) => {
+      if (!ptr.isDown) return;
+      if (ptr.x < sliderX - knobR || ptr.x > sliderX + sliderW + knobR) return;
+      if (ptr.y < sliderY - hitH / 2 || ptr.y > sliderY + hitH / 2) return;
+      const pct = pctFromX(ptr.x);
+      ShaderManager.setIntensity(pct);
+      refresh(pct, true);
     });
 
-    // ── 프리셋 버튼 ───────────────────────────────────────────
-    //    꺼짐 / 약하게 / 보통 / 강하게 — 빠른 설정용
+    // ── 프리셋 버튼 ──────────────────────────────────────────
     const presets = [
-      { label: '꺼짐',   v: 0.0 },
+      { label: '꺼짐',   v: 0.0  },
       { label: '약하게', v: 0.35 },
       { label: '보통',   v: 0.70 },
       { label: '강하게', v: 1.0  },
     ];
 
-    const presetY    = sliderY + knobR + H * 0.055;
-    const presetW    = sliderW / presets.length;
-    const btnH       = Math.max(28, Math.round(H * 0.038));
-    const btnGap     = W * 0.008;
-    const totalBtnW  = presets.length * presetW - btnGap;  // 근사
+    // ✏️ 수정: presetY = sliderY + knobR + H * 0.055
+    //    이전: startY + H * 0.10 (sliderY) + knobR + H * 0.055
+    //          슬라이더 위치가 startY 기준이므로 실제 Y가 section2Y에 따라
+    //          H * 0.935 뒤로가기 버튼까지 공간이 부족했음
+    //    이후: sliderY 직접 참조하므로 항상 슬라이더 기준으로 아래에 위치
+    const presetY = sliderY + knobR + H * 0.055;
+    const presetW = sliderW / presets.length;
+    const btnH    = Math.max(28, Math.round(H * 0.038));
+    const btnGap  = W * 0.008;
 
     presets.forEach((p, i) => {
       const bx = sliderX + presetW * i + presetW / 2 - btnGap / 2;
@@ -248,7 +297,10 @@ const Settings_Tab_Video = {
 
       btnHit.on('pointerover',  () => drawBtn(true));
       btnHit.on('pointerout',   () => drawBtn(false));
-      btnHit.on('pointerdown',  () => { ShaderManager.setIntensity(p.v); redraw(); });
+      btnHit.on('pointerdown',  () => {
+        ShaderManager.setIntensity(p.v);
+        refresh(p.v);
+      });
     });
   },
 };
