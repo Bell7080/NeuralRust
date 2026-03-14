@@ -74,13 +74,14 @@ const TM_RightPanel = {
 
     // ════════════════════════════════════════════════════════════
     //  ✏️ 툴팁 헬퍼 — 개선된 버전
-    //    · 이름(제목): 고정 fontSize 18, 진한 색
-    //    · 설명: 고정 fontSize 15, 연한 색
+    //    · 이름(제목): scaledFontSize(16) — 해상도 비례
+    //    · 설명:       scaledFontSize(13) — 해상도 비례
+    //    · 최대 너비:  W * 0.22           — 화면 폭 비례
     //    · 좌측 정렬, 내용량에 따라 박스 자동 크기 조절
     // ════════════════════════════════════════════════════════════
-    const TIP_FS_TITLE = 18;  // 고정 폰트 크기 (제목)
-    const TIP_FS_DESC  = 15;  // 고정 폰트 크기 (설명)
-    const TIP_MAX_W    = 320; // 툴팁 최대 너비 (px)
+    const TIP_FS_TITLE = fs(16);              // 해상도 비례 (고정 18px 제거)
+    const TIP_FS_DESC  = fs(13);              // 해상도 비례 (고정 15px 제거)
+    const TIP_MAX_W    = Math.round(W * 0.22); // 화면 폭 비례 (고정 320px 제거)
 
     let _tip = null;
     const _showTip = (x, y, rawText) => {
@@ -95,7 +96,7 @@ const TM_RightPanel = {
 
       // 제목 텍스트 객체 (임시 생성으로 너비 측정)
       const titleObj = scene.add.text(0, 0, titleLine, {
-        fontSize: `${TIP_FS_TITLE}px`,
+        fontSize: TIP_FS_TITLE,
         fill: '#e8d080',
         fontFamily: FontManager.MONO,
         fontStyle: 'bold',
@@ -103,7 +104,7 @@ const TM_RightPanel = {
       }).setDepth(502);
 
       const descObj = descLines ? scene.add.text(0, 0, descLines, {
-        fontSize: `${TIP_FS_DESC}px`,
+        fontSize: TIP_FS_DESC,
         fill: '#b8a890',
         fontFamily: FontManager.MONO,
         wordWrap: { width: TIP_MAX_W - tpadX * 2 },

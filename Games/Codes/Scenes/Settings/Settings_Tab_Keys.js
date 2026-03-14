@@ -33,20 +33,20 @@ const Settings_Tab_Keys = {
 
     // 섹션 라벨
     scene.add.text(leftX, H * 0.295, '[ 키 설정 ]', {
-      fontSize: scaledFontSize(13, scene.scale),
+      fontSize: scaledFontSize(15, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
     scene.add.text(W - marginX, H * 0.295, 'ESC — 변경 취소', {
-      fontSize: scaledFontSize(11, scene.scale),
+      fontSize: scaledFontSize(13, scene.scale),
       fill: '#3d2810',
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5);
 
     // 대기 안내 텍스트 (리바인드 중)
     const waitText = scene.add.text(cx, H * 0.895, '', {
-      fontSize: scaledFontSize(13, scene.scale),
+      fontSize: scaledFontSize(15, scene.scale),
       fill: '#a05018',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(50);
@@ -97,7 +97,7 @@ const Settings_Tab_Keys = {
 
     // 액션 라벨
     scene.add.text(labelX, cy, action.label, {
-      fontSize: scaledFontSize(13, scene.scale),
+      fontSize: scaledFontSize(15, scene.scale),
       fill: '#6b4520',
       fontFamily: FontManager.BODY,
     }).setOrigin(0, 0.5);
@@ -105,7 +105,7 @@ const Settings_Tab_Keys = {
     // 키 버튼 배경 + 텍스트
     const keyBg   = scene.add.graphics();
     const keyText = scene.add.text(keyBtnX, cy, InputManager.displayName(action.key), {
-      fontSize: scaledFontSize(12, scene.scale),
+      fontSize: scaledFontSize(14, scene.scale),
       fill: '#a07040',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);

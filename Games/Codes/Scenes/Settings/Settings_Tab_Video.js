@@ -24,8 +24,8 @@ const Settings_Tab_Video = {
     const marginX    = W * 0.08;           // 좌우 여백
     const contentW   = W * 0.84;           // 콘텐츠 폭
     const optionBoxH = Math.round(H * 0.10);  // 옵션 박스 높이 (H 비례)
-    const labelSize  = 14;                 // scaledFontSize 기준값
-    const titleSize  = 18;
+    const labelSize  = 16;                 // scaledFontSize 기준값
+    const titleSize  = 20;
 
     // ── 섹션 1: 화면 모드 ─────────────────────────────────────
     const section1Y  = H * 0.30;
@@ -66,7 +66,7 @@ const Settings_Tab_Video = {
 
       // 설명
       scene.add.text(marginX + contentW * 0.09, y + optionBoxH * 0.20, opt.desc, {
-        fontSize: scaledFontSize(12, scene.scale),
+        fontSize: scaledFontSize(14, scene.scale),
         fill: isSelected ? '#4a2810' : '#251508',
         fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);
@@ -97,7 +97,7 @@ const Settings_Tab_Video = {
     // 안내 텍스트 — 옵션 박스들 바로 아래
     const hintY = option1Y + optionGap * options.length - optionBoxH * 0.05;
     scene.add.text(cx, hintY, 'F11 키로도 전체화면을 전환할 수 있습니다', {
-      fontSize: scaledFontSize(11, scene.scale),
+      fontSize: scaledFontSize(13, scene.scale),
       fill: '#2a1508',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 0);
@@ -125,7 +125,7 @@ const Settings_Tab_Video = {
 
     // 설명
     scene.add.text(marginX, startY + H * 0.038, '화면 톤·비네팅·스캔라인 강도를 조절합니다', {
-      fontSize: scaledFontSize(11, scene.scale),
+      fontSize: scaledFontSize(13, scene.scale),
       fill: '#251508',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -159,7 +159,7 @@ const Settings_Tab_Video = {
 
     // 라벨 텍스트 (슬라이더 위)
     const subLabel = scene.add.text(sliderX, sliderY - knobR - H * 0.015, '강도', {
-      fontSize: scaledFontSize(11, scene.scale),
+      fontSize: scaledFontSize(13, scene.scale),
       fill: '#3d2010',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -238,7 +238,7 @@ const Settings_Tab_Video = {
       drawBtn(false);
 
       scene.add.text(bx, presetY, p.label, {
-        fontSize: scaledFontSize(12, scene.scale),
+        fontSize: scaledFontSize(14, scene.scale),
         fill: '#3d2010',
         fontFamily: FontManager.MONO,
       }).setOrigin(0.5);

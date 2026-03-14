@@ -22,7 +22,7 @@ const Settings_Tab_Audio = {
 
     // 섹션 라벨
     scene.add.text(marginX, H * 0.295, '[ 오디오 ]', {
-      fontSize: scaledFontSize(13, scene.scale),
+      fontSize: scaledFontSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -69,7 +69,7 @@ const Settings_Tab_Audio = {
     // 안내 텍스트 — 슬라이더 아래 여백에
     scene.add.text(cx, sliderAreaTop + sliderAreaH + H * 0.025,
       '배경음악 · 효과음 볼륨은 마스터 볼륨에 곱해서 적용됩니다', {
-        fontSize: scaledFontSize(11, scene.scale),
+        fontSize: scaledFontSize(13, scene.scale),
         fill: '#3d2810',
         fontFamily: FontManager.MONO,
         letterSpacing: 1,
@@ -92,14 +92,14 @@ const Settings_Tab_Audio = {
 
     // 라벨 (위)
     scene.add.text(labelX, cy - labelOffsetUp, cfg.label, {
-      fontSize: scaledFontSize(15, scene.scale),
+      fontSize: scaledFontSize(18, scene.scale),
       fill: '#8a5a30',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0, 0.5);
 
     // 서브 라벨 (아래)
     scene.add.text(labelX, cy + labelOffsetDown, cfg.sub, {
-      fontSize: scaledFontSize(10, scene.scale),
+      fontSize: scaledFontSize(12, scene.scale),
       fill: '#3a2010',
       fontFamily: FontManager.MONO,
       letterSpacing: 3,
@@ -141,7 +141,7 @@ const Settings_Tab_Audio = {
 
     // 퍼센트 텍스트
     const valueTxt = scene.add.text(valueX, cy - labelOffsetUp * 0.4, `${cfg.getPct()}%`, {
-      fontSize: scaledFontSize(14, scene.scale),
+      fontSize: scaledFontSize(16, scene.scale),
       fill: '#c8a070',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -150,7 +150,7 @@ const Settings_Tab_Audio = {
     let effTxt = null;
     if (cfg.getEff) {
       effTxt = scene.add.text(valueX, cy + labelOffsetDown * 1.2, `→ ${cfg.getEff()}%`, {
-        fontSize: scaledFontSize(10, scene.scale),
+        fontSize: scaledFontSize(12, scene.scale),
         fill: '#5a3820',
         fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);

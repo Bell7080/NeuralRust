@@ -184,63 +184,63 @@ class DialogueScene extends Phaser.Scene {
   // ════════════════════════════════════════════════════════════════
 
   _buildScene(W, H) {
-    const fs = n => parseInt(scaledFontSize(n, this.scale), 10);
-    this._fs = fs;
+    // fs(n)   → "Npx" 문자열 (fontSize 프로퍼티에 직접 사용)
+    // fsPx(n) → 정수 픽셀  (위치·크기 계산에 사용)
+    const fs   = n => scaledFontSize(n, this.scale);
+    const fsPx = n => parseInt(scaledFontSize(n, this.scale), 10);
+    this._fs = fsPx;   // 외부 메서드(_showLine 등)에서 정수가 필요할 때
 
     // ── 배경 ──────────────────────────────────────────────────
     this._buildBackground(W, H);
 
     // ── 치수 ─────────────────────────────────────────────────
-    // 대화창: 화면 너비 68%, 높이 30%, 하단 중앙
     const BOX_W  = Math.round(W * 0.68);
     const BOX_H  = Math.round(H * 0.30);
-    const BOX_X  = Math.round((W - BOX_W) / 2);   // 좌측 X
+    const BOX_X  = Math.round((W - BOX_W) / 2);
     const BOX_Y  = Math.round(H - BOX_H - H * 0.04);
-    const PAD    = fs(18);
+    const PAD    = fsPx(18);
     const TEXT_X = BOX_X + PAD;
-    const TEXT_Y = BOX_Y + PAD + fs(10);   // 이름판 아래에서 시작
+    const TEXT_Y = BOX_Y + PAD + fsPx(10);
     const TEXT_W = BOX_W - PAD * 2;
 
-    this._layout = { BOX_W, BOX_H, BOX_X, BOX_Y, PAD, TEXT_X, TEXT_Y, TEXT_W, fs };
+    this._layout = { BOX_W, BOX_H, BOX_X, BOX_Y, PAD, TEXT_X, TEXT_Y, TEXT_W, fs: fsPx };
 
-    // UI 전체를 하나의 컨테이너로 묶어 페이드인 제어
     this._uiContainer = this.add.container(0, 0);
-    this._buildBox(W, H, BOX_W, BOX_H, BOX_X, BOX_Y, PAD, TEXT_X, TEXT_Y, TEXT_W, fs);
-    this._buildCharacterSlot(W, H, BOX_X, BOX_Y, fs);
-    // 선택지 컨테이너 — 캐릭터/UI보다 위에 표시
+    this._buildBox(W, H, BOX_W, BOX_H, BOX_X, BOX_Y, PAD, TEXT_X, TEXT_Y, TEXT_W, fs, fsPx);
+    this._buildCharacterSlot(W, H, BOX_X, BOX_Y, fsPx);
     this._choiceCont = this.add.container(0, 0);
     this.children.bringToTop(this._choiceCont);
   }
 
   // ── 대화창 박스 (스팀펑크) ────────────────────────────────────
-  _buildBox(W, H, BOX_W, BOX_H, BOX_X, BOX_Y, PAD, TEXT_X, TEXT_Y, TEXT_W, fs) {
+  // ✏️ fs  = "Npx" 문자열 (fontSize에 직접 사용)
+  //    fsPx = 정수 픽셀  (위치·크기 계산)
+  _buildBox(W, H, BOX_W, BOX_H, BOX_X, BOX_Y, PAD, TEXT_X, TEXT_Y, TEXT_W, fs, fsPx) {
     const g = this.add.graphics();
     this._uiContainer.add(g);
 
     // ── 메인 패널 ─────────────────────────────────────────────
-    // 반투명 짙은 배경
     g.fillStyle(0x06090f, 0.92);
     g.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
 
-    // 외곽 테두리 — 이중선 (스팀펑크 느낌)
+    // 외곽 테두리 — 이중선
     g.lineStyle(2, 0x8a6020, 0.9);
     g.strokeRect(BOX_X, BOX_Y, BOX_W, BOX_H);
     g.lineStyle(1, 0xc89040, 0.35);
     g.strokeRect(BOX_X + 3, BOX_Y + 3, BOX_W - 6, BOX_H - 6);
 
-    // 상단 구분선 (이름판 아래) — 이름판 높이 fs(42)에 맞춰 조정
-    const lineY = BOX_Y + fs(46);
+    // 상단 구분선 (이름판 아래)
+    const lineY = BOX_Y + fsPx(46);
     g.lineStyle(1, 0x8a6020, 0.6);
     g.lineBetween(BOX_X + PAD, lineY, BOX_X + BOX_W - PAD, lineY);
     g.lineStyle(1, 0xc89040, 0.2);
     g.lineBetween(BOX_X + PAD, lineY + 2, BOX_X + BOX_W - PAD, lineY + 2);
 
-    // 코너 장식 (리벳 느낌)
-    const cs = 10;
+    // 코너 장식 (리벳)
     const corners = [
-      [BOX_X + 6, BOX_Y + 6],
+      [BOX_X + 6,         BOX_Y + 6],
       [BOX_X + BOX_W - 6, BOX_Y + 6],
-      [BOX_X + 6, BOX_Y + BOX_H - 6],
+      [BOX_X + 6,         BOX_Y + BOX_H - 6],
       [BOX_X + BOX_W - 6, BOX_Y + BOX_H - 6],
     ];
     corners.forEach(([cx, cy]) => {
@@ -250,14 +250,12 @@ class DialogueScene extends Phaser.Scene {
       g.strokeCircle(cx, cy, 5);
     });
 
-    // 좌측 장식선
+    // 좌우 장식선
     g.lineStyle(2, 0xc89040, 0.5);
-    g.lineBetween(BOX_X + 8, BOX_Y + 18, BOX_X + 8, BOX_Y + BOX_H - 18);
-
-    // 우측 장식선
+    g.lineBetween(BOX_X + 8,         BOX_Y + 18, BOX_X + 8,         BOX_Y + BOX_H - 18);
     g.lineBetween(BOX_X + BOX_W - 8, BOX_Y + 18, BOX_X + BOX_W - 8, BOX_Y + BOX_H - 18);
 
-    // 하단 중앙 장식 (기어 느낌)
+    // 하단 중앙 기어 장식
     const midX = BOX_X + BOX_W / 2;
     g.lineStyle(1, 0x8a6020, 0.4);
     g.lineBetween(midX - 30, BOX_Y + BOX_H - 4, midX + 30, BOX_Y + BOX_H - 4);
@@ -266,30 +264,26 @@ class DialogueScene extends Phaser.Scene {
 
     // ── 이름판 ────────────────────────────────────────────────
     const NW = Math.round(BOX_W * 0.35);
-    const NH = fs(42);   // 높이 크게
+    const NH = fsPx(42);
     const NX = BOX_X;
     const NY = BOX_Y - NH + 1;
 
     const ng = this.add.graphics();
     this._uiContainer.add(ng);
-    // 이름판 배경
     ng.fillStyle(0x0a0d16, 0.97);
     ng.fillRect(NX, NY, NW, NH);
-    // 이름판 테두리
     ng.lineStyle(2, 0x8a6020, 0.9);
     ng.strokeRect(NX, NY, NW, NH);
     ng.lineStyle(1, 0xc89040, 0.3);
     ng.strokeRect(NX + 2, NY + 2, NW - 4, NH - 4);
-    // 이름판 좌측 강조선
     ng.lineStyle(3, 0xc89040, 0.8);
     ng.lineBetween(NX, NY + 2, NX, NY + NH - 2);
-    // 이름판 우하단 작은 장식
     ng.fillStyle(0xc89040, 0.6);
     ng.fillRect(NX + NW - 6, NY + NH - 2, 6, 2);
 
     this._nameTxt = this.add.text(
       NX + NW / 2, NY + NH / 2, '', {
-      fontSize:        `${fs(26)}px`,   // 이름 폰트 크게
+      fontSize:        fs(26),         // ✏️ "26px" 직접 — pxpx 버그 수정
       fill:            '#e8c87a',
       fontFamily:      FontManager.TITLE,
       stroke:          '#050810',
@@ -299,21 +293,21 @@ class DialogueScene extends Phaser.Scene {
 
     // ── 본문 텍스트 ───────────────────────────────────────────
     this._bodyTxt = this.add.text(
-      TEXT_X, TEXT_Y + fs(28), '', {   // 위치 아래로
-      fontSize:    `${fs(26)}px`,      // 본문 폰트 크게
+      TEXT_X, TEXT_Y + fsPx(28), '', {
+      fontSize:    fs(26),             // ✏️ pxpx 버그 수정
       fill:        '#d8cbb8',
       fontFamily:  FontManager.BODY,
       wordWrap:    { width: TEXT_W },
-      lineSpacing: fs(8),
+      lineSpacing: fsPx(8),
     });
     this._uiContainer.add(this._bodyTxt);
 
     // ── ▶ 다음 줄 아이콘 ─────────────────────────────────────
     this._nextIcon = this.add.text(
       BOX_X + BOX_W - PAD,
-      BOX_Y + BOX_H - fs(14),
+      BOX_Y + BOX_H - fsPx(14),
       '▶', {
-      fontSize:   `${fs(11)}px`,
+      fontSize:   fs(12),              // ✏️ pxpx 버그 수정 + 11→12
       fill:       '#c89040',
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5).setVisible(false);
@@ -332,9 +326,9 @@ class DialogueScene extends Phaser.Scene {
     // 하단 힌트
     const hint = this.add.text(
       BOX_X + BOX_W - PAD,
-      BOX_Y + BOX_H + fs(4),
+      BOX_Y + BOX_H + fsPx(4),
       'SPACE / CLICK', {
-      fontSize:      `${fs(7)}px`,
+      fontSize:      fs(9),            // ✏️ pxpx 버그 수정 + 7→9
       fill:          '#5a4a28',
       fontFamily:    FontManager.MONO,
       letterSpacing: 2,
@@ -681,18 +675,17 @@ class DialogueScene extends Phaser.Scene {
   _showChoices(choices) {
     if (!choices || !choices.length) { this._cursor++; this._showLine(); return; }
 
-    const fs  = this._fs;
+    const fsPx = this._fs;   // 정수 픽셀 (위치·크기 계산)
+    const fs   = n => scaledFontSize(n, this.scale);  // "Npx" 문자열 (fontSize에 사용)
     const { BOX_X, BOX_W, BOX_Y, BOX_H, PAD } = this._layout;
 
-    const BTN_H = fs(44);
+    const BTN_H = fsPx(44);
     const BTN_W = Math.round(BOX_W * 0.78);
-    const GAP   = fs(8);
+    const GAP   = fsPx(8);
 
-    // ── 버튼 묶음을 대화창 내부 중앙에 배치 ──────────────────
     const totalH = choices.length * BTN_H + (choices.length - 1) * GAP;
-    // 대화창 내부 상단 여백(이름판+구분선 영역) 제외한 본문 영역 중앙
-    const innerTop = BOX_Y + fs(50);   // 구분선 아래
-    const innerH   = BOX_H - fs(50) - PAD;
+    const innerTop = BOX_Y + fsPx(50);
+    const innerH   = BOX_H - fsPx(50) - PAD;
     const startX   = BOX_X + (BOX_W - BTN_W) / 2;
     const startY   = innerTop + (innerH - totalH) / 2;
 
@@ -707,16 +700,10 @@ class DialogueScene extends Phaser.Scene {
 
       const draw = hover => {
         bg.clear();
-
-        // 배경
         bg.fillStyle(hover ? 0x181208 : 0x0c0a04, hover ? 0.97 : 0.92);
         bg.fillRect(bx, by, BTN_W, BTN_H);
-
-        // 외곽 단선 테두리
         bg.lineStyle(1, hover ? 0xc89040 : 0x6a4a18, 1.0);
         bg.strokeRect(bx, by, BTN_W, BTN_H);
-
-        // 좌측 강조선
         bg.fillStyle(hover ? 0xd4a040 : 0x8a6020, 1.0);
         bg.fillRect(bx, by, 2, BTN_H);
       };
@@ -724,19 +711,19 @@ class DialogueScene extends Phaser.Scene {
 
       // ◆ 다이아 마커
       const marker = this.add.text(
-        bx + fs(20), by + BTN_H / 2, '◆', {
-        fontSize:   `${fs(13)}px`,
+        bx + fsPx(20), by + BTN_H / 2, '◆', {
+        fontSize:   fs(13),              // ✏️ pxpx 버그 수정
         fill:       '#8a6020',
         fontFamily: FontManager.MONO,
       }).setOrigin(0.5, 0.5);
 
       // 선택지 텍스트
       const lbl = this.add.text(
-        bx + fs(34), by + BTN_H / 2, choice.label, {
-        fontSize:   `${fs(20)}px`,
+        bx + fsPx(34), by + BTN_H / 2, choice.label, {
+        fontSize:   fs(20),              // ✏️ pxpx 버그 수정
         fill:       '#c8a858',
         fontFamily: FontManager.BODY,
-        wordWrap:   { width: BTN_W - fs(44) },
+        wordWrap:   { width: BTN_W - fsPx(44) },
         stroke:          '#080600',
         strokeThickness: 2,
       }).setOrigin(0, 0.5);
@@ -749,13 +736,13 @@ class DialogueScene extends Phaser.Scene {
         draw(true);
         lbl.setStyle({ fill: '#f8e080', stroke: '#080600', strokeThickness: 2 });
         marker.setStyle({ fill: '#f0c040' });
-        this.tweens.add({ targets: lbl, x: bx + fs(38), duration: 80, ease: 'Sine.easeOut' });
+        this.tweens.add({ targets: lbl, x: bx + fsPx(38), duration: 80, ease: 'Sine.easeOut' });
       });
       hit.on('pointerout', () => {
         draw(false);
         lbl.setStyle({ fill: '#c8a858', stroke: '#080600', strokeThickness: 2 });
         marker.setStyle({ fill: '#8a6020' });
-        this.tweens.add({ targets: lbl, x: bx + fs(34), duration: 80, ease: 'Sine.easeOut' });
+        this.tweens.add({ targets: lbl, x: bx + fsPx(34), duration: 80, ease: 'Sine.easeOut' });
       });
       hit.on('pointerdown', () => {
         this._choiceCont.removeAll(true);
@@ -769,7 +756,6 @@ class DialogueScene extends Phaser.Scene {
         this._showLine();
       });
 
-      // 알파 등장 (딜레이 스태거)
       const items = [bg, marker, lbl, hit];
       items.forEach(obj => obj.setAlpha(0));
       this.tweens.add({

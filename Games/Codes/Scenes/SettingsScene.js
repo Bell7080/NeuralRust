@@ -5,18 +5,18 @@
 //  역할: 설정 화면 껍데기 — 배경 / 제목 / 탭 라우팅 / 뒤로가기
 //  공통 헬퍼: makeButton / drawOptionBox / showConfirmPopup / showToast
 //
+//  ✏️ 폰트 증량 내역 (가시성 개선)
+//    제목 한글         : 42 → 50
+//    제목 영문 서브    : 14 → 16
+//    탭 라벨           : 18 → 22
+//    뒤로가기 버튼     : 22 → 26
+//    makeButton 텍스트 : 16 → 19
+//    showConfirmPopup  : 19 → 22
+//    showToast         : 26 → 30
+//
 //  레이아웃 원칙:
 //    모든 위치·크기는 W / H 비율 기반. 하드코딩 없음.
 //    탭 콘텐츠 시작 Y = H * 0.29 (탭바 하단 구분선 바로 아래)
-//
-//  색상 팔레트 (통일 기준):
-//    배경        #050407
-//    섹션 라벨   #5a3518  (기존 #3d2010 보다 밝게)
-//    비선택 텍스트 #6b4520
-//    설명 텍스트 #3d2810
-//    선택 텍스트 #c8a070
-//    강조 텍스트 #a05018
-//    위험 텍스트 #cc5533
 // ================================================================
 
 class SettingsScene extends Phaser.Scene {
@@ -80,16 +80,15 @@ class SettingsScene extends Phaser.Scene {
   }
 
   // ── 제목 ──────────────────────────────────────────────────────
-  //  제목 영역: Y 0 ~ H*0.18
   _buildTitle(W, H, cx) {
     const titleY = H * 0.075;
     this.add.text(cx, titleY, '설  정', {
-      fontSize: scaledFontSize(42, this.scale),
+      fontSize: scaledFontSize(50, this.scale),    // ✏️ 42 → 50
       fill: '#7a5028',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
     this.add.text(cx, titleY + H * 0.055, 'SETTINGS', {
-      fontSize: scaledFontSize(14, this.scale),
+      fontSize: scaledFontSize(16, this.scale),    // ✏️ 14 → 16
       fill: '#3d2010',
       fontFamily: FontManager.MONO,
       letterSpacing: 6,
@@ -97,8 +96,6 @@ class SettingsScene extends Phaser.Scene {
   }
 
   // ── 탭 바 ─────────────────────────────────────────────────────
-  //  탭 바 영역: Y H*0.18 ~ H*0.285
-  //  콘텐츠 시작 Y = tabY + tabH + gap ≈ H*0.29
   _buildTabBar(W, H, cx) {
     const tabY    = H * 0.185;
     const tabH    = Math.round(H * 0.068);
@@ -122,7 +119,7 @@ class SettingsScene extends Phaser.Scene {
       this._drawTabBg(bg, tx, tabY, tabW, tabH, selected);
 
       this.add.text(tx + tabW / 2, tabY + tabH / 2, tab.label, {
-        fontSize: scaledFontSize(18, this.scale),
+        fontSize: scaledFontSize(22, this.scale),  // ✏️ 18 → 22
         fill: selected ? '#c8a070' : '#6b4520',
         fontFamily: FontManager.TITLE,
       }).setOrigin(0.5);
@@ -139,7 +136,6 @@ class SettingsScene extends Phaser.Scene {
       });
     });
 
-    // 탭 하단 구분선
     const lineY = tabY + tabH + Math.round(H * 0.006);
     const line  = this.add.graphics();
     line.lineStyle(1, 0x3a2010, 0.6);
@@ -160,7 +156,7 @@ class SettingsScene extends Phaser.Scene {
   // ── 뒤로가기 ──────────────────────────────────────────────────
   _buildBackButton(W, H) {
     const btn = this.add.text(W * 0.06, H * 0.935, '← 돌아가기', {
-      fontSize: scaledFontSize(22, this.scale),
+      fontSize: scaledFontSize(26, this.scale),    // ✏️ 22 → 26
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
@@ -196,14 +192,12 @@ class SettingsScene extends Phaser.Scene {
     else            { gfx.fillStyle(0x000000, 0); gfx.lineStyle(1, 0x251508, 0.4); }
     gfx.strokeRect(x, y, w, h);
     gfx.fillRect(x, y, w, h);
-    // 선택된 탭 하단 강조선
     if (selected) {
       gfx.lineStyle(2, 0xa05018, 1);
       gfx.lineBetween(x + 1, y + h - 1, x + w - 1, y + h - 1);
     }
   }
 
-  // w, h 는 실제 박스 너비/높이 (boxTop 기준이 아니라 center Y 기준으로 호출해도 됨)
   drawOptionBox(gfx, x, y, w, h, selected, hover = false) {
     gfx.clear();
     if (selected) {
@@ -218,7 +212,6 @@ class SettingsScene extends Phaser.Scene {
     }
     gfx.strokeRect(x, y, w, h);
     gfx.fillRect(x, y, w, h);
-    // 선택된 항목 왼쪽 강조선
     if (selected) {
       gfx.lineStyle(2, 0xa05018, 1);
       gfx.lineBetween(x + 1, y + 1, x + 1, y + h - 1);
@@ -240,7 +233,7 @@ class SettingsScene extends Phaser.Scene {
     };
     draw(nc, nb);
     this.add.text(x, y, label, {
-      fontSize: scaledFontSize(16, this.scale),
+      fontSize: scaledFontSize(19, this.scale),    // ✏️ 16 → 19
       fill: danger ? '#a04030' : '#7a5028',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
@@ -264,12 +257,11 @@ class SettingsScene extends Phaser.Scene {
     box.lineStyle(1, 0x5a3010, 1);
     box.strokeRect(popX, popY, popW, popH);
     box.fillRect(popX, popY, popW, popH);
-    // 팝업 상단 강조선
     box.lineStyle(2, 0x7a4018, 0.8);
     box.lineBetween(popX + 1, popY + 1, popX + popW - 1, popY + 1);
 
     const msgText = this.add.text(cx, popY + popH * 0.35, message, {
-      fontSize: scaledFontSize(19, this.scale),
+      fontSize: scaledFontSize(22, this.scale),    // ✏️ 19 → 22
       fill: '#a07850',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(502);
@@ -283,7 +275,7 @@ class SettingsScene extends Phaser.Scene {
     };
     const makePopBtn = (bx, lbl, color, hcolor, cb) => {
       const t = this.add.text(bx, btnY, lbl, {
-        fontSize: scaledFontSize(19, this.scale),
+        fontSize: scaledFontSize(22, this.scale),  // ✏️ 19 → 22
         fill: color, fontFamily: FontManager.MONO,
       }).setOrigin(0.5).setDepth(502).setInteractive({ useHandCursor: true });
       t.on('pointerover', () => t.setStyle({ fill: hcolor }));
@@ -297,7 +289,7 @@ class SettingsScene extends Phaser.Scene {
 
   showToast(cx, y, message, onComplete, color) {
     const toast = this.add.text(cx, y, message, {
-      fontSize: scaledFontSize(26, this.scale),
+      fontSize: scaledFontSize(30, this.scale),    // ✏️ 26 → 30
       fill: color || '#c8a070',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(200).setAlpha(0);
