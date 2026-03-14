@@ -11,7 +11,33 @@
 //    · _confirmHire: baseStats 기준 저장 구조로 교체 (현재 최신 버전과 동기화)
 //    · _showHireCompletePopup: scaledFontSize → this._fs() 교체
 //    · _showHireCompletePopup: _popupObjs 추적 추가 (탭 전환 시 안전 정리)
+//  ✏️ v5 수정사항
+//    · _buildCustom SKILL 박스: result.skill(id) → 이름으로 변환 후 표시
+//    · _rerollSkill: 팝업 라벨을 이름으로, 저장값은 id 유지, setText도 이름으로
+//    · _confirmHire: spriteKey 폴백 'char_0' → 'char_000' (3자리 padStart 정합성)
 // ================================================================
+
+// ════════════════════════════════════════════════════════════════
+//  _skillIdToName — 스킬 id를 표시용 이름으로 변환하는 내부 헬퍼
+//
+//  Data_Skills.js의 getSkillById() 또는 SkillRegistry.getName()이
+//  로드되어 있으면 이름을 반환하고, 없으면 id를 그대로 반환.
+//  호출 위치: _buildCustom(SKILL 박스), _rerollSkill(팝업 라벨, setText)
+// ════════════════════════════════════════════════════════════════
+Tab_Recruit.prototype._skillIdToName = function (id) {
+  if (!id) return id;
+  // Data_Skills.js의 getSkillById 우선
+  if (typeof getSkillById === 'function') {
+    const s = getSkillById(id);
+    if (s && s.name) return s.name;
+  }
+  // _SkillRegistry.js의 SkillRegistry.getName 차선
+  if (typeof SkillRegistry !== 'undefined' && typeof SkillRegistry.getName === 'function') {
+    const name = SkillRegistry.getName(id);
+    if (name && name !== id) return name;
+  }
+  return id;
+};
 
 // ════════════════════════════════════════════════════════════════
 //  _resolveStats — 스탯 표시 데이터의 유일한 생성 함수
@@ -51,103 +77,102 @@ Tab_Recruit.prototype._buildCustom = function () {
   const result = this.result;
   if (!result.baseStats) result.baseStats = [...result.stats];
   if (result.baseSum == null)
-    result.baseSum = result.stats ? result.stats.reduce((a, b) => a + b, 0) : 0;
+    result.baseSum = result.stats
+      ? result.stats.reduce((a, b) => a + b, 0)
+      : result.statSum;
 
-  const { W, H } = this;
-  const bW    = W * 0.21;
-  const bH    = H * 0.80;
-  const gapX  = W * 0.03;
-  const leftX = W / 2 - (bW * 2 + gapX) / 2 + bW / 2;
-  const rightX = leftX + bW + gapX;
-  const cy    = H * 0.50;
+  const { scene, W, H } = this;
+  const cx = W / 2;
+  const cy = H * 0.50;
+  const bw = W * 0.82;
+  const bh = H * 0.80;
 
-  this._buildResultBox(leftX, cy, bW, bH);
-  this._buildCustomBox(rightX, cy, bW, bH);
+  const panelBg = scene.add.graphics();
+  panelBg.fillStyle(0x0c0905, 0.97);
+  panelBg.lineStyle(1, 0x3a2010, 0.8);
+  panelBg.fillRect(cx - bw/2, cy - bh/2, bw, bh);
+  panelBg.strokeRect(cx - bw/2, cy - bh/2, bw, bh);
+  this._container.add(panelBg);
+
+  const leftW  = bw * 0.46;
+  const rightW = bw - leftW;
+  const leftCX  = cx - bw/2 + leftW/2;
+  const rightCX = cx - bw/2 + leftW + rightW/2;
+
+  this._buildStatPanel(leftCX, cy, leftW, bh);
+  this._buildCustomBox(rightCX, cy, rightW, bh);
 };
 
-// ── 왼쪽: 결과 요약 ──────────────────────────────────────────────
+// ── 왼쪽: 스탯 패널 ─────────────────────────────────────────────
 
-Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
+Tab_Recruit.prototype._buildStatPanel = function (cx, cy, bw, bh) {
   const { scene, result } = this;
-  const isF = result.job === 'fisher';
 
   const bg = scene.add.graphics();
-  bg.fillStyle(0x120d07, 0.95); bg.lineStyle(1, 0x3a2210, 0.8);
+  bg.fillStyle(0x100d08, 0.95); bg.lineStyle(1, 0x2a1a08, 0.7);
   bg.fillRect(cx-bw/2, cy-bh/2, bw, bh); bg.strokeRect(cx-bw/2, cy-bh/2, bw, bh);
   this._container.add(bg);
 
-  const pad    = bw * 0.06;
-  const innerL = cx - bw/2 + pad;
-  const innerW = bw - pad * 2;
-  const topY   = cy - bh/2 + pad;
+  const pad     = bw * 0.06;
+  const innerL  = cx - bw/2 + pad;
+  const innerW  = bw - pad * 2;
 
-  // ── 초상화 ──────────────────────────────────────────────────
-  const portW = bw * 0.38;
-  const portH = bh * 0.28;
-  const portX = innerL;
-  const portY = topY;
+  // ── 캐릭터 기본 정보 ─────────────────────────────────────────
+  const topY    = cy - bh/2 + pad;
+  const cogCol  = RECRUIT_COG_COLORS[result.cog] || '#7dff4f';
 
-  const portBg = scene.add.graphics();
-  portBg.fillStyle(0x1e1810, 0.95); portBg.lineStyle(1, 0x5a3a18, 0.7);
-  portBg.fillRect(portX, portY, portW, portH);
-  portBg.strokeRect(portX, portY, portW, portH);
-  this._container.add(portBg);
+  const cogTxt = scene.add.text(innerL, topY, `Cog  ${result.cog}`, {
+    fontSize: this._fs(18), fill: cogCol,
+    fontFamily: FontManager.MONO,
+    stroke: '#000000', strokeThickness: 3,
+  }).setOrigin(0, 0);
+  this._container.add(cogTxt);
 
-  if (result.spriteKey && scene.textures.exists(result.spriteKey)) {
-    const img = scene.add.image(portX + portW/2, portY + portH/2, result.spriteKey).setOrigin(0.5);
-    const sc  = Math.min(portW * 0.90 / img.width, portH * 0.90 / img.height);
-    img.setScale(sc);
-    this._container.add(img);
-  } else {
-    const num = parseInt((result.spriteKey || '').replace('char_', '')) + 1;
-    this._container.add(scene.add.text(portX + portW/2, portY + portH/2, `#${num}`, {
-      fontSize: this._fs(14), fill: '#2a3a44', fontFamily: FontManager.MONO,
-    }).setOrigin(0.5));
-  }
+  const jobLbl = { fisher:'낚시꾼', diver:'잠수부', ai:'A.I' }[result.job] || result.job;
+  const jobTxt = scene.add.text(innerL + innerW, topY, jobLbl, {
+    fontSize: this._fs(14), fill: '#a07040', fontFamily: FontManager.TITLE,
+  }).setOrigin(1, 0);
+  this._container.add(jobTxt);
 
-  // ── 우측 정보 ────────────────────────────────────────────────
-  const infoX = portX + portW + pad;
-  const infoR = cx + bw/2 - pad;
-  const infoW = infoR - infoX;
-  let   infoY = topY;
+  const infoTopY = topY + parseInt(this._fs(24));
 
-  // 이름 (인라인 편집 포함)
-  const nameFontSz = this._fs(20);
-  const nameFieldH = parseInt(nameFontSz) + 10;
-  const nameTextCY = infoY + nameFieldH / 2;
-  const nameUnderY = infoY + nameFieldH;
+  // ── 이름 필드 (Recruit_Name.js) ──────────────────────────────
+  const nameFieldH = parseInt(this._fs(30));
+  const nameTextCY = infoTopY + nameFieldH / 2;
 
-  const _nameTxt2 = scene.add.text(infoX, nameTextCY, this.result.name, {
+  const nameFontSz = this._fs(18);
+  const _nameTxt2  = scene.add.text(innerL, nameTextCY, result.name || '이름 없음', {
     fontSize: nameFontSz, fill: '#e8c070', fontFamily: FontManager.TITLE,
   }).setOrigin(0, 0.5);
   this._container.add(_nameTxt2);
-  this._nameTxt = _nameTxt2;
-
-  const _cursorBar = scene.add.graphics().setVisible(false);
-  _cursorBar.fillStyle(0xe8c070, 1);
-  _cursorBar.fillRect(0, nameTextCY - parseInt(nameFontSz)*0.5, 2, parseInt(nameFontSz));
-  this._container.add(_cursorBar);
-  let _cursorTween = null;
-  let _isEditing   = false;
 
   const _nameLineG = scene.add.graphics();
+  const nameUnderY = infoTopY + nameFieldH - 2;
+
   const _drawNL = (hov, editing) => {
     _nameLineG.clear();
     const col = editing ? 0xf0d080 : (hov ? 0x9a6020 : 0x3a2010);
     const alp = editing ? 1.0 : (hov ? 1.0 : 0.5);
     _nameLineG.lineStyle(editing ? 2 : 1, col, alp);
-    _nameLineG.lineBetween(infoX, nameUnderY, infoX + infoW, nameUnderY);
+    _nameLineG.lineBetween(innerL, nameUnderY, innerL + innerW, nameUnderY);
   };
   _drawNL(false, false);
   this._container.add(_nameLineG);
 
   const _isValidKorean = (s) => s && s.length > 0 && /^[가-힣\s]+$/.test(s.trim()) && s.trim().length > 0;
 
-  // 이름 히트 영역
   const nameHit = scene.add.rectangle(
-    infoX + infoW/2, nameTextCY, infoW, nameFieldH, 0, 0
+    innerL + innerW/2, nameTextCY, innerW, nameFieldH, 0, 0
   ).setInteractive({ useHandCursor: true }).setDepth(20);
   this._sceneHits.push(nameHit);
+
+  let _isEditing = false;
+  let _cursorTween = null;
+  const _cursorBar = scene.add.graphics();
+  _cursorBar.fillStyle(0xe8c070, 1);
+  _cursorBar.fillRect(0, nameTextCY - parseInt(nameFontSz) * 0.6, 2, parseInt(nameFontSz) * 1.2);
+  _cursorBar.setVisible(false);
+  this._container.add(_cursorBar);
 
   nameHit.on('pointerover', () => { if (!_isEditing) _drawNL(true, false); });
   nameHit.on('pointerout',  () => { if (!_isEditing) _drawNL(false, false); });
@@ -156,7 +181,6 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
     _isEditing = true;
     _drawNL(false, true);
 
-    // 인라인 input 오버레이
     const inp = document.createElement('input');
     inp.type  = 'text';
     inp.value = this.result.name;
@@ -168,22 +192,21 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
     document.body.appendChild(inp);
     inp.focus();
 
-    const _previewTxt = scene.add.text(infoX, nameTextCY, inp.value, {
+    const _previewTxt = scene.add.text(innerL, nameTextCY, inp.value, {
       fontSize: nameFontSz, fill: '#e8c070', fontFamily: FontManager.TITLE,
     }).setOrigin(0, 0.5);
     this._container.add(_previewTxt);
     _nameTxt2.setVisible(false);
 
     const _updateCursor = () => {
-      const txt = _previewTxt;
-      const tw  = txt.width;
+      const tw = _previewTxt.width;
       if (_cursorBar.active) {
-        _cursorBar.setX(infoX + tw + 2);
+        _cursorBar.setX(innerL + tw + 2);
         _cursorBar.setVisible(true);
       }
     };
 
-    _cursorBar.setX(infoX + 2);
+    _cursorBar.setX(innerL + 2);
     _cursorBar.setVisible(true);
     _cursorTween = scene.tweens.add({
       targets: _cursorBar, alpha: { from:1, to:0 },
@@ -212,79 +235,60 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
   });
 
-  infoY += nameFieldH + parseInt(this._fs(8));
+  let infoY = infoTopY + nameFieldH + parseInt(this._fs(8));
 
   // 직업
-  this._container.add(scene.add.text(infoX, infoY,
-    `직업  :  ${RECRUIT_JOB_LABEL[result.job]}`, {
-    fontSize: this._fs(11), fill: isF ? '#c8a070' : '#7ab0c8',
-    fontFamily: FontManager.MONO,
+  this._container.add(scene.add.text(innerL, infoY,
+    `직업  :  ${jobLbl}`, {
+    fontSize: this._fs(11), fill: '#7a5028', fontFamily: FontManager.MONO,
   }).setOrigin(0, 0));
   infoY += parseInt(this._fs(16));
 
-  // 오버클럭 뱃지
+  // 스탯합
+  const isF = result.overclock != null;
+  this._container.add(scene.add.text(innerL, infoY,
+    `스탯합  :  ${result.statSum ?? result.baseSum ?? 0}`, {
+    fontSize: this._fs(11), fill: isF ? '#d0a040' : '#7a5028',
+    fontFamily: FontManager.MONO,
+  }).setOrigin(0, 0));
+  infoY += parseInt(this._fs(20));
+
+  // 오버클럭 표시
   if (result.overclock) {
-    const ocColor = result.overclock.color;
-    const rawLabel = (result.overclock.label || '');
-    const ocStatName = rawLabel
-      .replace(/⚡\s*/g, '').replace(/오버클럭\s*:\s*/g, '').trim()
-      || result.overclock.statKey || '';
-    const ocTxt = scene.add.text(infoX, infoY,
-      `오버클럭  :  ${ocStatName}`, {
-      fontSize: this._fs(10), fill: ocColor, fontFamily: FontManager.MONO,
-    }).setOrigin(0, 0);
+    const oc = result.overclock;
+    const ocHex = parseInt(oc.color.replace('#', '0x'));
+    const ocBg = scene.add.graphics();
+    const ocH  = parseInt(this._fs(18));
+    ocBg.fillStyle(ocHex, 0.12);
+    ocBg.lineStyle(1, ocHex, 0.5);
+    ocBg.fillRect(innerL, infoY, innerW, ocH);
+    ocBg.strokeRect(innerL, infoY, innerW, ocH);
+    this._container.add(ocBg);
+    this._container.add(scene.add.text(innerL + innerW/2, infoY + ocH/2,
+      `⚡ OVERCLOCK  ·  ${oc.label || oc.statKey}`, {
+      fontSize: this._fs(9), fill: oc.color,
+      fontFamily: FontManager.MONO,
+    }).setOrigin(0.5));
+    infoY += ocH + parseInt(this._fs(6));
+
     const _ocP = { v: 0 };
-    this._tween({
-      targets: _ocP, v: { from:0, to:1 },
-      duration: 1400, yoyo:true, repeat:-1, ease:'Sine.easeInOut',
+    this._ocGlowTween = this._tween({
+      targets: _ocP, v: { from: 0, to: 1 },
+      duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
       onUpdate: () => {
-        if (!ocTxt.active) return;
-        ocTxt.setStyle({ fill:ocColor, stroke:ocColor, strokeThickness:_ocP.v*1.4 });
+        if (ocBg.active) {
+          ocBg.clear();
+          ocBg.fillStyle(ocHex, 0.08 + _ocP.v * 0.10);
+          ocBg.lineStyle(1, ocHex, 0.3 + _ocP.v * 0.4);
+          ocBg.fillRect(innerL, infoY - ocH - parseInt(this._fs(6)), innerW, ocH);
+          ocBg.strokeRect(innerL, infoY - ocH - parseInt(this._fs(6)), innerW, ocH);
+        }
       },
     });
-    this._container.add(ocTxt);
-    infoY += parseInt(this._fs(15));
   }
 
-  // HP 바
-  const hpBarY = portY + portH + parseInt(this._fs(4));
-  const hpBarH = parseInt(this._fs(14));
-  const hpBg2  = scene.add.graphics();
-  hpBg2.fillStyle(0x050404, 0.9); hpBg2.lineStyle(1, 0x2a1a08, 0.7);
-  hpBg2.strokeRect(innerL, hpBarY, innerW, hpBarH);
-  hpBg2.fillRect(innerL, hpBarY, innerW, hpBarH);
-  const hpFg2 = scene.add.graphics();
-  hpFg2.fillStyle(0x306030, 1);
-  hpFg2.fillRect(innerL+1, hpBarY+1, Math.round((innerW-2)*1), hpBarH-2);
-  const maxHp = (result.baseStats && result.baseStats[0]) ? result.baseStats[0] * 10 : 100;
-  this._container.add([hpBg2, hpFg2,
-    scene.add.text(innerL + innerW/2, hpBarY + hpBarH/2,
-      `HP  ${maxHp} / ${maxHp}`, {
-      fontSize: this._fs(8), fill: '#d0b060', fontFamily: FontManager.MONO,
-    }).setOrigin(0.5),
-  ]);
-
-  // Cog 바
-  const cogBarY = hpBarY + hpBarH + parseInt(this._fs(4));
-  const cogBarH = parseInt(this._fs(18));
-  const cogBg2  = scene.add.graphics();
-  cogBg2.fillStyle(0x0e0b07, 1); cogBg2.lineStyle(1, 0x4a2a10, 0.8);
-  cogBg2.strokeRect(innerL, cogBarY, innerW, cogBarH);
-  cogBg2.fillRect(innerL, cogBarY, innerW, cogBarH);
-  this._container.add(cogBg2);
-  this._container.add(scene.add.text(innerL + innerW/2, cogBarY + cogBarH/2,
-    `◈  Cog  ${result.cog}  ◈`, {
-    fontSize: this._fs(11), fill: '#e8c040', fontFamily: FontManager.MONO,
-  }).setOrigin(0.5));
-
-  // 스탯 블록
-  const statTopY = cogBarY + cogBarH + parseInt(this._fs(6));
-  this._container.add(scene.add.text(innerL, statTopY, '[ 스  탯 ]', {
-    fontSize: this._fs(9), fill: '#5a3818', fontFamily: FontManager.MONO,
-  }).setOrigin(0, 0));
-
-  this._statTexts = [];
-
+  // ── 스탯 블록 ─────────────────────────────────────────────────
+  const statTopY   = infoY + parseInt(this._fs(4));
   const statBotY   = cy + bh/2 - pad;
   const totalRows  = RECRUIT_STAT_LABELS.length;
   const rowH2      = (statBotY - statTopY - parseInt(this._fs(13))) / totalRows;
@@ -293,11 +297,9 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
   const statBlockX = innerL;
   const statBlockW = innerW;
 
-  // ✅ _resolveStats() — 오버클럭 포함한 표시 데이터 배열
   const resolved  = this._resolveStats(result);
   const ocStatIdx = resolved.findIndex(r => r.isOc);
 
-  // 오버클럭 행 외부 glow
   if (ocStatIdx >= 0) {
     const ocHex2 = parseInt(resolved[ocStatIdx].ocColor.replace('#', '0x'));
     const glowBg = scene.add.graphics();
@@ -347,7 +349,6 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    // ✅ dispStr — "base → eff" 또는 "eff", _resolveStats에서 생성
     const valT = scene.add.text(statBlockX + statBlockW - 6, midY, stat.dispStr, {
       fontSize: this._fs(11),
       fill: stat.isOc ? stat.ocColor : stat.col,
@@ -476,11 +477,12 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   this._passiveTxtRef = pRef;
   this._passiveBtn    = pBtn.ref;
 
-  // SKILL 박스
+  // ✅ SKILL 박스 — result.skill은 id이므로 이름으로 변환 후 표시
   const sRef = {}; const sBtn = {};
+  const sklName = this._skillIdToName(result.skill);
   const sklDesc = (typeof getSkillDescription === 'function')
     ? getSkillDescription(result.skill) : '';
-  makeAbilBox('SKILL', sRef, result.skill, sklDesc, this.rerolls.skill,
+  makeAbilBox('SKILL', sRef, sklName, sklDesc, this.rerolls.skill,
     () => this._rerollSkill(), sBtn);
   this._skillTxtRef = sRef;
   this._skillBtn    = sBtn.ref;
@@ -597,7 +599,6 @@ Tab_Recruit.prototype._makeRerollBtn = function (cx, y, w, label, cb, h) {
     fontSize: this._fs(11), fill: '#7a5028', fontFamily: FontManager.MONO,
   }).setOrigin(0.5);
   this._container.add(txt);
-  // hit은 씬 직접 추가 — 컨테이너 이동 시 좌표 어긋남 방지
   const hit = scene.add.rectangle(cx, y, w, h, 0, 0)
     .setInteractive({ useHandCursor: true }).setDepth(20);
   hit.on('pointerover', () => draw(true,  false));
@@ -650,16 +651,13 @@ Tab_Recruit.prototype._rerollStats = function () {
     if (totalDiff > 0 || baseSum <= MIN_SUM) break;
   }
 
-  // ✅ 스냅샷 두 개를 팝업에 전달 — _resolveStats()는 팝업 내부에서 호출
   const prevSnap = { ...this.result, baseStats: prevBase };
   const nextSnap = { ...this.result, baseStats: newBase };
 
   this._showStatPopup(prevSnap, nextSnap, (chosenIsNext) => {
-    // ✅ chosenIsNext: boolean — true면 새 스탯, false면 이전 유지
     this.result.baseStats = chosenIsNext ? [...newBase] : [...prevBase];
     this.rerolls.stat--;
 
-    // ✅ setText 갱신도 _resolveStats() 소비
     const updated = this._resolveStats(this.result);
     updated.forEach((stat, i) => {
       this._statTexts[i].setText(stat.dispStr);
@@ -724,21 +722,40 @@ Tab_Recruit.prototype._rerollPassive = function () {
   }, [prev, next]);
 };
 
+// ✅ _rerollSkill
+//  · RECRUIT_SKILL_POOL은 id 배열 → prev/next는 id
+//  · 팝업 표시 라벨은 _skillIdToName()으로 이름 변환
+//  · rawValues 인자를 제거하여 chosen이 라벨(이름)로 돌아오지 않도록 처리
+//  · onConfirm 콜백에서 prevId/nextId로 result.skill(id) 저장,
+//    _skillTxtRef.ref.setText에는 이름 표시
 Tab_Recruit.prototype._rerollSkill = function () {
   if (this.rerolls.skill <= 0) { this._toast('재설정 횟수 소진'); return; }
-  const prev    = this.result.skill;
+
+  const prevId = this.result.skill;
   const sklPool = RECRUIT_SKILL_POOL[this.result.cog] || RECRUIT_SKILL_POOL[1];
-  let next = prev;
+  let nextId = prevId;
   for (let t = 0; t < 10; t++) {
-    next = _rFrom(sklPool);
-    if (next !== prev || sklPool.length <= 1) break;
+    nextId = _rFrom(sklPool);
+    if (nextId !== prevId || sklPool.length <= 1) break;
   }
-  this._showChoicePopup('스킬  재설정', prev, next, (chosen) => {
-    this.result.skill = chosen; this.rerolls.skill--;
-    this._skillTxtRef.ref.setText(chosen);
+
+  const prevName = this._skillIdToName(prevId);
+  const nextName = this._skillIdToName(nextId);
+
+  // ✅ rawValues 없이 호출 — chosen은 prevName 또는 nextName(이름 문자열)으로 반환됨
+  this._showChoicePopup('스킬  재설정', prevName, nextName, (chosen) => {
+    // 어느 쪽이 선택됐는지 이름 비교로 판별 → id로 저장
+    const chosenId   = (chosen === nextName) ? nextId : prevId;
+    const chosenName = (chosen === nextName) ? nextName : prevName;
+
+    this.result.skill = chosenId;          // ✅ 저장은 id
+    this.rerolls.skill--;
+    this._skillTxtRef.ref.setText(chosenName); // ✅ 표시는 이름
+
     if (this.rerolls.skill <= 0) this._disableBtn(this._skillBtn, '✕');
     else this._skillBtn.txt.setText(`🎲  ${this.rerolls.skill}`);
-  }, [prev, next]);
+  });
+  // rawValues 인자 없음 — _showChoicePopup이 라벨 문자열을 그대로 chosen으로 반환
 };
 
 // ── 영입 확정 ────────────────────────────────────────────────────
@@ -770,7 +787,8 @@ Tab_Recruit.prototype._confirmHire = function () {
     passive:      result.passive  || '—',
     skill:        result.skill    || '—',
     overclock:    result.overclock || null,
-    spriteKey:    result.spriteKey || 'char_0',
+    // ✅ 폴백을 'char_000'으로 수정 — _rSpriteKey()의 padStart(3,'0') 형식과 일치
+    spriteKey:    result.spriteKey || 'char_000',
     maxHp:        statObj.hp * 10,
     currentHp:    statObj.hp * 10,
     mastery:      0,
@@ -790,60 +808,59 @@ Tab_Recruit.prototype._confirmHire = function () {
 
 // ── 영입 완료 팝업 ────────────────────────────────────────────────
 
-Tab_Recruit.prototype._showHireCompletePopup = function (name, onDone) {
+Tab_Recruit.prototype._showHireCompletePopup = function (charName, onClose) {
   const { scene, W, H } = this;
-  const cx    = W / 2;
-  const cy    = H / 2;
-  const depth = 200;
+  const cx = W / 2;
+  const cy = H / 2;
 
-  const overlay = scene.add.rectangle(0, 0, W, H, 0x000000, 0)
-    .setOrigin(0).setDepth(depth);
+  const overlay = scene.add.rectangle(0, 0, W, H, 0x000000, 0.75)
+    .setOrigin(0).setDepth(90).setInteractive();
+  this._popupObjs.push(overlay);
 
-  const mainTxt = scene.add.text(cx, cy - parseInt(this._fs(10)),
-    `${name}  영입 완료`, {
-    fontSize: this._fs(28),
-    fill: '#e8c070', fontFamily: FontManager.TITLE,
-    stroke: '#0a0604', strokeThickness: 6,
-  }).setOrigin(0.5).setAlpha(0).setDepth(depth + 1);
+  const pw = W * 0.44;
+  const ph = H * 0.32;
+  const px = cx - pw / 2;
+  const py = cy - ph / 2;
 
-  const subTxt = scene.add.text(cx, cy + parseInt(this._fs(18)),
-    '새로운 동료가 합류했습니다', {
-    fontSize: this._fs(13),
-    fill: '#8a6030', fontFamily: FontManager.MONO,
-  }).setOrigin(0.5).setAlpha(0).setDepth(depth + 1);
+  const popBg = scene.add.graphics().setDepth(91);
+  popBg.fillStyle(0x0e0b07, 1);
+  popBg.lineStyle(2, 0xa05018, 0.9);
+  popBg.fillRect(px, py, pw, ph);
+  popBg.strokeRect(px, py, pw, ph);
+  this._popupObjs.push(popBg);
 
-  const boxW  = parseInt(this._fs(280));
-  const boxH  = parseInt(this._fs(90));
-  const boxCy = cy + parseInt(this._fs(4));
-  const msgBox = scene.add.graphics().setDepth(depth + 0.5).setAlpha(0);
-  msgBox.fillStyle(0x0d0a06, 0.92);
-  msgBox.fillRoundedRect(cx - boxW/2, boxCy - boxH/2, boxW, boxH, 10);
-  msgBox.lineStyle(2, 0x9a6020, 0.85);
-  msgBox.strokeRoundedRect(cx - boxW/2, boxCy - boxH/2, boxW, boxH, 10);
-  msgBox.lineStyle(1, 0x3a2010, 0.4);
-  msgBox.strokeRoundedRect(cx - boxW/2 + 4, boxCy - boxH/2 + 4, boxW - 8, boxH - 8, 7);
+  const titleTxt = scene.add.text(cx, py + ph * 0.22, '영  입  완  료', {
+    fontSize: this._fs(18), fill: '#e8c070', fontFamily: FontManager.TITLE,
+  }).setOrigin(0.5).setDepth(92).setAlpha(0);
+  this._popupObjs.push(titleTxt);
 
-  [overlay, msgBox, mainTxt, subTxt].forEach(o => this._popupObjs.push(o));
+  const nameTxt = scene.add.text(cx, py + ph * 0.48, charName, {
+    fontSize: this._fs(26), fill: '#ffffff', fontFamily: FontManager.TITLE,
+    stroke: '#3a1a08', strokeThickness: 4,
+  }).setOrigin(0.5).setDepth(92).setAlpha(0);
+  this._popupObjs.push(nameTxt);
 
-  scene.tweens.add({ targets: overlay, alpha: 0.55, duration: 200, ease: 'Sine.easeOut' });
+  const hintTxt = scene.add.text(cx, py + ph * 0.76, '— 클릭하여 계속 —', {
+    fontSize: this._fs(10), fill: '#5a3818', fontFamily: FontManager.MONO,
+  }).setOrigin(0.5).setDepth(92).setAlpha(0);
+  this._popupObjs.push(hintTxt);
+
+  scene.tweens.add({ targets: titleTxt, alpha: 1, duration: 300, delay: 80 });
+  scene.tweens.add({ targets: nameTxt,  alpha: 1, duration: 350, delay: 200 });
   scene.tweens.add({
-    targets: [msgBox, mainTxt, subTxt], alpha: 1,
-    duration: 220, ease: 'Sine.easeOut',
-    onComplete: () => {
-      scene.time.delayedCall(1400, () => {
-        scene.tweens.add({
-          targets: [overlay, msgBox, mainTxt, subTxt],
-          alpha: 0, duration: 380, ease: 'Sine.easeIn',
-          onComplete: () => {
-            [overlay, msgBox, mainTxt, subTxt].forEach(o => {
-              o.destroy();
-              const idx = this._popupObjs.indexOf(o);
-              if (idx !== -1) this._popupObjs.splice(idx, 1);
-            });
-            if (onDone) onDone();
-          },
-        });
-      });
-    },
+    targets: hintTxt, alpha: { from: 0, to: 0.7 },
+    duration: 600, delay: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
   });
+
+  const closeAll = () => {
+    [overlay, popBg, titleTxt, nameTxt, hintTxt].forEach(o => {
+      try { o.destroy(); } catch(e) {}
+      const idx = this._popupObjs.indexOf(o);
+      if (idx !== -1) this._popupObjs.splice(idx, 1);
+    });
+    if (onClose) onClose();
+  };
+
+  overlay.on('pointerdown', closeAll);
+  popBg.setInteractive().on('pointerdown', closeAll);
 };
