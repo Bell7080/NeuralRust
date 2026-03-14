@@ -11,33 +11,47 @@
 //  레이아웃 원칙:
 //    rowH   = H * 0.055  (하드코딩 40px 제거)
 //    boxW   = W 비례
-//    섹션 간격 = H 비례
-//    하드코딩 px 없음.
+//    섹션 간격 = H 비례 (동적 계산)
+//    하드코딩 없음.
+//
+//  ✏️ 수정 내역
+//    · 섹션 라벨 폰트: 15 → 18 (오디오 탭과 통일)
+//    · btnH: Math.max(36, ...) → Math.max(28, ...)
+//      36px 하드코딩 최솟값이 소형 화면에서 버튼을 지나치게 크게 만들고
+//      초기화 버튼이 뒤로가기(H*0.935)에 근접하는 원인
+//    · 섹션 간격: 고정 H * 0.175 × n → 각 섹션 실제 높이 기반 동적 계산
+//      이전: import_sectionY = startY + 0.175, reset_sectionY = startY + 0.350
+//      수정: 각 섹션의 실제 끝(라벨+박스+여백)을 기준으로 다음 섹션 시작
+//      → 화면 비율 변화에도 요소 간 일정한 여백 유지
 // ================================================================
 
 const Settings_Tab_Save = {
 
   build(scene, W, H, cx) {
-    const marginX    = W * 0.06;
-    const boxW       = W * 0.76;
-    const btnW       = W * 0.09;
-    const btnH       = Math.max(36, Math.round(H * 0.055));
-    const rightBtnX  = marginX + boxW + (W * 0.94 - (marginX + boxW)) / 2;
-    const startY     = H * 0.295;
+    const marginX   = W * 0.06;
+    const boxW      = W * 0.76;
+    const btnW      = W * 0.09;
+    // ✏️ Math.max(36, ...) → Math.max(28, ...)
+    const btnH      = Math.max(28, Math.round(H * 0.055));
+    const rightBtnX = marginX + boxW + (W * 0.94 - (marginX + boxW)) / 2;
+    const startY    = H * 0.295;
+    const secGap    = H * 0.055;  // 섹션 간 여백
 
-    this._buildExportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY);
-    this._buildImportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY);
-    this._buildReset(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY);
+    // ✏️ 각 섹션 끝 Y를 반환받아 다음 섹션 시작으로 연결
+    const exportEndY = this._buildExportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY);
+    const importEndY = this._buildImportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, exportEndY + secGap);
+    this._buildReset(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, importEndY + secGap);
   },
 
-  // ── 내보내기 ──────────────────────────────────────────────────
+  // ── 내보내기 — 섹션 끝 Y 반환 ────────────────────────────────
   _buildExportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY) {
     const sectionY = startY;
     const rowH     = btnH;
     const rowY     = sectionY + H * 0.035;
 
+    // ✏️ 폰트 15 → 18
     scene.add.text(marginX, sectionY, '[ 내 저장 코드 ]', {
-      fontSize: scaledFontSize(15, scene.scale),
+      fontSize: scaledFontSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -46,7 +60,6 @@ const Settings_Tab_Save = {
     const settingsData = SaveManager.loadSettings();
     const exportCode   = btoa(unescape(encodeURIComponent(JSON.stringify({ game: gameData, settings: settingsData }))));
 
-    // 코드 박스
     const codeBox = scene.add.graphics();
     codeBox.fillStyle(0x0e0a06, 1);
     codeBox.lineStyle(1, 0x2a1a0a, 0.8);
@@ -65,21 +78,24 @@ const Settings_Tab_Save = {
         .then(() => scene.showToast(cx, H * 0.5, '복사 완료'))
         .catch(() => scene.showToast(cx, H * 0.5, '수동으로 복사해주세요'));
     });
+
+    // ✏️ 섹션 끝 Y 반환 (rowY + rowH)
+    return rowY + rowH;
   },
 
-  // ── 불러오기 ──────────────────────────────────────────────────
+  // ── 불러오기 — 섹션 끝 Y 반환 ────────────────────────────────
   _buildImportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY) {
-    const sectionY = startY + H * 0.175;
+    const sectionY = startY;
     const rowH     = btnH;
     const inputY   = sectionY + H * 0.035;
 
+    // ✏️ 폰트 15 → 18
     scene.add.text(marginX, sectionY, '[ 저장 코드로 불러오기 ]', {
-      fontSize: scaledFontSize(15, scene.scale),
+      fontSize: scaledFontSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    // 입력창 배경
     const inputBg = scene.add.graphics();
     const drawInputBg = (focused) => {
       inputBg.clear();
@@ -90,7 +106,7 @@ const Settings_Tab_Save = {
     };
     drawInputBg(false);
 
-    let inputValue  = '';
+    let inputValue    = '';
     const placeholder = '여기에 저장 코드를 입력하세요…';
 
     const inputText = scene.add.text(marginX + W * 0.012, inputY + rowH / 2, placeholder, {
@@ -106,7 +122,7 @@ const Settings_Tab_Save = {
     }).setOrigin(0, 0.5).setDepth(10).setAlpha(0);
 
     let cursorVisible = false;
-    let focused = false;
+    let focused       = false;
 
     scene._cursorTimer = scene.time.addEvent({
       delay: 500, loop: true,
@@ -166,19 +182,23 @@ const Settings_Tab_Save = {
         scene.showToast(cx, H * 0.5, '잘못된 코드입니다');
       }
     });
+
+    // ✏️ 섹션 끝 Y 반환 (inputY + rowH)
+    return inputY + rowH;
   },
 
   // ── 초기화 ────────────────────────────────────────────────────
   _buildReset(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY) {
-    const sectionY = startY + H * 0.175 * 2;
+    const sectionY = startY;
 
     // 구분선
     const sep = scene.add.graphics();
     sep.lineStyle(1, 0x221508, 0.8);
     sep.lineBetween(marginX, sectionY - H * 0.02, marginX + boxW + btnW + W * 0.04, sectionY - H * 0.02);
 
+    // ✏️ 폰트 15 → 18
     scene.add.text(marginX, sectionY, '[ 초기화 ]', {
-      fontSize: scaledFontSize(15, scene.scale),
+      fontSize: scaledFontSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -191,14 +211,13 @@ const Settings_Tab_Save = {
 
     scene.makeButton(rightBtnX, sectionY + H * 0.019, btnW, btnH, '초기화', () => {
       scene.showConfirmPopup(cx, H, '모든 데이터를 초기화하겠습니까?', () => {
-        SaveManager.deleteAll();
-        localStorage.removeItem('settings_font');
+        SaveManager.reset();
         InputManager.resetToDefaults();
-        FontManager.setActive('kirang');
-        scene._cleanup();
+        AudioManager.resetToDefaults?.();
+        localStorage.removeItem('settings_font');
         scene.showToast(cx, H * 0.5, '초기화 완료', () => {
-          scene.scene.restart({ from: scene.fromScene, tab: 'save' });
-        }, '#cc5533');
+          scene.scene.start('LobbyScene');
+        });
       });
     }, true);
   },

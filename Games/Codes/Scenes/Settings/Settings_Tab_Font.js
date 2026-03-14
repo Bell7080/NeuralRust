@@ -11,28 +11,35 @@
 //    콘텐츠 시작 Y = H * 0.29 (SettingsScene 탭바 하단 기준)
 //    optionBoxH   = H * 0.10  (하드코딩 56px 제거)
 //    옵션 내부 텍스트 Y 오프셋 = boxH 비례
-//    미리보기 영역 = 옵션 마지막 박스 아래 H * 0.04 간격
+//    미리보기 영역 = 마지막 박스 하단 + H * 0.04 간격
+//
+//  ✏️ 수정 내역
+//    · previewY: firstOptY + optionGap * N + H*0.02
+//                → lastOptBottom + H * 0.04
+//      이전 계산은 optionGap * N 이 마지막 박스 중앙 + optionGap 전체를
+//      더하므로 필요 이상으로 아래로 밀림.
+//      lastOptBottom(마지막 박스 하단) 기준으로 변경해 간격을 적정하게 유지.
+//    · 섹션 라벨 폰트: 15 → 18 (오디오 탭과 통일)
 // ================================================================
 
 const Settings_Tab_Font = {
 
-  // ── 공통 레이아웃 상수 (build 진입 시 계산) ───────────────────
   _layout(W, H) {
     const marginX    = W * 0.06;
     const contentW   = W * 0.88;
     const optionBoxH = Math.round(H * 0.10);
     const optionGap  = optionBoxH + Math.round(H * 0.018);
-    const firstOptY  = H * 0.345;   // 첫 박스 중앙 Y
+    const firstOptY  = H * 0.345;
     return { marginX, contentW, optionBoxH, optionGap, firstOptY };
   },
 
   build(scene, W, H, cx) {
-    const L    = this._layout(W, H);
+    const L     = this._layout(W, H);
     const saved = localStorage.getItem('settings_font') || 'kirang';
 
-    // 섹션 라벨
+    // 섹션 라벨 — ✏️ 15 → 18 (오디오 탭과 통일)
     scene.add.text(L.marginX, H * 0.295, '[ 폰트 ]', {
-      fontSize: scaledFontSize(15, scene.scale),
+      fontSize: scaledFontSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -47,8 +54,15 @@ const Settings_Tab_Font = {
       this._makeOption(scene, opt, W, H, cx, L, L.firstOptY + L.optionGap * i, saved);
     });
 
-    // 미리보기 — 마지막 옵션 아래
-    const previewY = L.firstOptY + L.optionGap * options.length + H * 0.02;
+    // ✏️ 수정: 마지막 박스 하단 기준으로 previewY 계산
+    //   이전: L.firstOptY + L.optionGap * options.length + H * 0.02
+    //         = 첫 박스 중앙 + (박스 3개치 gap) + 여백
+    //         → 마지막 박스 아래 optionGap 한 칸 분량 빈 공간 발생
+    //   수정: 마지막 박스 중앙 + 박스 높이/2 + 여백
+    //         = 실제 마지막 박스 하단 바로 아래
+    const lastOptCenter = L.firstOptY + L.optionGap * (options.length - 1);
+    const lastOptBottom = lastOptCenter + L.optionBoxH / 2;
+    const previewY      = lastOptBottom + H * 0.04;
     this._buildPreview(scene, W, H, cx, L, previewY);
   },
 
@@ -58,28 +72,24 @@ const Settings_Tab_Font = {
     const box        = scene.add.graphics();
     scene.drawOptionBox(box, L.marginX, boxTop, L.contentW, L.optionBoxH, isSelected);
 
-    // 마커
     scene.add.text(L.marginX + L.contentW * 0.03, cy, isSelected ? '▶' : '·', {
       fontSize: scaledFontSize(15, scene.scale),
       fill: isSelected ? '#a05018' : '#3d2810',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    // 옵션명 (박스 높이 기준 위쪽 1/4)
     const nameText = scene.add.text(L.marginX + L.contentW * 0.07, cy - L.optionBoxH * 0.18, opt.label, {
       fontSize: scaledFontSize(20, scene.scale),
       fill: isSelected ? '#c8a070' : '#7a5028',
       fontFamily: opt.family,
     }).setOrigin(0, 0.5);
 
-    // 설명 (박스 높이 기준 아래쪽 1/4)
     scene.add.text(L.marginX + L.contentW * 0.07, cy + L.optionBoxH * 0.22, opt.desc, {
       fontSize: scaledFontSize(13, scene.scale),
       fill: isSelected ? '#5a3820' : '#4a3018',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    // 히트 영역
     const hit = scene.add.rectangle(cx, cy, L.contentW, L.optionBoxH, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
 
@@ -104,7 +114,6 @@ const Settings_Tab_Font = {
   },
 
   _buildPreview(scene, W, H, cx, L, startY) {
-    // 구분선
     const divider = scene.add.graphics();
     divider.lineStyle(1, 0x2a1a0a, 0.8);
     divider.lineBetween(L.marginX, startY, L.marginX + L.contentW, startY);

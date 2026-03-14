@@ -13,6 +13,17 @@
 //    키 버튼 높이 = H 비례.
 //    2열 배치 — 열 폭 colW = W 비례.
 //    하드코딩 px 없음.
+//
+//  ✏️ 수정 내역
+//    · areaH: H * 0.56 → H * 0.52
+//      키 목록 구간을 줄여 초기화 버튼과 뒤로가기(H*0.935) 사이 여유 확보.
+//      이전: areaEnd=0.87, resetY=0.895, 버튼하단=0.917 → 뒤로가기까지 1.8%
+//      수정: areaEnd=0.83, resetY=0.855, 버튼하단=0.877 → 뒤로가기까지 5.8%
+//    · 섹션 라벨 폰트: 15 → 18 (오디오 탭과 통일)
+//    · 대기 안내 텍스트 Y: H * 0.895 → H * 0.865 (areaEnd 기준으로 연동)
+//    · btnH: Math.max(32, ...) → Math.max(28, ...) 최솟값 완화
+//      (32px 하드코딩이 소형 화면에서 버튼을 지나치게 크게 만듦)
+//    · keyBtnH: Math.max(24, ...) → Math.max(20, ...) 동일 이유
 // ================================================================
 
 const Settings_Tab_Keys = {
@@ -22,18 +33,18 @@ const Settings_Tab_Keys = {
     const colCount = 2;
     const marginX  = W * 0.06;
 
-    // 행 높이: 10개 액션을 5행×2열로, H * 0.30 ~ H * 0.88 구간에 배치
+    // ✏️ areaH H * 0.56 → H * 0.52 (하단 여유 확보)
     const areaTop = H * 0.31;
-    const areaH   = H * 0.56;
+    const areaH   = H * 0.52;
     const rowH    = areaH / Math.ceil(actions.length / colCount);
 
     const colW   = W * 0.44;
     const leftX  = marginX;
     const rightX = cx + W * 0.02;
 
-    // 섹션 라벨
+    // ✏️ 섹션 라벨 폰트 15 → 18
     scene.add.text(leftX, H * 0.295, '[ 키 설정 ]', {
-      fontSize: scaledFontSize(15, scene.scale),
+      fontSize: scaledFontSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -44,8 +55,9 @@ const Settings_Tab_Keys = {
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5);
 
-    // 대기 안내 텍스트 (리바인드 중)
-    const waitText = scene.add.text(cx, H * 0.895, '', {
+    // ✏️ 대기 안내 텍스트 Y: areaTop + areaH + 여유 (뒤로가기 침범 방지)
+    const waitTextY = areaTop + areaH + H * 0.025;
+    const waitText = scene.add.text(cx, waitTextY, '', {
       fontSize: scaledFontSize(15, scene.scale),
       fill: '#a05018',
       fontFamily: FontManager.MONO,
@@ -62,10 +74,11 @@ const Settings_Tab_Keys = {
       rowObjects.push(obj);
     });
 
-    // 초기화 버튼 — 키 목록 아래
-    const resetY = areaTop + areaH + H * 0.025;
+    // 초기화 버튼 — ✏️ resetY를 areaEnd 기준으로 연동
+    const resetY = areaTop + areaH + H * 0.055;
     const btnW   = W * 0.22;
-    const btnH   = Math.max(32, Math.round(H * 0.045));
+    // ✏️ Math.max(32, ...) → Math.max(28, ...) 최솟값 완화
+    const btnH   = Math.max(28, Math.round(H * 0.045));
     scene.makeButton(cx, resetY, btnW, btnH, '기본값으로 초기화', () => {
       scene.showConfirmPopup(cx, H, '키 설정을 기본값으로 되돌리겠습니까?', () => {
         InputManager.resetToDefaults();
@@ -77,14 +90,13 @@ const Settings_Tab_Keys = {
   },
 
   _makeRow(scene, action, baseX, cy, colW, rowH, H, waitText, rowObjects) {
-    // 내부 레이아웃 — colW 비례
     const labelX  = baseX + colW * 0.04;
     const keyBtnX = baseX + colW * 0.74;
     const keyBtnW = colW * 0.24;
-    const keyBtnH = Math.max(24, Math.round(H * 0.038));
+    // ✏️ Math.max(24, ...) → Math.max(20, ...)
+    const keyBtnH = Math.max(20, Math.round(H * 0.038));
     const rowPad  = Math.round(rowH * 0.12);
 
-    // 행 배경
     const rowBg = scene.add.graphics();
     const drawRowBg = (hover) => {
       rowBg.clear();
@@ -95,14 +107,12 @@ const Settings_Tab_Keys = {
     };
     drawRowBg(false);
 
-    // 액션 라벨
     scene.add.text(labelX, cy, action.label, {
       fontSize: scaledFontSize(15, scene.scale),
       fill: '#6b4520',
       fontFamily: FontManager.BODY,
     }).setOrigin(0, 0.5);
 
-    // 키 버튼 배경 + 텍스트
     const keyBg   = scene.add.graphics();
     const keyText = scene.add.text(keyBtnX, cy, InputManager.displayName(action.key), {
       fontSize: scaledFontSize(14, scene.scale),
@@ -125,7 +135,6 @@ const Settings_Tab_Keys = {
     };
     drawKeyBg('normal');
 
-    // 히트 영역 — 행 전체
     const hit = scene.add.rectangle(baseX + colW / 2, cy, colW, rowH - rowPad * 2, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
 
