@@ -8,21 +8,17 @@
 //        scene.makeButton / scene.showConfirmPopup / scene.showToast
 //        scene.fromScene / scene._cursorTimer (cleanup용)
 //
-//  레이아웃 원칙:
-//    rowH   = H * 0.055  (하드코딩 40px 제거)
-//    boxW   = W 비례
-//    섹션 간격 = H 비례 (동적 계산)
-//    하드코딩 없음.
-//
 //  ✏️ 수정 내역
-//    · 섹션 라벨 폰트: 15 → 18 (오디오 탭과 통일)
-//    · btnH: Math.max(36, ...) → Math.max(28, ...)
-//      36px 하드코딩 최솟값이 소형 화면에서 버튼을 지나치게 크게 만들고
-//      초기화 버튼이 뒤로가기(H*0.935)에 근접하는 원인
-//    · 섹션 간격: 고정 H * 0.175 × n → 각 섹션 실제 높이 기반 동적 계산
-//      이전: import_sectionY = startY + 0.175, reset_sectionY = startY + 0.350
-//      수정: 각 섹션의 실제 끝(라벨+박스+여백)을 기준으로 다음 섹션 시작
-//      → 화면 비율 변화에도 요소 간 일정한 여백 유지
+//    · 섹션 라벨 Y: H * 0.295 → H * 0.310 (폰트/키 탭과 통일, 탭바 겹침 방지)
+//    · 섹션 라벨 폰트: 18 유지
+//    · 코드 박스 내 텍스트 폰트: 13 → 16 (base64 코드가 너무 작아 보이던 문제)
+//    · 입력창 플레이스홀더 폰트: 13 → 16 (동일)
+//    · 입력창 입력 텍스트 폰트: 13 → 16 (동일)
+//    · 커서 폰트: 14 → 17 (입력 폰트+1 유지)
+//    · rowH(박스 높이): btnH → btnH * 1.1 (폰트 16px 세로 패딩 확보)
+//      표시 글자수 제한: 58자 → 50자 (폰트 커진 만큼 박스 내 표시 폭 줄어듦)
+//    · 섹션 간격: 동적 계산(이전 수정) 유지, startY → H * 0.310 연동
+//    · btnH: Math.max(28, H*0.055) 유지
 // ================================================================
 
 const Settings_Tab_Save = {
@@ -31,25 +27,23 @@ const Settings_Tab_Save = {
     const marginX   = W * 0.06;
     const boxW      = W * 0.76;
     const btnW      = W * 0.09;
-    // ✏️ Math.max(36, ...) → Math.max(28, ...)
     const btnH      = Math.max(28, Math.round(H * 0.055));
     const rightBtnX = marginX + boxW + (W * 0.94 - (marginX + boxW)) / 2;
-    const startY    = H * 0.295;
-    const secGap    = H * 0.055;  // 섹션 간 여백
+    // ✏️ startY: H * 0.295 → H * 0.310
+    const startY    = H * 0.310;
+    const secGap    = H * 0.055;
 
-    // ✏️ 각 섹션 끝 Y를 반환받아 다음 섹션 시작으로 연결
     const exportEndY = this._buildExportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY);
     const importEndY = this._buildImportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, exportEndY + secGap);
     this._buildReset(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, importEndY + secGap);
   },
 
-  // ── 내보내기 — 섹션 끝 Y 반환 ────────────────────────────────
   _buildExportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY) {
     const sectionY = startY;
-    const rowH     = btnH;
-    const rowY     = sectionY + H * 0.035;
+    // ✏️ rowH: btnH → Math.round(btnH * 1.1) (폰트 16px 세로 패딩 확보)
+    const rowH     = Math.round(btnH * 1.1);
+    const rowY     = sectionY + H * 0.038;
 
-    // ✏️ 폰트 15 → 18
     scene.add.text(marginX, sectionY, '[ 내 저장 코드 ]', {
       fontSize: scaledFontSize(18, scene.scale),
       fill: '#5a3518',
@@ -66,9 +60,11 @@ const Settings_Tab_Save = {
     codeBox.strokeRect(marginX, rowY, boxW, rowH);
     codeBox.fillRect(marginX, rowY, boxW, rowH);
 
-    const display = exportCode.length > 58 ? exportCode.substring(0, 58) + '…' : exportCode;
+    // ✏️ 표시 글자수: 58 → 50 (폰트 16px 기준 박스 폭에 맞춤)
+    const display = exportCode.length > 50 ? exportCode.substring(0, 50) + '…' : exportCode;
+    // ✏️ 코드 텍스트 폰트: 13 → 16
     scene.add.text(marginX + W * 0.012, rowY + rowH / 2, display, {
-      fontSize: scaledFontSize(13, scene.scale),
+      fontSize: scaledFontSize(16, scene.scale),
       fill: '#5a3820',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -79,17 +75,15 @@ const Settings_Tab_Save = {
         .catch(() => scene.showToast(cx, H * 0.5, '수동으로 복사해주세요'));
     });
 
-    // ✏️ 섹션 끝 Y 반환 (rowY + rowH)
     return rowY + rowH;
   },
 
-  // ── 불러오기 — 섹션 끝 Y 반환 ────────────────────────────────
   _buildImportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY) {
     const sectionY = startY;
-    const rowH     = btnH;
-    const inputY   = sectionY + H * 0.035;
+    // ✏️ rowH: btnH → Math.round(btnH * 1.1)
+    const rowH     = Math.round(btnH * 1.1);
+    const inputY   = sectionY + H * 0.038;
 
-    // ✏️ 폰트 15 → 18
     scene.add.text(marginX, sectionY, '[ 저장 코드로 불러오기 ]', {
       fontSize: scaledFontSize(18, scene.scale),
       fill: '#5a3518',
@@ -107,16 +101,18 @@ const Settings_Tab_Save = {
     drawInputBg(false);
 
     let inputValue    = '';
+    // ✏️ 플레이스홀더 폰트: 13 → 16
     const placeholder = '여기에 저장 코드를 입력하세요…';
 
     const inputText = scene.add.text(marginX + W * 0.012, inputY + rowH / 2, placeholder, {
-      fontSize: scaledFontSize(13, scene.scale),
+      fontSize: scaledFontSize(16, scene.scale),
       fill: '#3d2810',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setDepth(10);
 
+    // ✏️ 커서 폰트: 14 → 17 (입력 폰트+1)
     const cursor = scene.add.text(marginX + W * 0.012, inputY + rowH / 2, '|', {
-      fontSize: scaledFontSize(14, scene.scale),
+      fontSize: scaledFontSize(17, scene.scale),
       fill: '#8a6040',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setDepth(10).setAlpha(0);
@@ -137,7 +133,8 @@ const Settings_Tab_Save = {
         inputText.setText(placeholder).setStyle({ fill: '#3d2810' });
         cursor.setAlpha(0);
       } else {
-        const shown = inputValue.length > 58 ? inputValue.substring(0, 58) + '…' : inputValue;
+        // ✏️ 표시 글자수: 58 → 50
+        const shown = inputValue.length > 50 ? inputValue.substring(0, 50) + '…' : inputValue;
         inputText.setText(shown).setStyle({ fill: '#7a5028' });
         cursor.setX(marginX + W * 0.012 + inputText.width + 2);
       }
@@ -183,20 +180,16 @@ const Settings_Tab_Save = {
       }
     });
 
-    // ✏️ 섹션 끝 Y 반환 (inputY + rowH)
     return inputY + rowH;
   },
 
-  // ── 초기화 ────────────────────────────────────────────────────
   _buildReset(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY) {
     const sectionY = startY;
 
-    // 구분선
     const sep = scene.add.graphics();
     sep.lineStyle(1, 0x221508, 0.8);
     sep.lineBetween(marginX, sectionY - H * 0.02, marginX + boxW + btnW + W * 0.04, sectionY - H * 0.02);
 
-    // ✏️ 폰트 15 → 18
     scene.add.text(marginX, sectionY, '[ 초기화 ]', {
       fontSize: scaledFontSize(18, scene.scale),
       fill: '#5a3518',

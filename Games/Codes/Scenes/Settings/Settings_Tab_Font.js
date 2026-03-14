@@ -7,19 +7,14 @@
 //  의존: FontManager, SaveManager, utils.js
 //        scene.drawOptionBox / scene.fromScene
 //
-//  레이아웃 원칙:
-//    콘텐츠 시작 Y = H * 0.29 (SettingsScene 탭바 하단 기준)
-//    optionBoxH   = H * 0.10  (하드코딩 56px 제거)
-//    옵션 내부 텍스트 Y 오프셋 = boxH 비례
-//    미리보기 영역 = 마지막 박스 하단 + H * 0.04 간격
-//
 //  ✏️ 수정 내역
-//    · previewY: firstOptY + optionGap * N + H*0.02
-//                → lastOptBottom + H * 0.04
-//      이전 계산은 optionGap * N 이 마지막 박스 중앙 + optionGap 전체를
-//      더하므로 필요 이상으로 아래로 밀림.
-//      lastOptBottom(마지막 박스 하단) 기준으로 변경해 간격을 적정하게 유지.
-//    · 섹션 라벨 폰트: 15 → 18 (오디오 탭과 통일)
+//    · 섹션 라벨 Y: H * 0.295 → H * 0.310
+//      탭바 구분선(H * ~0.259)과 라벨(폰트 18) 사이 여백 부족으로
+//      겹쳐 보이던 문제 해소. 라벨 상단이 구분선에서 H * 0.051 떨어짐.
+//    · firstOptY: H * 0.345 → H * 0.360
+//      섹션 라벨 이동량(+H*0.015)에 연동, 라벨→첫 박스 간격 유지.
+//    · 섹션 라벨 폰트: 18 유지
+//    · previewY: lastOptBottom + H * 0.04 기준 유지
 // ================================================================
 
 const Settings_Tab_Font = {
@@ -29,7 +24,7 @@ const Settings_Tab_Font = {
     const contentW   = W * 0.88;
     const optionBoxH = Math.round(H * 0.10);
     const optionGap  = optionBoxH + Math.round(H * 0.018);
-    const firstOptY  = H * 0.345;
+    const firstOptY  = H * 0.360;   // ✏️ 0.345 → 0.360
     return { marginX, contentW, optionBoxH, optionGap, firstOptY };
   },
 
@@ -37,8 +32,8 @@ const Settings_Tab_Font = {
     const L     = this._layout(W, H);
     const saved = localStorage.getItem('settings_font') || 'kirang';
 
-    // 섹션 라벨 — ✏️ 15 → 18 (오디오 탭과 통일)
-    scene.add.text(L.marginX, H * 0.295, '[ 폰트 ]', {
+    // ✏️ 섹션 라벨 Y: H * 0.295 → H * 0.310
+    scene.add.text(L.marginX, H * 0.310, '[ 폰트 ]', {
       fontSize: scaledFontSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
@@ -54,12 +49,6 @@ const Settings_Tab_Font = {
       this._makeOption(scene, opt, W, H, cx, L, L.firstOptY + L.optionGap * i, saved);
     });
 
-    // ✏️ 수정: 마지막 박스 하단 기준으로 previewY 계산
-    //   이전: L.firstOptY + L.optionGap * options.length + H * 0.02
-    //         = 첫 박스 중앙 + (박스 3개치 gap) + 여백
-    //         → 마지막 박스 아래 optionGap 한 칸 분량 빈 공간 발생
-    //   수정: 마지막 박스 중앙 + 박스 높이/2 + 여백
-    //         = 실제 마지막 박스 하단 바로 아래
     const lastOptCenter = L.firstOptY + L.optionGap * (options.length - 1);
     const lastOptBottom = lastOptCenter + L.optionBoxH / 2;
     const previewY      = lastOptBottom + H * 0.04;
