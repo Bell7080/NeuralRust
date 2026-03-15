@@ -298,28 +298,43 @@ Tab_Recruit.prototype._showChoicePopup = function (title, prevLabel, nextLabel, 
       iBg.strokeRect(panelX - iSz/2, iY - iSz/2, iSz, iSz);
       pop.add(iBg);
 
-      if (rawVal && scene.textures.exists(rawVal)) {
-        const img = scene.add.image(panelX, iY, rawVal).setOrigin(0.5);
-        const sc  = Math.min(iSz / img.width, iSz / img.height) * 0.90;
+      // ✅ CharacterSpriteManager.getKey()로 키 정규화 후 텍스처 체크
+      let normalizedRaw = rawVal;
+      if (rawVal && typeof CharacterSpriteManager !== 'undefined' && CharacterSpriteManager.getKey) {
+        const idNum = parseInt((rawVal || '').replace('char_', ''), 10);
+        if (!isNaN(idNum)) normalizedRaw = CharacterSpriteManager.getKey(idNum);
+      }
+
+      if (normalizedRaw && scene.textures.exists(normalizedRaw)) {
+        const img = scene.add.image(panelX, iY, normalizedRaw).setOrigin(0.5);
+        const cellW = (typeof CharacterSpriteManager !== 'undefined' && CharacterSpriteManager.CELL_W) ? CharacterSpriteManager.CELL_W : (img.width || 152);
+        const cellH = (typeof CharacterSpriteManager !== 'undefined' && CharacterSpriteManager.CELL_H) ? CharacterSpriteManager.CELL_H : (img.height || 280);
+        const sc = Math.min(iSz / cellW, iSz / cellH) * 0.90;
         img.setScale(sc);
         pop.add(img);
       } else {
-        const num = parseInt((rawVal || '').replace('char_', '')) + 1;
-        pop.add(scene.add.text(panelX, iY, `#${num}`, {
+        const num = parseInt((rawVal || '').replace('char_', ''), 10);
+        const displayNum = isNaN(num) ? '?' : num + 1;
+        pop.add(scene.add.text(panelX, iY, `#${displayNum}`, {
           fontSize: this._fs(18), fill: '#3d2010', fontFamily: FontManager.MONO,
         }).setOrigin(0.5));
       }
     } else {
-      // 패시브 / 스킬 / 포지션
+      // 패시브 / 포지션 / 스킬
       const nameY = bY - bH * 0.08;
       pop.add(scene.add.text(panelX, nameY, label, {
         fontSize: this._fs(14), fill: '#e8c060',
         fontFamily: FontManager.TITLE,
       }).setOrigin(0.5));
 
-      const desc = (typeof getPositionDescription === 'function' ? getPositionDescription(label) : '') ||
-                   (typeof getPassiveDescription  === 'function' ? getPassiveDescription(label)  : '') ||
-                   (typeof getSkillDescription    === 'function' ? getSkillDescription(label)    : '') || '';
+      // ✅ 설명 조회:
+      //    · rawVal이 있으면 rawVal(원본 id/값)로 조회 — 스킬 id 등
+      //    · rawVal이 없으면 label(이름)로 조회 — 포지션·패시브
+      const lookupKey = rawVal || label;
+      const desc =
+        (typeof getPositionDescription === 'function' ? getPositionDescription(label)    : '') ||
+        (typeof getPassiveDescription  === 'function' ? getPassiveDescription(label)     : '') ||
+        (typeof getSkillDescription    === 'function' ? getSkillDescription(lookupKey)   : '') || '';
       if (desc) {
         pop.add(scene.add.text(panelX, nameY + parseInt(this._fs(22)), desc, {
           fontSize: this._fs(13), fill: '#a07840',

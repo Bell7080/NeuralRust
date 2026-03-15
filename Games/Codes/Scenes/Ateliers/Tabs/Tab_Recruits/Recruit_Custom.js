@@ -265,7 +265,7 @@ Tab_Recruit.prototype._buildStatPanel = function (cx, cy, bw, bh) {
     ocBg.strokeRect(innerL, infoY, innerW, ocH);
     this._container.add(ocBg);
     this._container.add(scene.add.text(innerL + innerW/2, infoY + ocH/2,
-      `⚡ OVERCLOCK  ·  ${oc.label || oc.statKey}`, {
+      oc.label || oc.statKey, {
       fontSize: this._fs(9), fill: oc.color,
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5));
@@ -452,16 +452,15 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
     this._container.add(nameTxt);
     nameTxtRef.ref = nameTxt;
 
-    if (descVal) {
-      const descTxt = scene.add.text(
-        boxL + abilInner, curY + abilInner + abilTitleH + 3 + abilNameH + 2, descVal, {
-        fontSize: this._fs(8), fill: '#7a5830',
-        fontFamily: FontManager.MONO,
-        wordWrap: { width: boxW - abilInner * 2 },
-      }).setOrigin(0, 0);
-      this._container.add(descTxt);
-      if (nameTxtRef) nameTxtRef.desc = descTxt;
-    }
+    // ✅ descVal이 없어도 텍스트 오브젝트 생성 — 재설정 후 setText로 갱신 가능하게
+    const descTxt = scene.add.text(
+      boxL + abilInner, curY + abilInner + abilTitleH + 3 + abilNameH + 2, descVal || '', {
+      fontSize: this._fs(8), fill: '#7a5830',
+      fontFamily: FontManager.MONO,
+      wordWrap: { width: boxW - abilInner * 2 },
+    }).setOrigin(0, 0);
+    this._container.add(descTxt);
+    nameTxtRef.desc = descTxt;
 
     const btnY2 = curY + abilInner + abilTitleH + 3 + abilNameH + abilDescH + 2 + 5 + btnH/2;
     const btn   = this._makeRerollBtn(
@@ -602,6 +601,8 @@ Tab_Recruit.prototype._renderSpriteBox = function (spriteKey) {
 
     this._spriteImg = img;
     this._container.add(img);
+    // ✅ 재설정 시 이미 쌓인 다른 오브젝트 위로 끌어올림
+    this._container.bringToTop(img);
   } else {
     // 텍스처 미로드 시 번호 텍스트 표시
     const idNum = parseInt((spriteKey || '').replace('char_', ''), 10);
@@ -769,9 +770,8 @@ Tab_Recruit.prototype._rerollPassive = function () {
 // ✅ _rerollSkill
 //  · RECRUIT_SKILL_POOL은 id 배열 → prev/next는 id
 //  · 팝업 표시 라벨은 _skillIdToName()으로 이름 변환
-//  · rawValues 인자를 제거하여 chosen이 라벨(이름)로 돌아오지 않도록 처리
-//  · onConfirm 콜백에서 prevId/nextId로 result.skill(id) 저장,
-//    _skillTxtRef.ref.setText에는 이름 표시
+//  · rawValues에 [prevId, nextId]를 전달 → 팝업 내부에서 id로 설명 조회 가능
+//  · chosen은 이름 문자열로 반환, id는 이름 비교로 역추적
 Tab_Recruit.prototype._rerollSkill = function () {
   if (this.rerolls.skill <= 0) { this._toast('재설정 횟수 소진'); return; }
 
@@ -786,16 +786,15 @@ Tab_Recruit.prototype._rerollSkill = function () {
   const prevName = this._skillIdToName(prevId);
   const nextName = this._skillIdToName(nextId);
 
-  // ✅ rawValues 없이 호출 — chosen은 prevName 또는 nextName(이름 문자열)으로 반환됨
+  // ✅ rawValues에 id 배열 전달 — 팝업 내 lookupKey로 getSkillDescription(id) 호출됨
+  //    isSprite 판별은 'char_' 여부이므로 스킬 id는 isSprite=false로 올바르게 분기됨
   this._showChoicePopup('스킬  재설정', prevName, nextName, (chosen) => {
-    // 어느 쪽이 선택됐는지 이름 비교로 판별 → id로 저장
     const chosenId   = (chosen === nextName) ? nextId : prevId;
     const chosenName = (chosen === nextName) ? nextName : prevName;
 
-    this.result.skill = chosenId;          // ✅ 저장은 id
+    this.result.skill = chosenId;
     this.rerolls.skill--;
-    this._skillTxtRef.ref.setText(chosenName); // ✅ 표시는 이름
-    // ✅ 설명 텍스트 갱신
+    this._skillTxtRef.ref.setText(chosenName);
     if (this._skillTxtRef.desc) {
       const newDesc = (typeof getSkillDescription === 'function')
         ? getSkillDescription(chosenId) : '';
@@ -804,8 +803,7 @@ Tab_Recruit.prototype._rerollSkill = function () {
 
     if (this.rerolls.skill <= 0) this._disableBtn(this._skillBtn, '✕');
     else this._skillBtn.txt.setText(`🎲  ${this.rerolls.skill}`);
-  });
-  // rawValues 인자 없음 — _showChoicePopup이 라벨 문자열을 그대로 chosen으로 반환
+  }, [prevId, nextId]);   // ✅ rawValues = id 배열
 };
 
 // ── 영입 확정 ────────────────────────────────────────────────────
