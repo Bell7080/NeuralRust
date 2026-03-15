@@ -436,6 +436,10 @@ const CharProfile = {
           if (_pendingTxt) _pendingTxt.setVisible(false);
           const pendingRow = _pendingTxt ? _pendingTxt.getData('rowBg') : null;
           if (pendingRow) pendingRow.setVisible(false);
+          // ✅ + 버튼 공간이 사라졌으므로 수치 텍스트를 우측 끝으로 이동
+          Object.values(_valTxts).forEach(vt => {
+            if (vt && vt.active) vt.setX(leftColX + colW - 10);
+          });
         }
       });
 
