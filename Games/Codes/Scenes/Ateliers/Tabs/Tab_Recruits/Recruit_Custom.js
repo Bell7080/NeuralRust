@@ -706,12 +706,17 @@ Tab_Recruit.prototype._rerollSprite = function () {
   if (this.rerolls.sprite <= 0) { this._toast('재설정 횟수 소진'); return; }
   const prev = this.result.spriteKey;
   const next = _rSpriteKey();
-  this._showChoicePopup('외형  재설정',
-    `외형  #${parseInt(prev.replace('char_', '')) + 1}`,
-    `외형  #${parseInt(next.replace('char_', '')) + 1}`,
+
+  const prevLabel = `외형  #${parseInt(prev.replace('char_', ''), 10) + 1}`;
+  const nextLabel = `외형  #${parseInt(next.replace('char_', ''), 10) + 1}`;
+
+  this._showChoicePopup('외형  재설정', prevLabel, nextLabel,
     (chosen) => {
-      this.result.spriteKey = chosen; this.rerolls.sprite--;
-      this._renderSpriteBox(chosen);
+      // ✅ chosen은 라벨 문자열('외형 #N') — 라벨 비교로 spriteKey 역추적
+      const chosenKey = (chosen === nextLabel) ? next : prev;
+      this.result.spriteKey = chosenKey;
+      this.rerolls.sprite--;
+      this._renderSpriteBox(chosenKey);
       if (this.rerolls.sprite <= 0) this._disableBtn(this._spriteBtn, '외형  ✕');
       else this._spriteBtn.txt.setText(`외형  🎲  ${this.rerolls.sprite}`);
     }, [prev, next]);
