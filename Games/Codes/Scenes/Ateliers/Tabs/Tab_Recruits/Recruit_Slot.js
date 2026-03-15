@@ -268,21 +268,17 @@ Tab_Recruit.prototype._flipToPick = function () {
           fontSize: this._fs(11), fill: '#7a5028', fontFamily: FontManager.MONO,
         }).setOrigin(0.5));
 
-        // 오버클럭 뱃지 (있을 때만, pulse glow)
+        // 오버클럭 뱃지 — Data_Overclock.js의 label 필드를 직접 사용
         if (roll.overclock) {
-          const ocColor  = roll.overclock.color;
-          const rawLabel = (roll.overclock.label || '');
-          const ocName   = rawLabel
-            .replace(/⚡\s*/g, '').replace(/오버클럭\s*:\s*/g, '').trim()
-            || roll.overclock.statKey || '';
-          const ocTxt = scene.add.text(0, infoTop + lineH * 3.6,
-            `오버클럭 : ${ocName}`, {
-            fontSize: this._fs(12),
-            fill: ocColor,
+          const ocColor = roll.overclock.color;
+          const ocLabel = roll.overclock.label || '';   // ex) '오버클럭 : 체력'
+          const ocTxt = scene.add.text(0, infoTop + lineH * 3.6, ocLabel, {
+            fontSize:   this._fs(11),
+            fill:       ocColor,
             fontFamily: FontManager.MONO,
           }).setOrigin(0.5);
           card.add(ocTxt);
-          // pulse glow
+          // pulse glow — 기존 유지
           const _ocP = { v: 0 };
           this._tween({
             targets: _ocP, v: { from: 0, to: 1 },
