@@ -65,53 +65,63 @@ class PartyScene extends Phaser.Scene {
 
   // ── 헤더 ─────────────────────────────────────────────────────────
   _buildHeader(W, H) {
-    this.add.text(W / 2, H * 0.07, '탐  사  파  티  편  성', {
-      fontSize: FontManager.adjustedSize(26, this.scale),
-      fill: '#6b4020', fontFamily: FontManager.TITLE,
+    const fs = n => FontManager.adjustedSize(n, this.scale);
+
+    this.add.text(W / 2, H * 0.052, '탐  사  파  티  편  성', {
+      fontSize: fs(22), fill: '#6b4020', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, H * 0.07 + parseInt(FontManager.adjustedSize(30, this.scale)),
+    this.add.text(W / 2, H * 0.052 + parseInt(fs(26)),
       '탐사에 데려갈 인원을 결정합니다  —  비용: 파티 Cog 합산 Arc', {
-        fontSize: FontManager.adjustedSize(12, this.scale),
-        fill: '#5a3a18', fontFamily: FontManager.MONO, letterSpacing: 2,
+        fontSize: fs(11), fill: '#5a3a18', fontFamily: FontManager.MONO, letterSpacing: 2,
       }).setOrigin(0.5);
 
-    // 구분선
     const lg = this.add.graphics();
     lg.lineStyle(1, 0x2a1a0a, 0.8);
-    lg.lineBetween(W * 0.05, H * 0.13, W * 0.95, H * 0.13);
-    // 뒤로가기 없음 — 탐사 파티 편성 시작 = 탐사 진입 의사 표명
+    lg.lineBetween(W * 0.04, H * 0.105, W * 0.96, H * 0.105);
   }
 
-  // ── 파티 슬롯 (상단 영역) ──────────────────────────────────────────
+  // ── 파티 슬롯 (상단 영역 H 11%~30%) ──────────────────────────────
   _buildPartySlots(W, H) {
     this._partySlotObjs = [];
 
-    const slotW  = Math.round(W * 0.09);
-    const slotH  = Math.round(H * 0.22);
-    // 최대 동시 표시 슬롯 8칸 (인원 제한 없으므로 스크롤 없이 8명까지 표시)
+    // 슬롯 영역: H*0.11 ~ H*0.30  (19% 사용)
     const VISIBLE_SLOTS = 8;
-    const totalSlotW = VISIBLE_SLOTS * slotW + (VISIBLE_SLOTS - 1) * 12;
+    const slotAreaY = H * 0.113;
+    const slotAreaH = H * 0.185;
+
+    // 슬롯 크기: 높이는 영역의 80%, 너비는 높이 * 0.72 (세로형 카드)
+    const slotH  = Math.round(slotAreaH * 0.80);
+    const slotW  = Math.round(slotH * 0.72);
+    const gap    = Math.max(6, Math.round((W * 0.92 - slotW * VISIBLE_SLOTS) / (VISIBLE_SLOTS - 1)));
+    const totalSlotW = VISIBLE_SLOTS * slotW + (VISIBLE_SLOTS - 1) * gap;
     const startX = W / 2 - totalSlotW / 2 + slotW / 2;
-    const slotY  = H * 0.26;
+    const slotY  = slotAreaY + slotAreaH / 2;
 
     this._slotW = slotW; this._slotH = slotH;
     this._slotY = slotY; this._slotStartX = startX;
     this._VISIBLE_SLOTS = VISIBLE_SLOTS;
 
-    this.add.text(W / 2, H * 0.16, '탐  사  파  티', {
-      fontSize: FontManager.adjustedSize(15, this.scale),
-      fill: '#4a2a10', fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5);
+    // 섹션 라벨
+    this.add.text(W * 0.04, slotAreaY - 2, '파  티', {
+      fontSize: FontManager.adjustedSize(10, this.scale),
+      fill: '#3a1e08', fontFamily: FontManager.TITLE,
+    }).setOrigin(0, 1);
 
     for (let i = 0; i < VISIBLE_SLOTS; i++) {
-      const cx = startX + i * (slotW + 12);
+      const cx = startX + i * (slotW + gap);
       const objs = this._makePartySlot(cx, slotY, slotW, slotH, i);
       this._partySlotObjs.push(objs);
     }
+
+    // 슬롯 하단 구분선
+    const lg = this.add.graphics();
+    lg.lineStyle(1, 0x1e1008, 0.5);
+    lg.lineBetween(W * 0.04, slotAreaY + slotAreaH + 6, W * 0.96, slotAreaY + slotAreaH + 6);
   }
 
   _makePartySlot(cx, cy, w, h, idx) {
+    const fs = n => FontManager.adjustedSize(n, this.scale);
     const bg = this.add.graphics();
 
     const draw = (char) => {
@@ -131,36 +141,32 @@ class PartyScene extends Phaser.Scene {
     draw(null);
 
     // 빈 슬롯 표시
-    const plusTxt = this.add.text(cx, cy - 10, '+', {
-      fontSize: FontManager.adjustedSize(28, this.scale),
+    const plusTxt = this.add.text(cx, cy - h * 0.08, '+', {
+      fontSize: fs(Math.round(w * 0.38)),
       fill: '#1e1008', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
 
-    const slotNumTxt = this.add.text(cx, cy + parseInt(FontManager.adjustedSize(20, this.scale)), `${idx + 1}`, {
-      fontSize: FontManager.adjustedSize(11, this.scale),
-      fill: '#1a0e06', fontFamily: FontManager.MONO,
+    const slotNumTxt = this.add.text(cx, cy + h * 0.34, `${idx + 1}`, {
+      fontSize: fs(9), fill: '#1a0e06', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
 
-    // 캐릭터 배치 시 표시될 텍스트들 (초기 숨김)
-    const nameTxt = this.add.text(cx, cy - h * 0.28, '', {
-      fontSize: FontManager.adjustedSize(11, this.scale),
-      fill: '#c8bfb0', fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5).setAlpha(0);
-
+    // 캐릭터 배치 시 표시 (초기 숨김)
     const cogTxt = this.add.text(cx, cy - h * 0.38, '', {
-      fontSize: FontManager.adjustedSize(10, this.scale),
-      fill: '#a05018', fontFamily: FontManager.MONO,
+      fontSize: fs(8), fill: '#a05018', fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setAlpha(0);
 
-    const sprite = this.add.image(cx, cy + h * 0.05, '__DEFAULT').setAlpha(0);
-    sprite.setDisplaySize(w * 0.75, w * 0.75);
-
-    const removeTxt = this.add.text(cx, cy + h * 0.38, '[ 제거 ]', {
-      fontSize: FontManager.adjustedSize(10, this.scale),
-      fill: '#3d2010', fontFamily: FontManager.MONO,
+    const nameTxt = this.add.text(cx, cy + h * 0.24, '', {
+      fontSize: fs(9), fill: '#c8bfb0', fontFamily: FontManager.TITLE,
+      wordWrap: { width: w - 4 },
     }).setOrigin(0.5).setAlpha(0);
 
-    // hit
+    const sprite = this.add.image(cx, cy - h * 0.04, '__DEFAULT').setAlpha(0);
+    sprite.setDisplaySize(w * 0.68, w * 0.68);
+
+    const removeTxt = this.add.text(cx, cy + h * 0.42, '제거', {
+      fontSize: fs(7), fill: '#3d2010', fontFamily: FontManager.MONO,
+    }).setOrigin(0.5).setAlpha(0);
+
     const hit = this.add.rectangle(cx, cy, w, h, 0x000000, 0)
       .setInteractive({ useHandCursor: true }).setDepth(20);
     this._sceneHits.push(hit);
@@ -208,40 +214,44 @@ class PartyScene extends Phaser.Scene {
     this._refreshStartBtn();
   }
 
-  // ── 캐릭터 목록 (하단 스크롤) ─────────────────────────────────────
+  // ── 캐릭터 목록 (H 31.5%~84.5%) ──────────────────────────────────
   _buildCharList(W, H) {
     this._cardObjs = [];
 
-    const listY    = H * 0.51;
-    const listH    = H * 0.36;
-    const cardW    = Math.round(W * 0.095);
-    const cardH    = Math.round(H * 0.28);
-    const gapX     = Math.round(W * 0.012);
-    const cols     = Math.floor((W * 0.9) / (cardW + gapX));
-    const startX   = W / 2 - ((cols - 1) / 2) * (cardW + gapX);
+    // 목록 영역 정의
+    const listTopY  = H * 0.315;   // 슬롯 구분선 바로 아래
+    const listBotY  = H * 0.845;   // 버튼 영역 위
+    const listH     = listBotY - listTopY;
 
-    this.add.text(W / 2, H * 0.44, '캐  릭  터', {
-      fontSize: FontManager.adjustedSize(15, this.scale),
-      fill: '#4a2a10', fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5);
+    // 카드 크기: 1행에 최대 9개 기준으로 너비 산출
+    const hPad   = W * 0.04;
+    const gapX   = Math.round(W * 0.010);
+    const cols   = 9;
+    const cardW  = Math.round((W - hPad * 2 - gapX * (cols - 1)) / cols);
+    const cardH  = Math.round(cardW * 1.35);   // 세로형 비율
+    const gapY   = Math.round(gapX * 1.1);
+    const startX = hPad + cardW / 2;
 
-    this.add.text(W / 2, H * 0.44 + parseInt(FontManager.adjustedSize(18, this.scale)),
-      '클릭으로 파티에 추가 / 제거',
-      {
-        fontSize: FontManager.adjustedSize(10, this.scale),
-        fill: '#2a1508', fontFamily: FontManager.MONO, letterSpacing: 2,
-      }
-    ).setOrigin(0.5);
+    // 섹션 라벨
+    this.add.text(W * 0.04, listTopY + 2, '캐  릭  터', {
+      fontSize: FontManager.adjustedSize(10, this.scale),
+      fill: '#3a1e08', fontFamily: FontManager.TITLE,
+    }).setOrigin(0, 0);
 
-    // 구분선
-    const lg2 = this.add.graphics();
-    lg2.lineStyle(1, 0x1e1008, 0.6);
-    lg2.lineBetween(W * 0.05, H * 0.48, W * 0.95, H * 0.48);
+    this.add.text(W * 0.96, listTopY + 2,
+      '클릭으로 추가 / 제거', {
+        fontSize: FontManager.adjustedSize(9, this.scale),
+        fill: '#2a1508', fontFamily: FontManager.MONO,
+      }).setOrigin(1, 0);
+
+    const labelH = parseInt(FontManager.adjustedSize(14, this.scale)) + 6;
 
     // 마스크 영역
+    const maskY  = listTopY + labelH;
+    const maskH  = listH - labelH;
     const maskRect = this.make.graphics({});
     maskRect.fillStyle(0xffffff, 1);
-    maskRect.fillRect(0, listY - listH / 2, W, listH);
+    maskRect.fillRect(0, maskY, W, maskH);
     const mask = maskRect.createGeometryMask();
 
     const container = this.add.container(0, 0).setMask(mask);
@@ -249,27 +259,28 @@ class PartyScene extends Phaser.Scene {
     this._listScrollY   = 0;
 
     const rowCount = Math.ceil(this._chars.length / cols);
-    const totalH   = rowCount * (cardH + gapX);
+    const totalContentH = rowCount * (cardH + gapY);
 
     this._chars.forEach((char, i) => {
-      const col  = i % cols;
-      const row  = Math.floor(i / cols);
-      const cx   = startX + col * (cardW + gapX);
-      const cy   = listY + row * (cardH + gapX);
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const cx  = startX + col * (cardW + gapX);
+      const cy  = maskY + cardH / 2 + row * (cardH + gapY);
 
       const cardObjs = this._makeCharCard(char, cx, cy, cardW, cardH, false, container);
       this._cardObjs.push({ char, ...cardObjs, disabled: false });
     });
 
-    // 스크롤 이벤트
+    // 스크롤
     this.input.on('wheel', (ptr, objs, dx, dy) => {
-      const maxScroll = Math.max(0, totalH - listH);
+      const maxScroll = Math.max(0, totalContentH - maskH);
       this._listScrollY = Math.max(0, Math.min(this._listScrollY + dy * 0.5, maxScroll));
       container.setY(-this._listScrollY);
     });
   }
 
   _makeCharCard(char, cx, cy, w, h, disabled, container) {
+    const fs     = n => FontManager.adjustedSize(n, this.scale);
     const alpha  = disabled ? 0.25 : 1;
     const cogC   = CharacterManager.getCogColor(char.cog);
     const inPart = () => this._party.includes(char.id);
@@ -295,41 +306,40 @@ class PartyScene extends Phaser.Scene {
     };
     drawBg(false);
 
-    // Cog 뱃지
-    const cogTxt = this.add.text(cx - w * 0.35, cy - h * 0.42, `Cog${char.cog}`, {
-      fontSize: FontManager.adjustedSize(9, this.scale),
-      fill: cogC.css, fontFamily: FontManager.MONO,
+    // Cog 뱃지 (좌상단)
+    const cogTxt = this.add.text(cx - w * 0.42, cy - h * 0.44, `Cog${char.cog}`, {
+      fontSize: fs(8), fill: cogC.css, fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setAlpha(alpha);
     container.add(cogTxt);
 
-    // 직업
-    const jobTxt = this.add.text(cx + w * 0.4, cy - h * 0.42, char.jobLabel, {
-      fontSize: FontManager.adjustedSize(9, this.scale),
-      fill: '#4a3020', fontFamily: FontManager.MONO,
+    // 직업 (우상단)
+    const jobTxt = this.add.text(cx + w * 0.44, cy - h * 0.44, char.jobLabel, {
+      fontSize: fs(8), fill: '#4a3020', fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5).setAlpha(alpha);
     container.add(jobTxt);
 
-    // 스프라이트
+    // 스프라이트 (카드 중앙 위쪽)
     let spriteImg = null;
     if (!disabled && this.textures.exists(char.spriteKey)) {
-      spriteImg = this.add.image(cx, cy - h * 0.08, char.spriteKey)
-        .setDisplaySize(w * 0.72, w * 0.72);
+      spriteImg = this.add.image(cx, cy - h * 0.10, char.spriteKey)
+        .setDisplaySize(w * 0.70, w * 0.70);
       container.add(spriteImg);
     }
 
-    // 이름
-    const nameTxt = this.add.text(cx, cy + h * 0.3, char.name, {
-      fontSize: FontManager.adjustedSize(11, this.scale),
+    // 이름 (중앙 아래)
+    const nameTxt = this.add.text(cx, cy + h * 0.26, char.name, {
+      fontSize: fs(9),
       fill: disabled ? '#2a1a0a' : '#c8bfb0', fontFamily: FontManager.TITLE,
+      wordWrap: { width: w - 4 },
     }).setOrigin(0.5).setAlpha(alpha);
     container.add(nameTxt);
 
-    // HP 바
+    // HP 바 (하단) — h 비례로 barH 계산
     const hpRatio = (char.currentHp || 0) / (char.maxHp || 1);
-    const barW    = w * 0.8;
-    const barH    = Math.round(this.H * 0.008);
+    const barW    = w * 0.82;
+    const barH    = Math.max(3, Math.round(h * 0.055));
     const barX    = cx - barW / 2;
-    const barY    = cy + h * 0.42;
+    const barY    = cy + h * 0.40;
     const hpBar   = this.add.graphics().setAlpha(alpha);
     hpBar.fillStyle(0x1a1008, 1);
     hpBar.fillRect(barX, barY, barW, barH);
@@ -338,28 +348,13 @@ class PartyScene extends Phaser.Scene {
     hpBar.fillRect(barX, barY, barW * hpRatio, barH);
     container.add(hpBar);
 
-    // 파티 편성 중 표시
-    const inPartMark = this.add.text(cx, cy - h * 0.28, '▶ 편성중', {
-      fontSize: FontManager.adjustedSize(9, this.scale),
-      fill: '#ffd060', fontFamily: FontManager.MONO,
+    // 편성중 마크
+    const inPartMark = this.add.text(cx, cy - h * 0.26, '▶편성중', {
+      fontSize: fs(8), fill: '#ffd060', fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setAlpha(0);
     container.add(inPartMark);
 
-    // 비활성 오버레이
-    if (disabled) {
-      const overBg = this.add.graphics();
-      overBg.fillStyle(0x050407, 0.45);
-      overBg.fillRect(cx - w / 2, cy - h / 2, w, h);
-      container.add(overBg);
-
-      const lockTxt = this.add.text(cx, cy, `Cog ${char.cog}\n상한 초과`, {
-        fontSize: FontManager.adjustedSize(10, this.scale),
-        fill: '#3d2010', fontFamily: FontManager.MONO, align: 'center',
-      }).setOrigin(0.5);
-      container.add(lockTxt);
-    }
-
-    // hit (씬에 직접, 마스크 밖에서도 판정 통일)
+    // hit
     if (!disabled) {
       const hit = this.add.rectangle(cx, cy, w, h, 0x000000, 0)
         .setInteractive({ useHandCursor: true }).setDepth(20);
@@ -417,17 +412,17 @@ class PartyScene extends Phaser.Scene {
     });
   }
 
-  // ── 하단 버튼 ────────────────────────────────────────────────────
+  // ── 하단 버튼 (H 85.5%~97%) ──────────────────────────────────────
   _buildFooter(W, H) {
-    const btnY = H * 0.91;
-    const btnW = Math.round(W * 0.14);
-    const btnH = Math.round(H * 0.055);
+    const fs   = n => FontManager.adjustedSize(n, this.scale);
+    const btnY = H * 0.925;
+    const btnW = Math.round(W * 0.16);
+    const btnH = Math.round(H * 0.052);
 
     // 출발 버튼
     const startBg = this.add.graphics();
     const startTxt = this.add.text(W / 2, btnY, '출  발', {
-      fontSize: FontManager.adjustedSize(18, this.scale),
-      fill: '#c8a070', fontFamily: FontManager.TITLE,
+      fontSize: fs(18), fill: '#c8a070', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
 
     const drawStartBtn = (state) => {
@@ -469,11 +464,10 @@ class PartyScene extends Phaser.Scene {
       this._depart();
     });
 
-    // 파티 인원 카운트 표시
-    this._partyCountTxt = this.add.text(W / 2, btnY - btnH / 2 - 14, '', {
-      fontSize: FontManager.adjustedSize(11, this.scale),
-      fill: '#4a2a10', fontFamily: FontManager.MONO,
-    }).setOrigin(0.5);
+    // 비용 / 인원 표시 (버튼 위)
+    this._partyCountTxt = this.add.text(W / 2, btnY - btnH / 2 - 10, '', {
+      fontSize: fs(10), fill: '#4a2a10', fontFamily: FontManager.MONO,
+    }).setOrigin(0.5, 1);
 
     this._refreshStartBtn();
   }
