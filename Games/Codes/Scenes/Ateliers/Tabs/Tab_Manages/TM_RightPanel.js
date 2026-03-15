@@ -274,23 +274,35 @@ const TM_RightPanel = {
 
     // ── HP 바 ──────────────────────────────────────────────
     const hpBarH = parseInt(rfs(22));
+    const hpBarY = curY;
     const hpPct  = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
     const hpCol  = hpPct > 0.6 ? 0x306030 : hpPct > 0.3 ? 0x806020 : 0x803020;
     const hpBgG  = scene.add.graphics();
     hpBgG.fillStyle(0x030506, 0.9);
     hpBgG.lineStyle(1, 0x2a1a08, 0.7);
-    hpBgG.strokeRect(colX, curY, colW, hpBarH);
-    hpBgG.fillRect(colX, curY, colW, hpBarH);
+    hpBgG.strokeRect(colX, hpBarY, colW, hpBarH);
+    hpBgG.fillRect(colX, hpBarY, colW, hpBarH);
     const hpFgG  = scene.add.graphics();
     hpFgG.fillStyle(hpCol, 1);
-    hpFgG.fillRect(colX + 1, curY + 1, Math.max(0, Math.round((colW - 2) * hpPct)), hpBarH - 2);
+    hpFgG.fillRect(colX + 1, hpBarY + 1, Math.max(0, Math.round((colW - 2) * hpPct)), hpBarH - 2);
     addR(hpBgG);
     addR(hpFgG);
-    addR(scene.add.text(colX + colW / 2, curY + hpBarH / 2,
+    const hpTxt = scene.add.text(colX + colW / 2, hpBarY + hpBarH / 2,
       `HP  ${char.currentHp} / ${char.maxHp}`, {
         fontSize: rfs(13), fill: '#d0b060', fontFamily: FontManager.MONO,
-      }).setOrigin(0.5));
+      }).setOrigin(0.5);
+    addR(hpTxt);
     curY += hpBarH + parseInt(rfs(6));
+
+    // hp 스탯 변경 시 바 비율·텍스트만 갱신 (틀 크기는 고정)
+    const _refreshHpBar = () => {
+      const pct = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
+      const col = pct > 0.6 ? 0x306030 : pct > 0.3 ? 0x806020 : 0x803020;
+      hpFgG.clear();
+      hpFgG.fillStyle(col, 1);
+      hpFgG.fillRect(colX + 1, hpBarY + 1, Math.max(0, Math.round((colW - 2) * pct)), hpBarH - 2);
+      hpTxt.setText(`HP  ${char.currentHp} / ${char.maxHp}`);
+    };
 
     // ── Cog 바 ──────────────────────────────────────────────
     const cogBarH = parseInt(rfs(28));
@@ -309,7 +321,8 @@ const TM_RightPanel = {
     // ── 스탯 블록 ────────────────────────────────────────────
     curY = TM_RightPanel._buildStats(
       tab, char, addR, addHit, _showTip, _moveTip, _hideTip, _persistTweens,
-      SC, fs, rfs, colX, colW, curY, ry, rh, rpad
+      SC, fs, rfs, colX, colW, curY, ry, rh, rpad,
+      _refreshHpBar
     );
 
     // ── 어빌리티 (스탯 아래 일렬) ───────────────────────────
@@ -356,7 +369,7 @@ const TM_RightPanel = {
 
   // ── 스탯 블록 ────────────────────────────────────────────────
   // ✏️ rfs(패널 비례 폰트) 추가
-  _buildStats(tab, char, addR, addHit, _showTip, _moveTip, _hideTip, _persistTweens, SC, fs, rfs, colX, colW, curY, ry, rh, rpad) {
+  _buildStats(tab, char, addR, addHit, _showTip, _moveTip, _hideTip, _persistTweens, SC, fs, rfs, colX, colW, curY, ry, rh, rpad, onHpChange) {
     const { scene } = tab;
     const pendingStats = char.pendingStats || 0;
     const ocKey  = char.overclock ? char.overclock.statKey : null;
@@ -556,6 +569,8 @@ const TM_RightPanel = {
             _valTxts[key].setText(`${ne}`);
           }
           if (_pendingTxt) _pendingTxt.setText(`잔여  +${char.pendingStats || 0}`);
+          // hp 스탯이면 HP 바 실시간 갱신
+          if (key === 'hp' && typeof onHpChange === 'function') onHpChange();
           if ((char.pendingStats || 0) <= 0) {
             _plusButtons.forEach(({ bg, txt, hit }) => {
               bg.setVisible(false);
