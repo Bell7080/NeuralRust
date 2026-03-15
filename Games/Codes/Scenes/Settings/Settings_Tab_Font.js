@@ -111,7 +111,7 @@ const Settings_Tab_Font = {
 
     const labelY = startY + H * 0.025;
     scene.add.text(L.marginX, labelY, '미리보기', {
-      fontSize: FontManager.adjustedSize(13, scene.scale),
+      fontSize: FontManager.adjustedSize(15, scene.scale),
       fill: '#3d2810',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
