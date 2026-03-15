@@ -730,6 +730,12 @@ Tab_Recruit.prototype._rerollPosition = function () {
   this._showChoicePopup('포지션  재설정', prev, next, (chosen) => {
     this.result.position = chosen; this.rerolls.position--;
     this._positionTxtRef.ref.setText(chosen);
+    // ✅ 설명 텍스트 갱신
+    if (this._positionTxtRef.desc) {
+      const newDesc = (typeof getPositionDescription === 'function')
+        ? getPositionDescription(chosen) : '';
+      this._positionTxtRef.desc.setText(newDesc);
+    }
     if (this.rerolls.position <= 0) this._disableBtn(this._positionBtn, '✕');
     else this._positionBtn.txt.setText(`🎲  ${this.rerolls.position}`);
   }, [prev, next]);
@@ -749,6 +755,12 @@ Tab_Recruit.prototype._rerollPassive = function () {
   this._showChoicePopup('패시브  재설정', prev, next, (chosen) => {
     this.result.passive = chosen; this.rerolls.passive--;
     this._passiveTxtRef.ref.setText(chosen);
+    // ✅ 설명 텍스트 갱신
+    if (this._passiveTxtRef.desc) {
+      const newDesc = (typeof getPassiveDescription === 'function')
+        ? getPassiveDescription(chosen) : '';
+      this._passiveTxtRef.desc.setText(newDesc);
+    }
     if (this.rerolls.passive <= 0) this._disableBtn(this._passiveBtn, '✕');
     else this._passiveBtn.txt.setText(`🎲  ${this.rerolls.passive}`);
   }, [prev, next]);
@@ -783,6 +795,12 @@ Tab_Recruit.prototype._rerollSkill = function () {
     this.result.skill = chosenId;          // ✅ 저장은 id
     this.rerolls.skill--;
     this._skillTxtRef.ref.setText(chosenName); // ✅ 표시는 이름
+    // ✅ 설명 텍스트 갱신
+    if (this._skillTxtRef.desc) {
+      const newDesc = (typeof getSkillDescription === 'function')
+        ? getSkillDescription(chosenId) : '';
+      this._skillTxtRef.desc.setText(newDesc);
+    }
 
     if (this.rerolls.skill <= 0) this._disableBtn(this._skillBtn, '✕');
     else this._skillBtn.txt.setText(`🎲  ${this.rerolls.skill}`);
