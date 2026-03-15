@@ -563,6 +563,10 @@ const TM_RightPanel = {
               hit.disableInteractive();
             });
             if (_pendingTxt) _pendingTxt.setVisible(false);
+            // + 버튼 사라진 후 수치 텍스트 우측정렬 위치 실시간 보정
+            Object.values(_valTxts).forEach(vt => {
+              if (vt && vt.active) vt.setX(colX + colW - 8);
+            });
           }
         });
 
