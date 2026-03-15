@@ -327,7 +327,7 @@ class PartyScene extends Phaser.Scene {
     // HP 바
     const hpRatio = (char.currentHp || 0) / (char.maxHp || 1);
     const barW    = w * 0.8;
-    const barH    = Math.round(H * 0.008);
+    const barH    = Math.round(this.H * 0.008);
     const barX    = cx - barW / 2;
     const barY    = cy + h * 0.42;
     const hpBar   = this.add.graphics().setAlpha(alpha);
