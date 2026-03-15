@@ -426,9 +426,7 @@ const CharProfile = {
         } else {
           _valTxts[key].setText(`${newEff}`);
         }
-        // setText 후 남은 pendingStats에 따라 X 위치 즉시 보정
         const remaining = char.pendingStats || 0;
-        _valTxts[key].setX(remaining > 0 ? leftColX + colW - plusW - 16 : leftColX + colW - 10);
 
         if (_pendingTxt) {
           _pendingTxt.setText(`잔여 스탯  +${remaining}`);
@@ -440,10 +438,11 @@ const CharProfile = {
           if (_pendingTxt) _pendingTxt.setVisible(false);
           const pendingRow = _pendingTxt ? _pendingTxt.getData('rowBg') : null;
           if (pendingRow) pendingRow.setVisible(false);
-          // ✅ + 버튼 공간이 사라졌으므로 모든 수치 텍스트를 우측 끝으로 이동
+          // 배분 완료 — 수치 텍스트 우측 정렬 후 컨테이너 강제 갱신
           Object.values(_valTxts).forEach(vt => {
             if (vt && vt.active) vt.setX(leftColX + colW - 10);
           });
+          g.setAlpha(g.alpha);
         }
       });
 
