@@ -372,7 +372,7 @@ const CharProfile = {
         fontSize:fs(isOc ? 11 : 14),
         fill: isOc ? (char.overclock.color||'#ff4400') : statCol,
         fontFamily:FontManager.MONO,
-      }).setOrigin(1,0.5);
+      }).setOrigin(1,0.5).setDepth(401);
       _valTxts[key] = valT;
 
       const tipText = isOc
@@ -384,7 +384,8 @@ const CharProfile = {
       statHit.on('pointerover',(ptr)=>_showTip(ptr.x,ptr.y,tipText));
       statHit.on('pointermove',(ptr)=>_moveTip(ptr.x,ptr.y));
       statHit.on('pointerout', ()=>_hideTip());
-      g.add([statT, valT, statHit]);
+      g.add([statT, statHit]);
+      scene.sys.displayList.add(valT); // 컨테이너 밖 — setX 즉시 반영
 
       const btnX = leftColX + colW - plusW/2 - 4;
       const plusBg  = scene.add.graphics();
@@ -563,7 +564,7 @@ const CharProfile = {
       _persistTweens.forEach(tw => { try { tw.stop(); tw.remove(); } catch(e){} });
       scene.tweens.killTweensOf(g);
       overlay.destroy();
-      // true: 컨테이너 자식(Text, Graphics, hit 박스 등)까지 모두 파기
+      Object.values(_valTxts).forEach(vt => { if (vt && vt.active) vt.destroy(); });
       g.destroy(true);
       if (onClose) onClose();
     }
