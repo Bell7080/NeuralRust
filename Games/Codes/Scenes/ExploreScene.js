@@ -6,6 +6,12 @@
 //  카드 레이아웃: Cog 숫자 크게 (중앙) / "전투" 작게 (아래)
 // ================================================================
 
+// ── 난이도 슬롯: Cog 1~10 전투 카드만 사용 ──────────────────────
+// 이 슬롯은 탐사 난이도(적 Cog 상한)를 결정한다.
+// 선택 순간 탐사 진입 확정 — 이후 뒤로가기 없음.
+//
+// TODO: 라운드 슬롯(RoundSlotScene)은 별도 씬으로 구현 예정.
+//       라운드 슬롯에는 전투 외에 이벤트(낚시/잔해수집/전선연결/상점 등)도 포함될 예정.
 const EXPLORE_CARDS = [
   { type:'combat', cog:1,  label:'전  투', mainText:'1',  color:'#6b8040', border:0x4a5828, weight:14 },
   { type:'combat', cog:2,  label:'전  투', mainText:'2',  color:'#6b8040', border:0x4a5828, weight:13 },
@@ -17,9 +23,6 @@ const EXPLORE_CARDS = [
   { type:'combat', cog:8,  label:'전  투', mainText:'8',  color:'#c03828', border:0x882018, weight:4  },
   { type:'combat', cog:9,  label:'전  투', mainText:'9',  color:'#cc2828', border:0x901818, weight:3  },
   { type:'combat', cog:10, label:'전  투', mainText:'10', color:'#e01818', border:0xa80808, weight:2  },
-  { type:'event',  label:'이벤트', mainText:'?',  color:'#6b60a0', border:0x4a4070, weight:8 },
-  { type:'loot',   label:'수  집', mainText:'◆',  color:'#507060', border:0x304848, weight:7 },
-  { type:'rest',   label:'휴  식', mainText:'◇',  color:'#406858', border:0x284840, weight:5 },
 ];
 
 function drawCard() {
@@ -70,16 +73,16 @@ class ExploreScene extends Phaser.Scene {
   }
 
   _buildHeader(W, H) {
-    this.add.text(W / 2, H * 0.09, '탐  색', {
+    this.add.text(W / 2, H * 0.09, '난이도  선택', {
       fontSize: FontManager.adjustedSize(28, this.scale), fill: '#6b4020', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
-    this.add.text(W / 2, H * 0.09 + parseInt(FontManager.adjustedSize(26, this.scale)), 'DEEP SEA EXPLORATION', {
+    this.add.text(W / 2, H * 0.09 + parseInt(FontManager.adjustedSize(26, this.scale)), 'SELECT DIFFICULTY — COG LIMIT', {
       fontSize: FontManager.adjustedSize(11, this.scale), fill: '#2a1508', fontFamily: FontManager.MONO, letterSpacing: 4,
     }).setOrigin(0.5);
     const lineG = this.add.graphics();
     lineG.lineStyle(1, 0x2a1a0a, 0.8);
     lineG.lineBetween(W * 0.05, H * 0.17, W * 0.95, H * 0.17);
-    this._hintText = this.add.text(W / 2, H * 0.21, '이벤트를 불러오는 중...', {
+    this._hintText = this.add.text(W / 2, H * 0.21, '난이도를 불러오는 중...', {
       fontSize: FontManager.adjustedSize(13, this.scale), fill: '#2a1508', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
   }
@@ -175,12 +178,8 @@ class ExploreScene extends Phaser.Scene {
   }
 
   _buildFooter(W, H) {
-    const back = this.add.text(W * 0.08, H * 0.93, '← 공방으로', {
-      fontSize: FontManager.adjustedSize(17, this.scale), fill: '#3d2010', fontFamily: FontManager.MONO,
-    }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
-    back.on('pointerover', () => back.setStyle({ fill: '#c8a070' }));
-    back.on('pointerout',  () => back.setStyle({ fill: '#3d2010' }));
-    back.on('pointerdown', () => this.scene.start('AtelierScene', { tab: 'explore' }));
+    // 탐사 난이도 선택 화면에는 뒤로가기 없음 — 선택 순간 탐사 진입 확정
+    // (PartyScene에서 탐사 파티 편성 + Arc 비용 차감이 이미 완료된 상태)
   }
 
   _startSpin() {
@@ -208,7 +207,7 @@ class ExploreScene extends Phaser.Scene {
     this._spinTimer = this.time.addEvent({
       delay: 400, loop: true,
       callback: () => {
-        this._hintText.setText('이벤트를 불러오는 중  ' + ['·','· ·','· · ·'][dotCount++ % 3]);
+        this._hintText.setText('난이도를 불러오는 중  ' + ['·','· ·','· · ·'][dotCount++ % 3]);
       },
     });
   }
@@ -223,7 +222,7 @@ class ExploreScene extends Phaser.Scene {
     this._spinTimer.remove();
     this._phase = 'stopped';
     this._canChoose = true;
-    this._hintText.setText('이벤트를 선택하십시오');
+    this._hintText.setText('난이도를 선택하십시오  —  선택 후 탐사 진입');
     this._hintText.setStyle({ fill: '#8a6040' });
     this._enableCardSelection();
   }
@@ -276,7 +275,7 @@ class ExploreScene extends Phaser.Scene {
     });
 
     const card = chosen.targetCard;
-    this._hintText.setText('선택됨 —  ' + card.label + (card.cog ? '  Cog ' + card.cog : ''));
+    this._hintText.setText(`Cog ${card.cog}  —  탐사 진입`);
     this._hintText.setStyle({ fill: card.color });
 
     this.time.delayedCall(900, () => this._transitionToResult(card));
@@ -288,14 +287,9 @@ class ExploreScene extends Phaser.Scene {
     this.tweens.add({
       targets: flash, alpha: 1, duration: 400, ease: 'Sine.easeIn',
       onComplete: () => {
-        console.log('[ExploreScene] 선택:', card);
-        if (card.type === 'combat') {
-          // 전투 카드 → 파티 편성 화면
-          this.scene.start('PartyScene', { cogMax: card.cog, cardType: 'combat' });
-        } else {
-          // 이벤트·수집·휴식 등 → 추후 분기 구현 (현재 공방 복귀)
-          this.scene.start('AtelierScene', { tab: 'explore' });
-        }
+        // 난이도 선택 확정 → BattleReadyScene (전투 파티 재편성)으로 진입
+        // 탐사 파티(nr_party)는 PartyScene에서 이미 저장됨
+        this.scene.start('BattleReadyScene', { cogMax: card.cog });
       },
     });
   }

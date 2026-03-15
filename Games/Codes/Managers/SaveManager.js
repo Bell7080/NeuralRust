@@ -78,6 +78,14 @@ const SaveManager = {
     d.arc = value;
     this._write(this.SAVE_KEY, d);
   },
+  // arc 차감 — 잔액 부족 시 false 반환
+  // 탐사 출발 비용: 파티 캐릭터 cog 합산 (추후 음식 시스템 개발 후 대체 예정)
+  spendArc(amount) {
+    const current = this.getArc();
+    if (current < amount) return false;
+    this.setArc(current - amount);
+    return true;
+  },
 
   // ── 설정 데이터 ───────────────────────────────────────────────
   saveSettings(patch) {

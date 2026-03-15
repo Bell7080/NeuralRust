@@ -2,15 +2,16 @@
 //  PartyScene.js
 //  경로: Games/Codes/Scenes/PartyScene.js
 //
-//  역할: 탐사 파티 편성 화면
-//    - ExploreScene에서 카드 선택 후 진입
-//    - 코그 상한 필터 → 파티 슬롯에 캐릭터 추가/제거
-//    - 출발 버튼 → 파티 저장 후 BattleScene(추후)으로 전환
+//  역할: 탐사 파티 편성 화면 (탐사 전체에서 데려갈 인원 결정)
+//    - Tab_Explore의 "파티 편성" 버튼으로 진입
+//    - 인원 제한 없음 (Arc 비용 = 파티 내 cog 합산)
+//    - Arc 부족 시 출발 버튼 비활성
+//    - 출발 확정 → Arc 차감 → nr_party 저장 → ExploreScene (난이도 선택)
 //
-//  진입 데이터: { cogMax: number, cardType: string }
-//  퇴장:
-//    - 출발  → BattleScene (미구현 시 AtelierScene 임시 복귀)
-//    - 뒤로  → AtelierScene { tab: 'explore' }
+//  ※ 탐사 진입 후 뒤로가기 없음 — ExploreScene에서 난이도 선택 순간 확정
+//
+//  TODO: 추후 음식 시스템 개발 후 Arc 비용을 음식 소모로 대체 예정
+//        (현재: 파티 cog 합산 Arc 소모 / 추후: 인원당 음식 N개 소모)
 //
 //  컬러 참조: README.md 팔레트
 //    BG #050407 / ACCENT #a05018 / BRIGHT #c8a070 / TEXT #c8bfb0
@@ -20,13 +21,11 @@ class PartyScene extends Phaser.Scene {
   constructor() { super({ key: 'PartyScene' }); }
 
   init(data) {
-    this._cogMax   = data.cogMax   || 10;
-    this._cardType = data.cardType || 'combat';
-    this._party    = [];          // 현재 선택된 캐릭터 id 배열
-    this._chars    = [];          // 전체 캐릭터 목록 (코그 필터 미적용)
-    this._filtered = [];          // 코그 필터 적용 후 목록
-    this._selectedCharId = null;  // 목록에서 hover 중인 카드
-    this._maxParty = 6;           // 파티 최대 인원
+    this._party    = [];   // 현재 선택된 캐릭터 id 배열
+    this._chars    = [];   // 전체 캐릭터 목록
+    this._sceneHits = [];
+    // 파티 인원 제한 없음 — Arc 비용으로 압박
+    // (cogMax 필터 없음 — 모든 캐릭터 선택 가능)
   }
 
   create() {
@@ -37,9 +36,7 @@ class PartyScene extends Phaser.Scene {
     InputManager.reinit(this);
 
     this._chars    = CharacterManager.loadAll() || [];
-    this._filtered = this._chars.filter(c => c.cog <= this._cogMax);
-
-    this._sceneHits = [];
+    this._filtered = this._chars; // 탐사 파티는 전원 선택 가능 (cogMax 필터 없음)
 
     this._buildBackground(W, H);
     this._buildHeader(W, H);
@@ -68,58 +65,47 @@ class PartyScene extends Phaser.Scene {
 
   // ── 헤더 ─────────────────────────────────────────────────────────
   _buildHeader(W, H) {
-    this.add.text(W / 2, H * 0.07, '파  티  편  성', {
+    this.add.text(W / 2, H * 0.07, '탐  사  파  티  편  성', {
       fontSize: FontManager.adjustedSize(26, this.scale),
       fill: '#6b4020', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
 
-    // Cog 상한 표시
-    const cogC = CharacterManager.getCogColor(this._cogMax);
-    this.add.text(W / 2, H * 0.07 + parseInt(FontManager.adjustedSize(30, this.scale)), `Cog ${this._cogMax} 이하  편성`, {
-      fontSize: FontManager.adjustedSize(13, this.scale),
-      fill: cogC.css, fontFamily: FontManager.MONO, letterSpacing: 3,
-    }).setOrigin(0.5);
+    this.add.text(W / 2, H * 0.07 + parseInt(FontManager.adjustedSize(30, this.scale)),
+      '탐사에 데려갈 인원을 결정합니다  —  비용: 파티 Cog 합산 Arc', {
+        fontSize: FontManager.adjustedSize(12, this.scale),
+        fill: '#5a3a18', fontFamily: FontManager.MONO, letterSpacing: 2,
+      }).setOrigin(0.5);
 
     // 구분선
     const lg = this.add.graphics();
     lg.lineStyle(1, 0x2a1a0a, 0.8);
     lg.lineBetween(W * 0.05, H * 0.13, W * 0.95, H * 0.13);
-
-    // 뒤로 가기
-    const backTxt = this.add.text(W * 0.06, H * 0.07, '← 뒤로', {
-      fontSize: FontManager.adjustedSize(14, this.scale),
-      fill: '#3d2010', fontFamily: FontManager.MONO,
-    }).setOrigin(0, 0.5);
-
-    const backHit = this.add.rectangle(
-      backTxt.x + backTxt.width / 2,
-      backTxt.y,
-      backTxt.width + 20, parseInt(FontManager.adjustedSize(20, this.scale)) + 10,
-      0x000000, 0
-    ).setInteractive({ useHandCursor: true });
-
-    backHit.on('pointerover',  () => backTxt.setStyle({ fill: '#c8a070' }));
-    backHit.on('pointerout',   () => backTxt.setStyle({ fill: '#3d2010' }));
-    backHit.on('pointerdown',  () => this.scene.start('AtelierScene', { tab: 'explore' }));
-    this._sceneHits.push(backHit);
+    // 뒤로가기 없음 — 탐사 파티 편성 시작 = 탐사 진입 의사 표명
   }
 
   // ── 파티 슬롯 (상단 영역) ──────────────────────────────────────────
   _buildPartySlots(W, H) {
     this._partySlotObjs = [];
 
-    const slotW = Math.round(W * 0.10);
-    const slotH = Math.round(H * 0.22);
-    const startX = W / 2 - ((this._maxParty - 1) / 2) * (slotW + 16);
+    const slotW  = Math.round(W * 0.09);
+    const slotH  = Math.round(H * 0.22);
+    // 최대 동시 표시 슬롯 8칸 (인원 제한 없으므로 스크롤 없이 8명까지 표시)
+    const VISIBLE_SLOTS = 8;
+    const totalSlotW = VISIBLE_SLOTS * slotW + (VISIBLE_SLOTS - 1) * 12;
+    const startX = W / 2 - totalSlotW / 2 + slotW / 2;
     const slotY  = H * 0.26;
 
-    this.add.text(W / 2, H * 0.16, '파  티', {
+    this._slotW = slotW; this._slotH = slotH;
+    this._slotY = slotY; this._slotStartX = startX;
+    this._VISIBLE_SLOTS = VISIBLE_SLOTS;
+
+    this.add.text(W / 2, H * 0.16, '탐  사  파  티', {
       fontSize: FontManager.adjustedSize(15, this.scale),
       fill: '#4a2a10', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
 
-    for (let i = 0; i < this._maxParty; i++) {
-      const cx = startX + i * (slotW + 16);
+    for (let i = 0; i < VISIBLE_SLOTS; i++) {
+      const cx = startX + i * (slotW + 12);
       const objs = this._makePartySlot(cx, slotY, slotW, slotH, i);
       this._partySlotObjs.push(objs);
     }
@@ -240,7 +226,7 @@ class PartyScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.add.text(W / 2, H * 0.44 + parseInt(FontManager.adjustedSize(18, this.scale)),
-      `Cog ${this._cogMax} 초과 캐릭터는 비활성화`,
+      '클릭으로 파티에 추가 / 제거',
       {
         fontSize: FontManager.adjustedSize(10, this.scale),
         fill: '#2a1508', fontFamily: FontManager.MONO, letterSpacing: 2,
@@ -270,10 +256,9 @@ class PartyScene extends Phaser.Scene {
       const row  = Math.floor(i / cols);
       const cx   = startX + col * (cardW + gapX);
       const cy   = listY + row * (cardH + gapX);
-      const disabled = char.cog > this._cogMax;
 
-      const cardObjs = this._makeCharCard(char, cx, cy, cardW, cardH, disabled, container);
-      this._cardObjs.push({ char, ...cardObjs, disabled });
+      const cardObjs = this._makeCharCard(char, cx, cy, cardW, cardH, false, container);
+      this._cardObjs.push({ char, ...cardObjs, disabled: false });
     });
 
     // 스크롤 이벤트
@@ -403,10 +388,12 @@ class PartyScene extends Phaser.Scene {
   // ── 파티 조작 ────────────────────────────────────────────────────
   _addToParty(charId) {
     if (this._party.includes(charId)) return;
-    if (this._party.length >= this._maxParty) return;
+    // 인원 제한 없음 — Arc 비용(cog 합산)으로 압박
+    // 표시 슬롯(VISIBLE_SLOTS=8) 초과 시 추후 스크롤 구현 예정
     this._party.push(charId);
     this._refreshPartySlots();
     this._refreshCharListMarks();
+    this._refreshStartBtn();
   }
 
   _removeFromParty(slotIdx) {
@@ -414,6 +401,7 @@ class PartyScene extends Phaser.Scene {
     this._party.splice(slotIdx, 1);
     this._refreshPartySlots();
     this._refreshCharListMarks();
+    this._refreshStartBtn();
   }
 
   _removeFromPartyById(charId) {
@@ -490,18 +478,47 @@ class PartyScene extends Phaser.Scene {
     this._refreshStartBtn();
   }
 
-  _refreshStartBtn() {
-    const count = this._party.length;
-    const hasParty = count > 0;
+  // Arc 비용 = 파티 내 캐릭터 cog 합산
+  // TODO: 추후 음식 시스템 개발 후 Arc 비용을 음식 소모로 대체 예정
+  _calcPartyCost() {
+    return this._party.reduce((sum, id) => {
+      const c = this._chars.find(ch => ch.id === id);
+      return sum + (c ? c.cog : 0);
+    }, 0);
+  }
 
-    this._startBtnState = hasParty ? 'active' : 'disabled';
+  _refreshStartBtn() {
+    const count   = this._party.length;
+    const cost    = this._calcPartyCost();
+    const arc     = SaveManager.getArc();
+    const canAfford = arc >= cost;
+    const hasParty  = count > 0;
+    const canStart  = hasParty && canAfford;
+
+    this._startBtnState = canStart ? 'active' : 'disabled';
     this._drawStartBtn(this._startBtnState);
-    this._partyCountTxt.setText(`파티 ${count} / ${this._maxParty}명`);
-    this._partyCountTxt.setStyle({ fill: hasParty ? '#a05018' : '#2a1a0a' });
+
+    // 비용 / 인원 표시
+    const costColor = canAfford ? '#a05018' : '#a03018';
+    const arcColor  = canAfford ? '#c8a070' : '#cc4444';
+    this._partyCountTxt.setText(
+      `파티 ${count}명  |  비용 ${cost} Arc  (보유 ${arc})`
+    );
+    this._partyCountTxt.setStyle({ fill: canStart ? costColor : '#5a2a2a' });
   }
 
   // ── 출발 ─────────────────────────────────────────────────────────
   _depart() {
+    const cost = this._calcPartyCost();
+
+    // Arc 차감 (부족 시 방어)
+    const ok = SaveManager.spendArc(cost);
+    if (!ok) {
+      this._refreshStartBtn(); // 버튼 상태 재갱신
+      return;
+    }
+
+    // 탐사 파티 저장
     CharacterManager.saveParty(this._party);
 
     const flash = this.add.rectangle(0, 0, this.W, this.H, 0x050407, 0)
@@ -510,10 +527,9 @@ class PartyScene extends Phaser.Scene {
     this.tweens.add({
       targets: flash, alpha: 1, duration: 350, ease: 'Sine.easeIn',
       onComplete: () => {
-        // BattleScene 구현 전 임시: AtelierScene으로 복귀
-        // 구현 후 교체: this.scene.start('BattleScene', { cogMax: this._cogMax, cardType: this._cardType, party: this._party });
-        console.log('[PartyScene] 출발 — party:', this._party, 'cogMax:', this._cogMax);
-        this.scene.start('AtelierScene', { tab: 'explore' });
+        // 탐사 파티 확정 → 난이도 선택(ExploreScene)으로 진입
+        // ExploreScene에서 Cog 선택 후 BattleReadyScene(전투파티 재편성) → BattleScene
+        this.scene.start('ExploreScene', { from: 'PartyScene' });
       },
     });
   }

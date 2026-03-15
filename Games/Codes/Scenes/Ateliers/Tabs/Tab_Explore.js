@@ -30,7 +30,7 @@ class Tab_Explore extends Tab_Base {
     panel.strokeRect(cx - panelW / 2, cy - panelH / 2, panelW, panelH);
     panel.fillRect(cx - panelW / 2, cy - panelH / 2, panelW, panelH);
 
-    // ── 코너 장식 (drawCornerDeco 사용, 고정픽셀 → scaledFontSize 기반) ──
+    // ── 코너 장식 ────────────────────────────────────────────
     const deco = scene.add.graphics();
     const cs   = parseInt(FontManager.adjustedSize(14, scene.scale));
     const pad  = parseInt(FontManager.adjustedSize(8, scene.scale));
@@ -44,10 +44,8 @@ class Tab_Explore extends Tab_Base {
     // ── 상단 라벨 ────────────────────────────────────────────
     const labelY = cy - panelH / 2 + parseInt(FontManager.adjustedSize(26, scene.scale));
     const labelTxt = scene.add.text(cx, labelY, '[ 탐  색 ]', {
-      fontSize:      FontManager.adjustedSize(13, scene.scale),
-      fill:          '#7a5028',
-      fontFamily:    FontManager.MONO,
-      letterSpacing: 3,
+      fontSize: FontManager.adjustedSize(13, scene.scale),
+      fill: '#7a5028', fontFamily: FontManager.MONO, letterSpacing: 3,
     }).setOrigin(0.5, 0.5);
 
     // ── 구분선 ───────────────────────────────────────────────
@@ -56,163 +54,70 @@ class Tab_Explore extends Tab_Base {
     lineG.lineStyle(1, 0x4a2a10, 0.9);
     lineG.lineBetween(cx - panelW / 2 + 20, lineY, cx + panelW / 2 - 20, lineY);
 
-    // ── 메인 텍스트 (한 줄 — 타이핑으로 등장) ───────────────
-    const txt = scene.add.text(cx, cy - panelH * 0.06, '', {
-      fontSize:   FontManager.adjustedSize(32, scene.scale),
-      fill:       '#e8c080',
-      fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5).setAlpha(0);
+    // ── 안내 텍스트 ──────────────────────────────────────────
+    const descTxt = scene.add.text(cx, cy - panelH * 0.08,
+      '파티를 편성하고 탐사를 시작합니다.', {
+        fontSize: FontManager.adjustedSize(18, scene.scale),
+        fill: '#c8a070', fontFamily: FontManager.TITLE,
+      }).setOrigin(0.5);
 
-    // ── 확인 버튼 (처음엔 숨김) ──────────────────────────────
-    const btnW = parseInt(FontManager.adjustedSize(130, scene.scale));
+    const subTxt = scene.add.text(cx, cy + panelH * 0.04,
+      '탐사 시작 후에는 되돌아올 수 없습니다.', {
+        fontSize: FontManager.adjustedSize(12, scene.scale),
+        fill: '#5a3a18', fontFamily: FontManager.MONO,
+      }).setOrigin(0.5);
+
+    // ── 탐색 시작 버튼 ───────────────────────────────────────
+    const btnW = parseInt(FontManager.adjustedSize(160, scene.scale));
     const btnH = parseInt(FontManager.adjustedSize(50, scene.scale));
     const btnY = cy + panelH * 0.30;
 
-    const btnBg   = scene.add.graphics().setAlpha(0);
-    const btnGlow = scene.add.graphics().setAlpha(0);
-
+    const btnBg = scene.add.graphics();
     const drawBtn = (state) => {
       btnBg.clear();
       if (state === 'hover') {
-        btnBg.fillStyle(0x5a1010, 1);
-        btnBg.lineStyle(2, 0xff5533, 1);
+        btnBg.fillStyle(0x2a1a08, 1);
+        btnBg.lineStyle(2, 0xc8a070, 1);
       } else if (state === 'down') {
-        btnBg.fillStyle(0x300808, 1);
-        btnBg.lineStyle(2, 0xcc3318, 1);
+        btnBg.fillStyle(0x1a1008, 1);
+        btnBg.lineStyle(2, 0x907040, 1);
       } else {
-        btnBg.fillStyle(0x3a0e0e, 1);
-        btnBg.lineStyle(2, 0xbb2810, 0.95);
+        btnBg.fillStyle(0x1e1008, 1);
+        btnBg.lineStyle(2, 0xa05018, 0.9);
       }
       btnBg.strokeRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH);
       btnBg.fillRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH);
     };
     drawBtn('normal');
 
-    // 글로우 그리기 (외부 발광 레이어)
-    const drawGlow = (intensity) => {
-      btnGlow.clear();
-      const layers = [
-        { pad: 14, alpha: 0.05 * intensity, col: 0xff2200 },
-        { pad:  8, alpha: 0.13 * intensity, col: 0xff3310 },
-        { pad:  4, alpha: 0.28 * intensity, col: 0xdd2200 },
-        { pad:  1, alpha: 0.52 * intensity, col: 0xcc1800 },
-      ];
-      layers.forEach(({ pad, alpha, col }) => {
-        btnGlow.lineStyle(2, col, alpha);
-        btnGlow.strokeRect(
-          cx - btnW / 2 - pad, btnY - btnH / 2 - pad,
-          btnW + pad * 2, btnH + pad * 2
-        );
-      });
-    };
-
-    const btnTxt = scene.add.text(cx, btnY, '확  인', {
-      fontSize:   FontManager.adjustedSize(24, scene.scale),
-      fill:       '#ee5533',
-      fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5).setAlpha(0);
+    const btnTxt = scene.add.text(cx, btnY, '파티  편성', {
+      fontSize: FontManager.adjustedSize(22, scene.scale),
+      fill: '#c8a070', fontFamily: FontManager.TITLE,
+    }).setOrigin(0.5);
 
     const hit = scene.add.rectangle(cx, btnY, btnW, btnH, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
 
-    hit.on('pointerover', () => {
-      drawBtn('hover');
-      btnTxt.setStyle({ fill: '#ff7755' });
-    });
-    hit.on('pointerout', () => {
-      drawBtn('normal');
-      btnTxt.setStyle({ fill: '#ee5533' });
-    });
-    hit.on('pointerdown', () => {
-      drawBtn('down');
-      btnTxt.setStyle({ fill: '#ff3311' });
-    });
+    hit.on('pointerover', () => { drawBtn('hover'); btnTxt.setStyle({ fill: '#e8d090' }); });
+    hit.on('pointerout',  () => { drawBtn('normal'); btnTxt.setStyle({ fill: '#c8a070' }); });
+    hit.on('pointerdown', () => { drawBtn('down'); btnTxt.setStyle({ fill: '#907040' }); });
     hit.on('pointerup', () => {
-      // 버튼 비활성화 (중복 클릭 방지)
       hit.disableInteractive();
       drawBtn('down');
-
-      // AtelierScene의 슬라이드아웃 연출 호출 → 완료 후 씬 전환
+      // AtelierScene 슬라이드아웃 후 PartyScene 진입
+      // (ExploreScene은 PartyScene 이후 난이도 선택 단계로 이동)
       if (scene._slideOutUIThen) {
         scene._slideOutUIThen(() => {
-          scene.scene.start('ExploreScene', { from: 'AtelierScene' });
+          scene.scene.start('PartyScene', { from: 'AtelierScene' });
         });
       } else {
-        scene.scene.start('ExploreScene', { from: 'AtelierScene' });
+        scene.scene.start('PartyScene', { from: 'AtelierScene' });
       }
     });
 
-    // ── 모두 container에 추가 (hit 제외 — 씬 직접 추가로 분리) ──
-    this._container.add([
-      panel, deco, labelTxt, lineG,
-      txt,
-      btnGlow, btnBg, btnTxt,
-    ]);
-    // hit은 씬 직접 추가 — 컨테이너 tween 이동 시 좌표 어긋남 방지
+    // ── container 등록 ───────────────────────────────────────
+    this._container.add([panel, deco, labelTxt, lineG, descTxt, subTxt, btnBg, btnTxt]);
     hit.setDepth(20);
     this._sceneHits.push(hit);
-
-    // ── 타이핑 시퀀스 시작 ───────────────────────────────────
-    this._delay(80, () => {
-      this._typeText(txt, '심해를 직면할 준비가 되었습니까?', 52, () => {
-        this._delay(180, () => {
-          this._revealButton(btnBg, btnGlow, btnTxt, drawBtn, drawGlow);
-        });
-      });
-    });
-  }
-
-  // ── 버튼 등장 애니메이션 ─────────────────────────────────────
-  _revealButton(btnBg, btnGlow, btnTxt, drawBtn, drawGlow) {
-    // 버튼 배경 페이드인
-    this._tween({ targets: btnBg, alpha: { from: 0, to: 1 }, duration: 220 });
-
-    // 글로우 등장
-    this._delay(80, () => {
-      btnGlow.setAlpha(1);
-      const glowObj = { v: 0 };
-      this._tween({
-        targets: glowObj, v: 1, duration: 550, ease: 'Sine.easeOut',
-        onUpdate: () => drawGlow(glowObj.v),
-        onComplete: () => {
-          // 맥박 점멸
-          this._tween({
-            targets: glowObj,
-            v: { from: 1, to: 0.35 },
-            duration: 850,
-            yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-            onUpdate: () => drawGlow(glowObj.v),
-          });
-        },
-      });
-    });
-
-    // 버튼 텍스트 페이드인 + 미세 점멸
-    this._delay(100, () => {
-      this._tween({ targets: btnTxt, alpha: { from: 0, to: 1 }, duration: 280 });
-      this._delay(300, () => {
-        this._tween({
-          targets: btnTxt, alpha: { from: 1, to: 0.65 },
-          duration: 850, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-        });
-      });
-    });
-  }
-
-  // ── 타이핑 효과 ─────────────────────────────────────────────
-  _typeText(textObj, fullText, charDelay, onDone) {
-    textObj.setAlpha(1).setText('');
-    const chars = [...fullText];
-    let i = 0;
-    const tick = () => {
-      if (!textObj || !textObj.scene) return;
-      if (i < chars.length) {
-        textObj.setText(chars.slice(0, ++i).join(''));
-        this._timers.push(this.scene.time.delayedCall(charDelay, tick));
-      } else {
-        if (onDone) onDone();
-      }
-    };
-    this._timers.push(this.scene.time.delayedCall(charDelay, tick));
   }
 }
