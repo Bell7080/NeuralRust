@@ -313,6 +313,14 @@ const CharProfile = {
     const _valTxts = {};
     let _pendingTxt = null;
 
+    // + 버튼 visible 상태를 직접 보고 수치 텍스트 X를 결정
+    const _refreshValPos = () => {
+      _plusButtons.forEach(({ bg, valT: vt, btnX: bx }) => {
+        if (!vt || !vt.active) return;
+        vt.setX(bg.visible ? bx - plusW / 2 - 6 : leftColX + colW - 6);
+      });
+    };
+
     STAT_DEFS.forEach(({ key, label, tip }, i) => {
       const sy   = statStartY + i * rowH;
       const midY = sy + rowH / 2;
@@ -359,7 +367,7 @@ const CharProfile = {
         : `${effVal}`;
 
       const valT = scene.add.text(
-        pendingStats > 0 ? leftColX+colW-plusW-16 : leftColX+colW-10,
+        leftColX + colW - 10,
         midY, valStr, {
         fontSize:fs(isOc ? 11 : 14),
         fill: isOc ? (char.overclock.color||'#ff4400') : statCol,
@@ -371,7 +379,7 @@ const CharProfile = {
         ? `${tip}\n\n[ ${char.overclock.name} ]\n${char.overclock.description}`
         : tip;
       const statHit = scene.add.rectangle(
-        leftColX+colW/2, midY, colW-(pendingStats>0?plusW+4:0), rowH, 0, 0
+        leftColX+colW/2, midY, colW, rowH, 0, 0
       ).setInteractive({useHandCursor:false}).setDepth(402);
       statHit.on('pointerover',(ptr)=>_showTip(ptr.x,ptr.y,tipText));
       statHit.on('pointermove',(ptr)=>_moveTip(ptr.x,ptr.y));
@@ -438,17 +446,17 @@ const CharProfile = {
           if (_pendingTxt) _pendingTxt.setVisible(false);
           const pendingRow = _pendingTxt ? _pendingTxt.getData('rowBg') : null;
           if (pendingRow) pendingRow.setVisible(false);
-          // 배분 완료 — 수치 텍스트 우측 정렬 후 컨테이너 강제 갱신
-          Object.values(_valTxts).forEach(vt => {
-            if (vt && vt.active) vt.setX(leftColX + colW - 10);
-          });
-          g.setAlpha(g.alpha);
         }
+        // + 버튼 visible 기준으로 수치 텍스트 위치 즉시 갱신
+        _refreshValPos();
       });
 
       g.add([plusBg, plusTxt, plusHit]);
-      _plusButtons.push({bg: plusBg, txt: plusTxt, hit: plusHit});
+      _plusButtons.push({bg: plusBg, txt: plusTxt, hit: plusHit, valT, btnX});
     });
+
+    // 초기 + 버튼 visible 기준으로 수치 텍스트 위치 세팅
+    _refreshValPos();
 
     curY += statBH + parseInt(fs(4));
 
