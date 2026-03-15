@@ -3,16 +3,21 @@
 //  경로: Games/Codes/Scenes/BattleScene.js
 //
 //  역할: 인게임 자동전투
-//    - BattleReadyScene에서 전투파티 + cogMax 전달받아 진입
+//    - BattleReadyScene에서 전투파티 + cogMax + battleType 전달받아 진입
 //    - 상단: 적 이형 (도형 임시 표현 + HP바)
 //    - 중단: 전투 로그 피드
 //    - 하단: 아군 초상화 (원 도형 + HP바 + 게이지바)
 //    - 자동전투 진행 (민첩 기반 공격속도)
-//    - 전투 종료 → 결산 팝업 → RoundSlotScene (추후)
+//    - 전투 종료 → 결산 팝업 → DiveScene 복귀 (승리) or AtelierScene (패배)
 //
 //  진입 데이터:
-//    { cogMax: number, battleParty: string[] }
-//    battleParty = 전투에 참여할 캐릭터 id 배열 (파티 편성 순 = 배치 순)
+//    { cogMax, battleParty, round, battleType, maxRound, deepCoin, log }
+//    battleType: 'normal' | 'wave' | 'raid'
+//
+//  전투 유형별 적 생성:
+//    normal — 가중치 추첨, 기존 로직
+//    wave   — 침수자 강제 or 최다등장 이형, spawnCount 상한 +2 부스트
+//    raid   — 최강 이형 1마리, 스탯 ×2.5
 //
 //  전투 로직:
 //    - 아군: agility 기반 attackInterval(ms) 개별 타이머로 자동 공격
@@ -28,9 +33,7 @@
 //    - 스킬 발동 (게이지 충전 후 초상화 클릭)
 //    - 포지션(공격 범위) 적용
 //    - 패시브 자동 발동
-//    - 이형 wave 보너스 적용
 //    - 전투불능 영구사망 판정 (탐사 실패 시)
-//    - RoundSlotScene 구현 후 연결
 // ================================================================
 
 class BattleScene extends Phaser.Scene {
@@ -41,6 +44,10 @@ class BattleScene extends Phaser.Scene {
     this._cogMax      = data.cogMax      || 1;
     this._battleParty = data.battleParty || [];  // 전투 참여 캐릭터 id 배열
     this._round       = data.round       || 1;   // 현재 라운드 번호
+    this._battleType  = data.battleType  || 'normal'; // 전투 유형: normal | wave | raid
+    this._maxRound    = data.maxRound    || 5;         // 탐사 최대 라운드
+    this._deepCoin    = data.deepCoin    || 0;         // 심해화폐 (DiveScene으로 반환)
+    this._log         = data.log         || [];        // 탐사 기록지
   }
 
   // ── 씬 생성 ──────────────────────────────────────────────────────
@@ -85,46 +92,104 @@ class BattleScene extends Phaser.Scene {
   }
 
   // ════════════════════════════════════════════════════════════════
-  //  적 생성
+  //  적 생성 — battleType 분기
   // ════════════════════════════════════════════════════════════════
   _spawnEnemies(cogMax) {
-    // cogMax 이하 등장 가능한 이형 목록에서 가중치 추첨
+    if (this._battleType === 'raid')  return this._spawnRaid(cogMax);
+    if (this._battleType === 'wave')  return this._spawnWave(cogMax);
+    return this._spawnNormal(cogMax);
+  }
+
+  // ── 일반전: 기존 가중치 추첨 ─────────────────────────────────────
+  _spawnNormal(cogMax) {
     const pool = ENEMY_DATA.filter(e =>
       e.cogMin <= cogMax && (e.cogMax === null || e.cogMax >= cogMax)
     );
     if (!pool.length) return [];
 
-    // 가중치 추첨으로 이형 종류 선택
     const totalW = pool.reduce((s, e) => s + e.spawnWeight, 0);
     let r = Math.random() * totalW;
     let picked = pool[0];
     for (const e of pool) { r -= e.spawnWeight; if (r <= 0) { picked = e; break; } }
 
-    // 등장 수 결정
     const [minC, maxC] = picked.spawnCount;
-    const count = minC + Math.floor(Math.random() * (maxC - minC + 1));
-
-    // 스탯 스케일 적용
+    const count  = minC + Math.floor(Math.random() * (maxC - minC + 1));
     const scaled = getEnemyScaledStats(picked.id, cogMax);
+    return this._buildEnemyArray(picked, scaled, count);
+  }
 
+  // ── 웨이브전: 침수자 우선, spawnCount 상한 +2, wave 보너스 적용 ──
+  _spawnWave(cogMax) {
+    const pool = ENEMY_DATA.filter(e =>
+      e.cogMin <= cogMax && (e.cogMax === null || e.cogMax >= cogMax)
+    );
+    if (!pool.length) return this._spawnNormal(cogMax);
+
+    // 침수자 우선, 없으면 spawnCount 상한 최대인 이형
+    let picked = pool.find(e => e.id === 'drowned');
+    if (!picked) {
+      picked = pool.reduce((best, e) =>
+        e.spawnCount[1] > best.spawnCount[1] ? e : best, pool[0]);
+    }
+
+    const [minC, maxC] = picked.spawnCount;
+    const count  = (minC + 1) + Math.floor(Math.random() * (maxC - minC + 2 + 1));
+    const scaled = getEnemyScaledStats(picked.id, cogMax);
+    const enemies = this._buildEnemyArray(picked, scaled, count);
+
+    // wave 보너스: 동종 수에 비례 스탯 증가
+    if (picked.waveBonus) {
+      const { attackBonus, hpBonus } = picked.waveBonus;
+      const bonus = enemies.length - 1;
+      enemies.forEach(e => {
+        e.attack = Math.round(e.attack * (1 + attackBonus * bonus));
+        e._hp    = Math.round(e._hp    * (1 + hpBonus    * bonus));
+        e._maxHp = e._hp;
+      });
+    }
+    return enemies;
+  }
+
+  // ── 레이드전: 최강 이형 1마리, 스탯 ×2.5 ────────────────────────
+  _spawnRaid(cogMax) {
+    const pool = ENEMY_DATA.filter(e =>
+      e.cogMin <= cogMax && (e.cogMax === null || e.cogMax >= cogMax)
+    );
+    if (!pool.length) return [];
+
+    // HP 기준 가장 강한 이형 선택
+    const picked  = pool.reduce((best, e) =>
+      e.baseStats.hp > best.baseStats.hp ? e : best, pool[0]);
+    const scaled  = getEnemyScaledStats(picked.id, cogMax);
+    const M       = 2.5;
+
+    return [{
+      _uid:     `e_raid_${Date.now()}`,
+      id:       picked.id,
+      name:     `[레이드] ${picked.name}`,
+      behavior: picked.behavior,
+      _hp:      Math.round(scaled.hp     * M),
+      _maxHp:   Math.round(scaled.hp     * M),
+      attack:   Math.round(scaled.attack * M),
+      agility:  Math.round(scaled.agility * 1.2),
+      luck:     Math.round(scaled.luck    * 1.5),
+      _dead:    false,
+      _attackCount: 0,
+    }];
+  }
+
+  // ── 공통 배열 빌더 ────────────────────────────────────────────────
+  _buildEnemyArray(picked, scaled, count) {
     const enemies = [];
     for (let i = 0; i < count; i++) {
-      // wave 보너스: 침수자 등 — 동종 수에 비례 스탯 증가
-      let hp     = scaled.hp;
-      let attack = scaled.attack;
-      if (picked.behavior === 'wave' && picked.waveBonus) {
-        const bonus = count - 1; // 자신 제외 동종 수
-        hp     = Math.round(hp     * (1 + picked.waveBonus.hpBonus     * bonus));
-        attack = Math.round(attack * (1 + picked.waveBonus.attackBonus * bonus));
-      }
       enemies.push({
-        _uid:     `e_${i}`,
+        _uid:     `e_${i}_${Date.now()}`,
         id:       picked.id,
         name:     picked.name,
         behavior: picked.behavior,
-        _hp:      hp,
-        _maxHp:   hp,
-        attack,
+        _hp:      scaled.hp,
+        _maxHp:   scaled.hp,
+        attack:   scaled.attack,
         agility:  scaled.agility,
         luck:     scaled.luck,
         _dead:    false,
@@ -154,9 +219,18 @@ class BattleScene extends Phaser.Scene {
     const fs = n => FontManager.adjustedSize(n, this.scale);
 
     // 라운드 표시
-    this.add.text(W * 0.05, H * 0.03, `ROUND  ${this._round}`, {
+    this.add.text(W * 0.05, H * 0.03, `ROUND  ${this._round} / ${this._maxRound}`, {
       fontSize: fs(14), fill: '#5a3a18', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
+
+    // 전투 유형 배지 (중앙)
+    const TYPE_LABELS = { normal: '일  반  전', wave: '웨  이  브', raid: '레  이  드' };
+    const TYPE_COLORS = { normal: '#8a9060',   wave: '#406090',   raid: '#904030'   };
+    this.add.text(W * 0.5, H * 0.03,
+      TYPE_LABELS[this._battleType] || '일  반  전', {
+        fontSize: fs(13), fill: TYPE_COLORS[this._battleType] || '#8a9060',
+        fontFamily: FontManager.MONO, letterSpacing: 2,
+      }).setOrigin(0.5, 0.5);
 
     // Cog 난이도
     const cogC = CharacterManager.getCogColor(this._cogMax);
@@ -731,12 +805,31 @@ class BattleScene extends Phaser.Scene {
         targets: flash, alpha: 1, duration: 350, ease: 'Sine.easeIn',
         onComplete: () => {
           if (victory) {
-            // TODO: RoundSlotScene 구현 후 연결
-            // this.scene.start('RoundSlotScene', { cogMax: this._cogMax, round: this._round + 1 });
-            this.scene.start('AtelierScene', { tab: 'explore' });
+            const nextRound = this._round + 1;
+            // 기록지 결과 업데이트 (마지막 항목이 이번 라운드)
+            if (this._log.length > 0) {
+              this._log[this._log.length - 1].result = 'victory';
+            }
+            if (nextRound > this._maxRound) {
+              // 최대 라운드 완료 → 공방으로
+              this.scene.start('AtelierScene');
+            } else {
+              // 다음 라운드 → DiveScene 복귀
+              this.scene.start('DiveScene', {
+                cogMax:      this._cogMax,
+                battleParty: this._battleParty,
+                round:       nextRound,
+                maxRound:    this._maxRound,
+                deepCoin:    this._deepCoin,
+                log:         this._log,
+              });
+            }
           } else {
-            // 패배 → 공방으로
-            this.scene.start('AtelierScene', { tab: 'explore' });
+            // 패배 → 기록지 업데이트 후 공방으로
+            if (this._log.length > 0) {
+              this._log[this._log.length - 1].result = 'defeat';
+            }
+            this.scene.start('AtelierScene');
           }
         },
       });

@@ -21,8 +21,12 @@ class BattleReadyScene extends Phaser.Scene {
   constructor() { super({ key: 'BattleReadyScene' }); }
 
   init(data) {
-    this._cogMax      = data.cogMax || 1;
-    this._round       = data.round  || 1;
+    this._cogMax      = data.cogMax      || 1;
+    this._round       = data.round       || 1;
+    this._battleType  = data.battleType  || 'normal'; // ← DiveScene에서 전달
+    this._maxRound    = data.maxRound    || 5;
+    this._deepCoin    = data.deepCoin    || 0;
+    this._log         = data.log         || [];
     this._battleParty = [];   // 전투에 보낼 캐릭터 id 배열 (순서 = 배치 순서)
     this._sceneHits   = [];
   }
@@ -453,6 +457,10 @@ class BattleReadyScene extends Phaser.Scene {
           cogMax:      this._cogMax,
           battleParty: this._battleParty,
           round:       this._round,
+          battleType:  this._battleType,
+          maxRound:    this._maxRound,
+          deepCoin:    this._deepCoin,
+          log:         this._log,
         });
       },
     });
