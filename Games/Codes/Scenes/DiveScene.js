@@ -2,65 +2,65 @@
 //  DiveScene.js
 //  경로: Games/Codes/Scenes/DiveScene.js
 //
-//  역할: 탐사 로비 — 라운드 슬롯 + 탐사 현황 패널
-//    - BattleReadyScene에서 cogMax + battleParty 전달받아 진입
-//    - 중앙: 라운드 슬롯머신 (수동 스핀, 3칸 중 1칸 선택)
-//    - 좌측 패널: 심해화폐 / 가방(획득 아이템) / 기록지 / 파티 상태
-//    - 슬롯 결과: 일반전 / 웨이브전 / 레이드전
-//    - 전투 종료 후 승리 시 이 씬으로 복귀 (round + 1)
-//    - 최대 라운드 도달 or 철수 → AtelierScene
+//  역할: 탐사 로비 — 라운드 슬롯 + 탐사 현황
 //
-//  진입 데이터:
-//    {
-//      cogMax:      number,    // 탐사 코그 상한
-//      battleParty: string[],  // 전투 참여 캐릭터 id 배열
-//      round:       number,    // 현재 라운드 (1~)
-//      maxRound:    number,    // 최대 라운드 (기본 5)
-//      deepCoin:    number,    // 심해화폐 (재굴림 소모)
-//      log:         object[],  // 탐사 기록지 [{round, type, result, note}]
-//    }
+//  ── 레이아웃 (기획 이미지 기준) ──────────────────────────────
+//
+//  ┌──────┬────────────────────────────────────────────────────┐
+//  │      │  재화 / 라운드 진행 / 수치 스탯          [상단 패널] │
+//  │ 좌측 ├────────────────────────────────────────────────────┤
+//  │ 탭   │                                                    │
+//  │ 버튼 │   [슬롯1]   [슬롯2]   [슬롯3]   [레버]  [중앙 영역] │
+//  │      │                                                    │
+//  │ 인벤 │                                                    │
+//  │ 파티 ├────────────────────────────────────────────────────┤
+//  │ 상점 │  [탭 콘텐츠 패널 — 선택한 탭 내용]       [하단 패널] │
+//  │ 일지 │                                                    │
+//  └──────┴────────────────────────────────────────────────────┘
+//
+//  좌측: 탭 버튼 4개 (인벤토리 / 파티 관리 / 심해 상점 / 탐사 일지)
+//  우상단 패널: 심해화폐 / 현재 라운드 / Cog / 철수 버튼
+//  중앙: 슬롯 3개 + 우측 레버 (재설정/스핀)
+//  하단 패널: 선택된 탭 콘텐츠
 //
 //  슬롯 전투 유형:
-//    'normal' — 일반전  (랜덤 이형, 일반 등장 수)
-//    'wave'   — 웨이브전 (침수자 강제 or 다수 등장, spawnCount 상한 부스트)
-//    'raid'   — 레이드전 (적 1마리 강제, 스탯 ×2.5 보스 보정)
+//    'normal' — 일반전
+//    'wave'   — 웨이브전
+//    'raid'   — 레이드전
 //
 //  TODO:
-//    - 황금 코인 아이템으로 슬롯 보정 (좋은 이벤트 유도)
-//    - 음식 시스템 — 소모 시 maxRound 연장 가능
-//    - 가방 탭 — 획득 아이템 목록 실제 연동
-//    - 파티 탭 — HP 회복 / 전투불능 상태 표시
-//    - 심해화폐 재굴림 — 소모량 밸런스 확정 후 적용
+//    - 인벤토리 탭 — 획득 아이템 목록 실제 연동
+//    - 파티 관리 탭 — HP 회복 / 전투불능 상태 표시
+//    - 심해 상점 탭 — 심해화폐 소모 구매
+//    - 음식 시스템 — maxRound 연장
+//    - 황금 코인 — 슬롯 보정 아이템
 // ================================================================
 
 // ── 슬롯 카드 정의 ────────────────────────────────────────────────
 const DIVE_SLOT_CARDS = [
   {
-    type:        'normal',
-    label:       '일  반  전',
-    desc:        '무작위 이형이 출현한다',
-    color:       '#8a9060',
-    borderHex:   0x505828,
-    borderColor: '#505828',
-    weight:      5,
+    type:      'normal',
+    label:     '일  반  전',
+    desc:      '무작위 이형이 출현한다',
+    color:     '#8a9060',
+    borderHex: 0x505828,
+    weight:    5,
   },
   {
-    type:        'wave',
-    label:       '웨  이  브',
-    desc:        '다수의 이형이 떼를 지어 몰려온다',
-    color:       '#406090',
-    borderHex:   0x284868,
-    borderColor: '#284868',
-    weight:      3,
+    type:      'wave',
+    label:     '웨  이  브',
+    desc:      '다수의 이형이 떼를 지어 몰려온다',
+    color:     '#406090',
+    borderHex: 0x284868,
+    weight:    3,
   },
   {
-    type:        'raid',
-    label:       '레  이  드',
-    desc:        '강대한 이형 하나가 단독으로 나타난다',
-    color:       '#904030',
-    borderHex:   0x682818,
-    borderColor: '#682818',
-    weight:      2,
+    type:      'raid',
+    label:     '레  이  드',
+    desc:      '강대한 이형 하나가 단독으로 나타난다',
+    color:     '#904030',
+    borderHex: 0x682818,
+    weight:    2,
   },
 ];
 
@@ -85,12 +85,15 @@ class DiveScene extends Phaser.Scene {
   // ── 진입 데이터 ──────────────────────────────────────────────────
   init(data) {
     this._cogMax      = data.cogMax      || 1;
-    this._battleParty = data.battleParty || [];
     this._round       = data.round       || 1;
     this._maxRound    = data.maxRound    || 5;
     this._deepCoin    = data.deepCoin    || 0;
-    this._log         = data.log         || [];   // 탐사 기록지
+    this._log         = data.log         || [];
+    this._battleParty = data.battleParty && data.battleParty.length
+      ? data.battleParty
+      : (CharacterManager.loadParty() || []);
     this._sceneHits   = [];
+    this._activeTab   = 'party';  // 'inventory' | 'party' | 'shop' | 'journal'
   }
 
   // ── 씬 생성 ──────────────────────────────────────────────────────
@@ -100,18 +103,19 @@ class DiveScene extends Phaser.Scene {
     this.W = W; this.H = H;
     InputManager.reinit(this);
 
-    this._phase      = 'idle';    // 'idle' | 'spinning' | 'stopped' | 'chosen'
-    this._results    = [null, null, null];
-    this._chosen     = -1;
-    this._canChoose  = false;
-    this._slots      = [];
+    this._phase     = 'idle';
+    this._results   = [null, null, null];
+    this._chosen    = -1;
+    this._canChoose = false;
+    this._slots     = [];
 
     this._buildBackground(W, H);
-    this._buildLeftPanel(W, H);
-    this._buildCenterSlot(W, H);
-    this._buildSpinButton(W, H);
+    this._buildLeftTabs(W, H);
+    this._buildTopPanel(W, H);
+    this._buildSlotArea(W, H);
+    this._buildBottomPanel(W, H);
+    this._switchTab(this._activeTab);
 
-    // 라운드 최대치 도달 시 바로 철수 처리
     if (this._round > this._maxRound) {
       this.time.delayedCall(300, () => this._exitExpedition());
     }
@@ -124,216 +128,236 @@ class DiveScene extends Phaser.Scene {
     this.add.rectangle(0, 0, W, H, 0x050407).setOrigin(0);
     const scan = this.add.graphics();
     for (let y = 0; y < H; y += 4) {
-      scan.lineStyle(1, 0x1a0e06, 0.15);
+      scan.lineStyle(1, 0x1a0e06, 0.13);
       scan.lineBetween(0, y, W, y);
     }
     const grid = this.add.graphics();
     const step = Math.round(W / 56);
-    grid.lineStyle(1, 0x0f0a05, 0.45);
+    grid.lineStyle(1, 0x0f0a05, 0.4);
     for (let x = 0; x <= W; x += step) grid.lineBetween(x, 0, x, H);
     for (let y = 0; y <= H; y += step) grid.lineBetween(0, y, W, y);
 
     this.add.text(W / 2, H / 2, 'DIVE', {
-      fontSize:   FontManager.adjustedSize(110, this.scale),
-      fill:       '#0a0705',
-      fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5).setAlpha(0.07);
+      fontSize: FontManager.adjustedSize(110, this.scale),
+      fill: '#0a0705', fontFamily: FontManager.TITLE,
+    }).setOrigin(0.5).setAlpha(0.06);
   }
 
   // ════════════════════════════════════════════════════════════════
-  //  좌측 패널 (심해화폐 · 가방 · 기록지 · 파티)
+  //  좌측 탭 버튼 (세로 4개)
   // ════════════════════════════════════════════════════════════════
-  _buildLeftPanel(W, H) {
-    const fs     = n => FontManager.adjustedSize(n, this.scale);
-    const panelW = W * 0.22;
-    const panelH = H * 0.88;
-    const panelX = W * 0.015;
-    const panelY = H * 0.06;
+  _buildLeftTabs(W, H) {
+    const fs      = n => FontManager.adjustedSize(n, this.scale);
+    const tabW    = W * 0.10;
+    const tabH    = H * 0.10;
+    const tabX    = 0;
+    const gapY    = 4;
+    const tabs = [
+      { id: 'inventory', label: '인벤토리' },
+      { id: 'party',     label: '파티 관리' },
+      { id: 'shop',      label: '심해 상점' },
+      { id: 'journal',   label: '탐사 일지' },
+    ];
 
-    // 패널 외곽
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(0x0a0807, 0.85);
-    panelBg.lineStyle(1, 0x2a1a0a, 0.9);
-    panelBg.fillRect(panelX, panelY, panelW, panelH);
-    panelBg.strokeRect(panelX, panelY, panelW, panelH);
+    // 탭 버튼들을 수직 중앙 정렬
+    const totalH  = tabs.length * tabH + (tabs.length - 1) * gapY;
+    const startY  = H / 2 - totalH / 2;
 
-    const cx = panelX + panelW / 2;
-    let   y  = panelY + panelH * 0.04;
+    this._tabBtnObjs = {};
 
-    // ── 탐사 정보 헤더 ────────────────────────────────────────────
-    this.add.text(cx, y, `DIVE  —  COG ${this._cogMax}`, {
-      fontSize: fs(11), fill: '#3a2010', fontFamily: FontManager.MONO, letterSpacing: 2,
-    }).setOrigin(0.5);
-    y += parseInt(fs(16));
+    tabs.forEach((tab, i) => {
+      const cy = startY + i * (tabH + gapY) + tabH / 2;
+      const cx = tabX + tabW / 2;
 
-    this.add.text(cx, y, `라운드  ${this._round} / ${this._maxRound}`, {
-      fontSize: fs(14), fill: '#a05018', fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5);
-    y += parseInt(fs(20));
+      const bg = this.add.graphics();
+      const drawTab = (active, hover) => {
+        bg.clear();
+        if (active) {
+          bg.fillStyle(0x2a1a08, 1);
+          bg.lineStyle(2, 0xa05018, 1);
+        } else if (hover) {
+          bg.fillStyle(0x1a1008, 1);
+          bg.lineStyle(1, 0x6a3010, 0.8);
+        } else {
+          bg.fillStyle(0x0e0904, 0.9);
+          bg.lineStyle(1, 0x1e1008, 0.5);
+        }
+        bg.fillRect(tabX, cy - tabH / 2, tabW, tabH);
+        bg.strokeRect(tabX, cy - tabH / 2, tabW, tabH);
+      };
+      drawTab(tab.id === this._activeTab, false);
 
-    // 구분선
+      const txt = this.add.text(cx, cy, tab.label, {
+        fontSize: fs(10), fill: '#6b4020', fontFamily: FontManager.TITLE,
+        align: 'center', wordWrap: { width: tabW - 8 },
+      }).setOrigin(0.5);
+
+      const hit = this.add.rectangle(cx, cy, tabW, tabH, 0, 0)
+        .setInteractive({ useHandCursor: true }).setDepth(20);
+      this._sceneHits.push(hit);
+
+      hit.on('pointerover', () => {
+        if (this._activeTab !== tab.id) drawTab(false, true);
+        txt.setStyle({ fill: '#c8a070' });
+      });
+      hit.on('pointerout', () => {
+        drawTab(this._activeTab === tab.id, false);
+        txt.setStyle({ fill: this._activeTab === tab.id ? '#c8a070' : '#6b4020' });
+      });
+      hit.on('pointerdown', () => this._switchTab(tab.id));
+
+      this._tabBtnObjs[tab.id] = { bg, drawTab, txt };
+    });
+
+    // 탭 영역 우측 구분선
     const lg = this.add.graphics();
-    lg.lineStyle(1, 0x1e1008, 0.7);
-    lg.lineBetween(panelX + 8, y, panelX + panelW - 8, y);
-    y += parseInt(fs(10));
+    lg.lineStyle(1, 0x2a1a0a, 0.7);
+    lg.lineBetween(tabW, 0, tabW, H);
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  //  우상단 패널 — 재화 / 라운드 / Cog / 철수
+  // ════════════════════════════════════════════════════════════════
+  _buildTopPanel(W, H) {
+    const fs      = n => FontManager.adjustedSize(n, this.scale);
+    const tabW    = W * 0.10;
+    const panelX  = tabW;
+    const panelH  = H * 0.13;
+    const panelW  = W - tabW;
+
+    // 패널 배경
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0807, 0.9);
+    bg.lineStyle(1, 0x2a1a0a, 0.7);
+    bg.fillRect(panelX, 0, panelW, panelH);
+    bg.strokeRect(panelX, 0, panelW, panelH);
+
+    const cy = panelH / 2;
 
     // ── 심해화폐 ──────────────────────────────────────────────────
-    this.add.text(panelX + 10, y, '◈ 심해화폐', {
-      fontSize: fs(10), fill: '#2a3a50', fontFamily: FontManager.MONO,
-    });
-    this._deepCoinTxt = this.add.text(panelX + panelW - 10, y, `${this._deepCoin}`, {
-      fontSize: fs(12), fill: '#4a7ab0', fontFamily: FontManager.MONO,
-    }).setOrigin(1, 0);
-    y += parseInt(fs(18));
+    const coinX = panelX + panelW * 0.08;
+    this.add.text(coinX, cy - parseInt(fs(8)), '◈ 심해화폐', {
+      fontSize: fs(9), fill: '#2a3a50', fontFamily: FontManager.MONO,
+    }).setOrigin(0.5, 1);
+    this._deepCoinTxt = this.add.text(coinX, cy + parseInt(fs(4)), `${this._deepCoin}`, {
+      fontSize: fs(16), fill: '#4a8ac0', fontFamily: FontManager.TITLE,
+    }).setOrigin(0.5, 0);
 
-    // 구분선
-    const lg2 = this.add.graphics();
-    lg2.lineStyle(1, 0x1e1008, 0.5);
-    lg2.lineBetween(panelX + 8, y, panelX + panelW - 8, y);
-    y += parseInt(fs(8));
+    // ── 라운드 진행 ───────────────────────────────────────────────
+    const roundX = panelX + panelW * 0.28;
+    this.add.text(roundX, cy - parseInt(fs(8)), 'ROUND', {
+      fontSize: fs(9), fill: '#3a2010', fontFamily: FontManager.MONO, letterSpacing: 2,
+    }).setOrigin(0.5, 1);
+    this.add.text(roundX, cy + parseInt(fs(4)),
+      `${this._round}  /  ${this._maxRound}`, {
+        fontSize: fs(16), fill: '#a05018', fontFamily: FontManager.TITLE,
+      }).setOrigin(0.5, 0);
 
-    // ── 가방 (획득 아이템 — 추후 연동) ───────────────────────────
-    this.add.text(panelX + 10, y, '▣ 가방', {
-      fontSize: fs(10), fill: '#3a2a10', fontFamily: FontManager.MONO,
-    });
-    y += parseInt(fs(15));
-    this.add.text(panelX + 14, y, '(아이템 없음)', {
-      fontSize: fs(9), fill: '#1e1408', fontFamily: FontManager.MONO,
-    });
-    y += parseInt(fs(18));
+    // ── Cog 상한 ──────────────────────────────────────────────────
+    const cogX = panelX + panelW * 0.48;
+    const cogC = CharacterManager.getCogColor(this._cogMax);
+    this.add.text(cogX, cy - parseInt(fs(8)), 'COG LIMIT', {
+      fontSize: fs(9), fill: '#3a2010', fontFamily: FontManager.MONO, letterSpacing: 2,
+    }).setOrigin(0.5, 1);
+    this.add.text(cogX, cy + parseInt(fs(4)), `${this._cogMax}`, {
+      fontSize: fs(16), fill: cogC.css, fontFamily: FontManager.TITLE,
+    }).setOrigin(0.5, 0);
 
-    // 구분선
-    const lg3 = this.add.graphics();
-    lg3.lineStyle(1, 0x1e1008, 0.5);
-    lg3.lineBetween(panelX + 8, y, panelX + panelW - 8, y);
-    y += parseInt(fs(8));
-
-    // ── 기록지 ────────────────────────────────────────────────────
-    this.add.text(panelX + 10, y, '◉ 기록지', {
-      fontSize: fs(10), fill: '#3a2a10', fontFamily: FontManager.MONO,
-    });
-    y += parseInt(fs(15));
-
-    const logAreaH = panelH * 0.28;
-    const logClip  = this.add.graphics();
-    logClip.fillRect(panelX + 4, y, panelW - 8, logAreaH);
-    const logMask = logClip.createGeometryMask();
-
-    const logLines = this._log.length
-      ? this._log.slice(-8).reverse()
-      : [{ note: '기록 없음' }];
-
-    logLines.forEach((entry, i) => {
-      const txt = entry.note || `R${entry.round} ${entry.type || ''} — ${entry.result || ''}`;
-      const col = entry.result === 'defeat' ? '#5a2010'
-                : entry.result === 'victory' ? '#305020'
-                : '#2a1a08';
-      this.add.text(panelX + 12, y + i * parseInt(fs(13)), txt, {
-        fontSize: fs(9), fill: col, fontFamily: FontManager.MONO,
-        wordWrap: { width: panelW - 24 },
-      }).setMask(logMask);
-    });
-    y += logAreaH + parseInt(fs(8));
-
-    // 구분선
-    const lg4 = this.add.graphics();
-    lg4.lineStyle(1, 0x1e1008, 0.5);
-    lg4.lineBetween(panelX + 8, y, panelX + panelW - 8, y);
-    y += parseInt(fs(8));
-
-    // ── 파티 상태 ─────────────────────────────────────────────────
-    this.add.text(panelX + 10, y, '▷ 파티', {
-      fontSize: fs(10), fill: '#3a2a10', fontFamily: FontManager.MONO,
-    });
-    y += parseInt(fs(15));
-
+    // ── 탐사 파티 인원 ────────────────────────────────────────────
+    const partyX = panelX + panelW * 0.66;
     const allChars = CharacterManager.loadAll() || [];
-    this._battleParty.forEach(id => {
+    const alive = this._battleParty.filter(id => {
       const c = allChars.find(ch => ch.id === id);
-      if (!c) return;
-      const hpPct  = c.maxHp > 0 ? c.currentHp / c.maxHp : 0;
-      const hpCol  = hpPct > 0.6 ? '#306030' : hpPct > 0.3 ? '#806020' : '#802020';
-      const dead   = c.currentHp <= 0;
-      const nameC  = dead ? '#5a2222' : '#a09080';
-      this.add.text(panelX + 12, y, `${c.name}`, {
-        fontSize: fs(9), fill: nameC, fontFamily: FontManager.MONO,
-      });
-      if (!dead) {
-        const barW  = panelW - 24;
-        const barH  = Math.max(3, Math.round(H * 0.008));
-        const barY  = y + parseInt(fs(11));
-        const barBg = this.add.graphics();
-        barBg.fillStyle(0x1a0a06, 1);
-        barBg.fillRect(panelX + 12, barY, barW, barH);
-        const barFg = this.add.graphics();
-        barFg.fillStyle(Phaser.Display.Color.HexStringToColor(hpCol).color, 1);
-        barFg.fillRect(panelX + 12, barY, Math.round(barW * hpPct), barH);
-        y += parseInt(fs(9)) + barH + parseInt(fs(5));
-      } else {
-        this.add.text(panelX + 14, y + parseInt(fs(10)), '전투불능', {
-          fontSize: fs(8), fill: '#5a2222', fontFamily: FontManager.MONO,
-        });
-        y += parseInt(fs(22));
-      }
-    });
+      return c && c.currentHp > 0;
+    }).length;
+    this.add.text(partyX, cy - parseInt(fs(8)), '파티 생존', {
+      fontSize: fs(9), fill: '#3a2a10', fontFamily: FontManager.MONO,
+    }).setOrigin(0.5, 1);
+    this.add.text(partyX, cy + parseInt(fs(4)),
+      `${alive}  /  ${this._battleParty.length}`, {
+        fontSize: fs(16),
+        fill: alive > 0 ? '#608060' : '#a03018',
+        fontFamily: FontManager.TITLE,
+      }).setOrigin(0.5, 0);
 
     // ── 철수 버튼 ─────────────────────────────────────────────────
-    const exitY  = panelY + panelH - parseInt(fs(28));
+    const exitX = panelX + panelW * 0.88;
+    const exitW = Math.round(panelW * 0.16);
+    const exitH = Math.round(panelH * 0.52);
     const exitBg = this.add.graphics();
     const drawExit = (hover) => {
       exitBg.clear();
       exitBg.fillStyle(hover ? 0x1a0a06 : 0x0e0704, 1);
       exitBg.lineStyle(1, hover ? 0x804020 : 0x3a1a0a, 0.9);
-      exitBg.fillRect(panelX + 8, exitY, panelW - 16, parseInt(fs(22)));
-      exitBg.strokeRect(panelX + 8, exitY, panelW - 16, parseInt(fs(22)));
+      exitBg.fillRect(exitX - exitW / 2, cy - exitH / 2, exitW, exitH);
+      exitBg.strokeRect(exitX - exitW / 2, cy - exitH / 2, exitW, exitH);
     };
     drawExit(false);
-    const exitTxt = this.add.text(cx, exitY + parseInt(fs(11)), '철  수', {
+    const exitTxt = this.add.text(exitX, cy, '철  수', {
       fontSize: fs(12), fill: '#5a3010', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
-    const exitHit = this.add.rectangle(cx, exitY + parseInt(fs(11)), panelW - 16, parseInt(fs(22)), 0, 0)
-      .setInteractive({ useHandCursor: true });
-    exitHit.on('pointerover', () => { drawExit(true); exitTxt.setStyle({ fill: '#c06030' }); });
+    const exitHit = this.add.rectangle(exitX, cy, exitW, exitH, 0, 0)
+      .setInteractive({ useHandCursor: true }).setDepth(10);
+    exitHit.on('pointerover', () => { drawExit(true);  exitTxt.setStyle({ fill: '#c06030' }); });
     exitHit.on('pointerout',  () => { drawExit(false); exitTxt.setStyle({ fill: '#5a3010' }); });
     exitHit.on('pointerup',   () => this._exitExpedition());
     this._sceneHits.push(exitHit);
   }
 
   // ════════════════════════════════════════════════════════════════
-  //  중앙 슬롯머신
+  //  슬롯 영역 — 슬롯 3개 + 우측 레버
   // ════════════════════════════════════════════════════════════════
-  _buildCenterSlot(W, H) {
-    const fs = n => FontManager.adjustedSize(n, this.scale);
+  _buildSlotArea(W, H) {
+    const fs     = n => FontManager.adjustedSize(n, this.scale);
+    const tabW   = W * 0.10;
+    const topH   = H * 0.13;
+    const botH   = H * 0.30;
 
-    // 헤더
-    this.add.text(W * 0.61, H * 0.07, '라운드  선택', {
-      fontSize: fs(24), fill: '#6b4020', fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5);
-    this.add.text(W * 0.61, H * 0.07 + parseInt(fs(26)), `ROUND  ${this._round}  —  SELECT ENCOUNTER`, {
-      fontSize: fs(10), fill: '#2a1508', fontFamily: FontManager.MONO, letterSpacing: 3,
-    }).setOrigin(0.5);
+    // 슬롯 가용 영역
+    const slotAreaX = tabW;
+    const slotAreaY = topH;
+    const slotAreaW = W - tabW;
+    const slotAreaH = H - topH - botH;
 
+    // 힌트 텍스트
+    this._hintText = this.add.text(
+      slotAreaX + slotAreaW * 0.44,
+      slotAreaY + slotAreaH * 0.10,
+      '슬롯을 돌려 라운드를 결정하십시오', {
+        fontSize: fs(12), fill: '#2a1508', fontFamily: FontManager.MONO,
+      }).setOrigin(0.5);
+
+    // 라운드 라벨
+    this.add.text(
+      slotAreaX + slotAreaW * 0.44,
+      slotAreaY + slotAreaH * 0.04,
+      `ROUND  ${this._round}  —  SELECT ENCOUNTER`, {
+        fontSize: fs(10), fill: '#1e1008', fontFamily: FontManager.MONO, letterSpacing: 3,
+      }).setOrigin(0.5);
+
+    // 구분선
     const lineG = this.add.graphics();
-    lineG.lineStyle(1, 0x2a1a0a, 0.7);
-    lineG.lineBetween(W * 0.27, H * 0.16, W * 0.97, H * 0.16);
+    lineG.lineStyle(1, 0x2a1a0a, 0.6);
+    lineG.lineBetween(slotAreaX + 8, slotAreaY + slotAreaH * 0.16,
+      slotAreaX + slotAreaW * 0.88, slotAreaY + slotAreaH * 0.16);
 
-    this._hintText = this.add.text(W * 0.61, H * 0.20, '슬롯을 돌려 라운드를 결정하십시오', {
-      fontSize: fs(12), fill: '#2a1508', fontFamily: FontManager.MONO,
-    }).setOrigin(0.5);
-
-    // 슬롯 3칸
-    const cardW  = W * 0.19;
-    const cardH  = H * 0.58;
-    const cardY  = H * 0.545;
-    const gap    = W * 0.022;
-    const totalW = cardW * 3 + gap * 2;
-    const startX = W * 0.27 + (W * 0.70 - totalW) / 2;
+    // ── 슬롯 3칸 배치 ─────────────────────────────────────────────
+    // 레버 공간(오른쪽 12%) 제외하고 배치
+    const slotZoneW = slotAreaW * 0.86;
+    const cardW     = slotZoneW * 0.26;
+    const cardH     = slotAreaH * 0.72;
+    const cardY     = slotAreaY + slotAreaH * 0.57;
+    const gap       = (slotZoneW - cardW * 3) / 4;
+    const startX    = slotAreaX + gap + cardW / 2;
 
     this._slots = [];
     for (let i = 0; i < 3; i++) {
-      const cx = startX + i * (cardW + gap) + cardW / 2;
+      const cx = startX + i * (cardW + gap);
       this._slots.push(this._buildOneSlot(cx, cardY, cardW, cardH, i));
     }
+
+    // ── 레버 (우측) ───────────────────────────────────────────────
+    this._buildLever(W, H, slotAreaX, slotAreaY, slotAreaW, slotAreaH, fs);
   }
 
   _buildOneSlot(cx, cy, cw, ch, idx) {
@@ -350,7 +374,6 @@ class DiveScene extends Phaser.Scene {
     const stripCt = this.add.container(cx, cy - ch / 2);
     stripCt.setMask(mask);
 
-    // 카드 렌더
     strip.forEach((card, j) => {
       const cardY = j * ch;
       const bg = this.add.graphics();
@@ -359,14 +382,12 @@ class DiveScene extends Phaser.Scene {
       bg.fillRect(-cw / 2, cardY, cw, ch);
       bg.strokeRect(-cw / 2, cardY, cw, ch);
 
-      // 유형명 크게
       const mainTxt = this.add.text(0, cardY + ch * 0.38, card.label, {
         fontSize: FontManager.adjustedSize(16, this.scale),
         fill: card.color, fontFamily: FontManager.TITLE,
         align: 'center', wordWrap: { width: cw * 0.85 },
       }).setOrigin(0.5, 0.5);
 
-      // 설명 한 줄
       const descTxt = this.add.text(0, cardY + ch * 0.62, card.desc, {
         fontSize: FontManager.adjustedSize(9, this.scale),
         fill: card.color, fontFamily: FontManager.MONO,
@@ -376,84 +397,296 @@ class DiveScene extends Phaser.Scene {
       stripCt.add([bg, mainTxt, descTxt]);
     });
 
-    // hit area (선택용 — 슬롯 정지 후 활성화)
     const hitArea = this.add.rectangle(cx, cy, cw, ch, 0, 0).setDepth(5);
-
     return { frame, stripCt, mask, strip, cx, cy, cw, ch, stopped: false, targetCard: null, hitArea };
   }
 
-  // ════════════════════════════════════════════════════════════════
-  //  스핀 버튼
-  // ════════════════════════════════════════════════════════════════
-  _buildSpinButton(W, H) {
-    const fs   = n => FontManager.adjustedSize(n, this.scale);
-    const btnX = W * 0.61;
-    const btnY = H * 0.91;
-    const btnW = Math.round(W * 0.22);
-    const btnH = Math.round(H * 0.055);
+  // ── 레버 (스핀 + 재굴림) ─────────────────────────────────────────
+  _buildLever(W, H, areaX, areaY, areaW, areaH, fs) {
+    const leverX  = areaX + areaW * 0.92;
+    const leverCY = areaY + areaH * 0.52;
+    const leverW  = Math.round(areaW * 0.075);
+    const leverH  = Math.round(areaH * 0.55);
 
-    this._spinBtnBg  = this.add.graphics();
-    this._spinBtnTxt = this.add.text(btnX, btnY, '▶  슬롯  돌리기', {
-      fontSize: fs(16), fill: '#80c080', fontFamily: FontManager.TITLE,
+    // 레버 배경 박스
+    const leverBg = this.add.graphics();
+    const drawLever = (state) => {
+      leverBg.clear();
+      if (state === 'disabled') {
+        leverBg.fillStyle(0x080a08, 1);
+        leverBg.lineStyle(1, 0x1a2a1a, 0.4);
+      } else if (state === 'hover') {
+        leverBg.fillStyle(0x1a3a1a, 1);
+        leverBg.lineStyle(2, 0x70d070, 1);
+      } else if (state === 'active') {
+        leverBg.fillStyle(0x142014, 1);
+        leverBg.lineStyle(2, 0x50a050, 0.9);
+      } else { // pulling
+        leverBg.fillStyle(0x0a280a, 1);
+        leverBg.lineStyle(2, 0x80ff80, 1);
+      }
+      leverBg.fillRect(leverX - leverW / 2, leverCY - leverH / 2, leverW, leverH);
+      leverBg.strokeRect(leverX - leverW / 2, leverCY - leverH / 2, leverW, leverH);
+    };
+    this._drawLever  = drawLever;
+    this._leverState = 'active';
+    drawLever('active');
+
+    // 레버 기둥
+    const leverPole = this.add.graphics();
+    leverPole.lineStyle(3, 0x305030, 0.8);
+    leverPole.lineBetween(leverX, leverCY - leverH * 0.35, leverX, leverCY + leverH * 0.1);
+
+    // 레버 손잡이 (당기는 느낌 표시)
+    this._leverKnob = this.add.graphics();
+    const knobY = leverCY - leverH * 0.35;
+    this._leverKnobY = knobY;
+    this._leverKnobCY = leverCY;
+    this._leverPole   = leverPole;
+    this._leverX      = leverX;
+    this._leverW      = leverW;
+    this._leverH      = leverH;
+    this._drawKnob(knobY);
+
+    // 레버 라벨
+    this._leverLabelTxt = this.add.text(leverX, leverCY + leverH * 0.38, '▶ 당기기', {
+      fontSize: fs(9), fill: '#50a050', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
 
-    const drawSpin = (state) => {
-      this._spinBtnBg.clear();
-      if (state === 'disabled') {
-        this._spinBtnBg.fillStyle(0x080a08, 1);
-        this._spinBtnBg.lineStyle(1, 0x1a2a1a, 0.5);
-      } else if (state === 'hover') {
-        this._spinBtnBg.fillStyle(0x1a2a1a, 1);
-        this._spinBtnBg.lineStyle(2, 0x60c060, 1);
-      } else {
-        this._spinBtnBg.fillStyle(0x0e180e, 1);
-        this._spinBtnBg.lineStyle(2, 0x308030, 0.9);
-      }
-      this._spinBtnBg.fillRect(btnX - btnW / 2, btnY - btnH / 2, btnW, btnH);
-      this._spinBtnBg.strokeRect(btnX - btnW / 2, btnY - btnH / 2, btnW, btnH);
-    };
-    this._drawSpinBtn = drawSpin;
-    drawSpin('normal');
+    // 재굴림 텍스트 (슬롯 정지 후 표시)
+    this._rerollTxt = this.add.text(leverX, leverCY + leverH * 0.52,
+      `◈ ${this._deepCoin}`, {
+        fontSize: fs(9), fill: '#2a3a50', fontFamily: FontManager.MONO,
+      }).setOrigin(0.5).setAlpha(0);
 
-    const hit = this.add.rectangle(btnX, btnY, btnW, btnH, 0, 0)
+    // hit
+    const hit = this.add.rectangle(leverX, leverCY, leverW, leverH, 0, 0)
       .setInteractive({ useHandCursor: true }).setDepth(10);
-    this._spinHit = hit;
-
-    hit.on('pointerover', () => { if (this._phase === 'idle') drawSpin('hover'); });
-    hit.on('pointerout',  () => { if (this._phase === 'idle') drawSpin('normal'); });
-    hit.on('pointerdown', () => { if (this._phase === 'idle') drawSpin('down'); });
-    hit.on('pointerup',   () => {
-      if (this._phase !== 'idle') return;
-      this._startSpin();
-    });
+    this._leverHit = hit;
     this._sceneHits.push(hit);
 
-    // ── 재굴림 버튼 (슬롯 정지 후 표시, 심해화폐 소모) ───────────
-    const rerollX = W * 0.61;
-    const rerollY = btnY + btnH * 1.5;
-    this._rerollBg  = this.add.graphics().setAlpha(0);
-    this._rerollTxt = this.add.text(rerollX, rerollY, '◈ 재굴림  (심해화폐 1)', {
-      fontSize: fs(10), fill: '#2a3a50', fontFamily: FontManager.MONO,
-    }).setOrigin(0.5).setAlpha(0);
+    hit.on('pointerover', () => {
+      if (this._phase === 'idle') { drawLever('hover'); this._leverLabelTxt.setStyle({ fill: '#80ff80' }); }
+      if (this._phase === 'stopped' && this._deepCoin > 0) {
+        drawLever('hover'); this._rerollTxt.setStyle({ fill: '#6ab0e0' });
+      }
+    });
+    hit.on('pointerout', () => {
+      if (this._phase === 'idle') { drawLever('active'); this._leverLabelTxt.setStyle({ fill: '#50a050' }); }
+      if (this._phase === 'stopped') { drawLever('active'); this._rerollTxt.setStyle({ fill: '#2a3a50' }); }
+    });
+    hit.on('pointerdown', () => {
+      if (this._phase === 'idle') {
+        // 레버 당기기 애니
+        drawLever('pulling');
+        this._animLeverPull(() => this._startSpin());
+      } else if (this._phase === 'stopped' && this._deepCoin > 0) {
+        this._deepCoin -= 1;
+        if (this._deepCoinTxt) this._deepCoinTxt.setText(`${this._deepCoin}`);
+        this._rerollTxt.setText(`◈ ${this._deepCoin}`);
+        this._resetSlots();
+        this._animLeverPull(() => this._startSpin());
+      }
+    });
+  }
 
-    const rerollHit = this.add.rectangle(rerollX, rerollY, W * 0.20, btnH * 0.7, 0, 0)
-      .setDepth(10).setAlpha(0);
-    this._rerollHit = rerollHit;
+  _drawKnob(y) {
+    this._leverKnob.clear();
+    this._leverKnob.fillStyle(0x60a060, 1);
+    this._leverKnob.fillCircle(this._leverX, y, this._leverW * 0.28);
+    this._leverKnob.lineStyle(2, 0x80d080, 0.8);
+    this._leverKnob.strokeCircle(this._leverX, y, this._leverW * 0.28);
+  }
 
-    rerollHit.on('pointerover', () => {
-      this._rerollTxt.setStyle({ fill: '#6ab0e0' });
+  _animLeverPull(onComplete) {
+    // 손잡이가 아래로 내려갔다가 복귀하는 애니
+    const startY = this._leverKnobY;
+    const pullY  = this._leverCY + this._leverH * 0.1;
+    let progress = 0;
+    const timer  = this.time.addEvent({
+      delay: 16, repeat: 18,
+      callback: () => {
+        progress++;
+        const t = progress / 18;
+        const ease = t < 0.5
+          ? 4 * t * t * t
+          : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        const y = progress <= 9
+          ? startY + (pullY - startY) * (progress / 9)
+          : pullY  + (startY - pullY) * ((progress - 9) / 9);
+        this._drawKnob(y);
+        if (progress >= 18) {
+          this._drawKnob(startY);
+          onComplete && onComplete();
+        }
+      },
     });
-    rerollHit.on('pointerout', () => {
-      this._rerollTxt.setStyle({ fill: '#2a3a50' });
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  //  하단 패널 — 탭 콘텐츠
+  // ════════════════════════════════════════════════════════════════
+  _buildBottomPanel(W, H) {
+    const tabW   = W * 0.10;
+    const botH   = H * 0.30;
+    const panelX = tabW;
+    const panelY = H - botH;
+    const panelW = W - tabW;
+
+    // 패널 배경
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0807, 0.88);
+    bg.lineStyle(1, 0x2a1a0a, 0.7);
+    bg.fillRect(panelX, panelY, panelW, botH);
+    bg.strokeRect(panelX, panelY, panelW, botH);
+
+    this._botPanelX = panelX;
+    this._botPanelY = panelY;
+    this._botPanelW = panelW;
+    this._botPanelH = botH;
+
+    // 탭 콘텐츠 컨테이너 (탭 전환 시 교체)
+    this._tabContentContainer = this.add.container(0, 0).setDepth(5);
+  }
+
+  // ── 탭 전환 ──────────────────────────────────────────────────────
+  _switchTab(tabId) {
+    this._activeTab = tabId;
+
+    // 탭 버튼 상태 갱신
+    Object.keys(this._tabBtnObjs).forEach(id => {
+      const { drawTab, txt } = this._tabBtnObjs[id];
+      const isActive = id === tabId;
+      drawTab(isActive, false);
+      txt.setStyle({ fill: isActive ? '#c8a070' : '#6b4020' });
     });
-    rerollHit.on('pointerup', () => {
-      if (this._deepCoin < 1) return;
-      this._deepCoin -= 1;
-      if (this._deepCoinTxt) this._deepCoinTxt.setText(`${this._deepCoin}`);
-      this._resetSlots();
-      this._startSpin();
+
+    // 콘텐츠 교체
+    this._tabContentContainer.removeAll(true);
+
+    const fs = n => FontManager.adjustedSize(n, this.scale);
+    const px = this._botPanelX + 12;
+    const py = this._botPanelY + 10;
+    const pw = this._botPanelW - 24;
+    const ph = this._botPanelH - 20;
+
+    switch (tabId) {
+      case 'inventory':  this._buildTabInventory(px, py, pw, ph, fs); break;
+      case 'party':      this._buildTabParty(px, py, pw, ph, fs);     break;
+      case 'shop':       this._buildTabShop(px, py, pw, ph, fs);      break;
+      case 'journal':    this._buildTabJournal(px, py, pw, ph, fs);   break;
+    }
+  }
+
+  // ── 인벤토리 탭 ──────────────────────────────────────────────────
+  _buildTabInventory(px, py, pw, ph, fs) {
+    const lbl = this.add.text(px, py, '인벤토리', {
+      fontSize: fs(11), fill: '#4a2a10', fontFamily: FontManager.TITLE,
     });
-    this._sceneHits.push(rerollHit);
+    this._tabContentContainer.add(lbl);
+
+    const sub = this.add.text(px, py + parseInt(fs(16)), '(아이템 없음)', {
+      fontSize: fs(10), fill: '#1e1408', fontFamily: FontManager.MONO,
+    });
+    this._tabContentContainer.add(sub);
+  }
+
+  // ── 파티 관리 탭 ─────────────────────────────────────────────────
+  _buildTabParty(px, py, pw, ph, fs) {
+    const lbl = this.add.text(px, py, '파티 관리', {
+      fontSize: fs(11), fill: '#4a2a10', fontFamily: FontManager.TITLE,
+    });
+    this._tabContentContainer.add(lbl);
+
+    const allChars = CharacterManager.loadAll() || [];
+    const cardW = Math.round(pw / 8) - 6;
+    const cardH = Math.round(ph * 0.75);
+    let   cx    = px + cardW / 2;
+
+    this._battleParty.forEach(id => {
+      const c = allChars.find(ch => ch.id === id);
+      if (!c) return;
+      const hpPct = c.maxHp > 0 ? c.currentHp / c.maxHp : 0;
+      const dead  = c.currentHp <= 0;
+      const cogC  = CharacterManager.getCogColor(c.cog);
+
+      const cardBg = this.add.graphics();
+      cardBg.fillStyle(dead ? 0x1a0808 : 0x0c0906, 1);
+      cardBg.lineStyle(1, dead ? 0x5a1818 : cogC.phaser, 0.6);
+      cardBg.fillRect(cx - cardW / 2, py + parseInt(fs(20)), cardW, cardH);
+      cardBg.strokeRect(cx - cardW / 2, py + parseInt(fs(20)), cardW, cardH);
+      this._tabContentContainer.add(cardBg);
+
+      if (this.textures.exists(c.spriteKey)) {
+        const spr = this.add.image(cx, py + parseInt(fs(20)) + cardH * 0.36, c.spriteKey)
+          .setDisplaySize(cardW * 0.72, cardW * 0.72)
+          .setAlpha(dead ? 0.25 : 0.85);
+        this._tabContentContainer.add(spr);
+      }
+
+      const nameTxt = this.add.text(cx, py + parseInt(fs(20)) + cardH * 0.72, c.name, {
+        fontSize: fs(8), fill: dead ? '#5a2222' : '#c8bfb0',
+        fontFamily: FontManager.TITLE, wordWrap: { width: cardW - 4 }, align: 'center',
+      }).setOrigin(0.5);
+      this._tabContentContainer.add(nameTxt);
+
+      if (!dead) {
+        const bW = cardW * 0.82, bH = Math.max(3, 4);
+        const bY = py + parseInt(fs(20)) + cardH * 0.88;
+        const hpBar = this.add.graphics();
+        hpBar.fillStyle(0x1a1008, 1);
+        hpBar.fillRect(cx - bW / 2, bY, bW, bH);
+        const col = hpPct > 0.6 ? 0x306030 : hpPct > 0.3 ? 0x806020 : 0x803020;
+        hpBar.fillStyle(col, 1);
+        hpBar.fillRect(cx - bW / 2, bY, Math.round(bW * hpPct), bH);
+        this._tabContentContainer.add(hpBar);
+      } else {
+        const deadTxt = this.add.text(cx, py + parseInt(fs(20)) + cardH * 0.50, '전투불능', {
+          fontSize: fs(8), fill: '#c03030', fontFamily: FontManager.MONO,
+        }).setOrigin(0.5);
+        this._tabContentContainer.add(deadTxt);
+      }
+
+      cx += cardW + 6;
+    });
+  }
+
+  // ── 심해 상점 탭 ─────────────────────────────────────────────────
+  _buildTabShop(px, py, pw, ph, fs) {
+    const lbl = this.add.text(px, py, '심해 상점', {
+      fontSize: fs(11), fill: '#4a2a10', fontFamily: FontManager.TITLE,
+    });
+    this._tabContentContainer.add(lbl);
+    const sub = this.add.text(px, py + parseInt(fs(16)), '(준비 중)', {
+      fontSize: fs(10), fill: '#1e1408', fontFamily: FontManager.MONO,
+    });
+    this._tabContentContainer.add(sub);
+  }
+
+  // ── 탐사 일지 탭 ─────────────────────────────────────────────────
+  _buildTabJournal(px, py, pw, ph, fs) {
+    const lbl = this.add.text(px, py, '탐사 일지', {
+      fontSize: fs(11), fill: '#4a2a10', fontFamily: FontManager.TITLE,
+    });
+    this._tabContentContainer.add(lbl);
+
+    const logLines = this._log.length
+      ? this._log.slice().reverse()
+      : [{ note: '기록 없음' }];
+
+    logLines.forEach((entry, i) => {
+      const txt = entry.note
+        || `R${entry.round}  ${entry.type || ''}  —  ${entry.result || ''}`;
+      const col = entry.result === 'defeat'  ? '#7a2a10'
+                : entry.result === 'victory' ? '#305020'
+                : '#3a2a10';
+      const line = this.add.text(
+        px, py + parseInt(fs(20)) + i * parseInt(fs(14)), `▸ ${txt}`, {
+          fontSize: fs(10), fill: col, fontFamily: FontManager.MONO,
+          wordWrap: { width: pw - 8 },
+        });
+      this._tabContentContainer.add(line);
+    });
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -465,15 +698,12 @@ class DiveScene extends Phaser.Scene {
     this._chosen    = -1;
     this._canChoose = false;
 
-    this._drawSpinBtn('disabled');
-    this._spinHit.disableInteractive();
+    this._drawLever('disabled');
+    this._leverHit.disableInteractive();
+    this._leverLabelTxt.setStyle({ fill: '#2a4a2a' });
+    this._rerollTxt.setAlpha(0);
     this._hintText.setText('라운드를 결정하는 중...');
     this._hintText.setStyle({ fill: '#2a1508' });
-
-    // 재굴림 버튼 숨김
-    this._rerollBg.setAlpha(0);
-    this._rerollTxt.setAlpha(0);
-    this._rerollHit.setAlpha(0).disableInteractive();
 
     const stopDelays = [1400, 2200, 3000];
     this._slots.forEach((slot, i) => {
@@ -483,7 +713,6 @@ class DiveScene extends Phaser.Scene {
       slot.stopped       = false;
       const spinDist     = slot.ch * (totalItems - 2);
 
-      // 초기 위치 리셋
       slot.stripCt.setY(slot.cy - slot.ch / 2);
 
       this.tweens.add({
@@ -499,26 +728,24 @@ class DiveScene extends Phaser.Scene {
       });
     });
 
-    // 로딩 도트 애니
     let dotCount = 0;
     this._spinTimer = this.time.addEvent({
       delay: 400, loop: true,
       callback: () => {
-        this._hintText.setText('라운드를 결정하는 중  ' + ['·', '· ·', '· · ·'][dotCount++ % 3]);
+        this._hintText.setText('라운드를 결정하는 중  '
+          + ['·', '· ·', '· · ·'][dotCount++ % 3]);
       },
     });
   }
 
   _onSlotStopped(idx) {
     const slot = this._slots[idx];
-    // 테두리 강조
     slot.frame.clear();
     slot.frame.lineStyle(2, slot.targetCard.borderHex, 1);
     slot.frame.strokeRect(slot.cx - slot.cw / 2, slot.cy - slot.ch / 2, slot.cw, slot.ch);
 
     if (!this._slots.every(s => s.stopped)) return;
 
-    // 전체 정지
     if (this._spinTimer) this._spinTimer.remove();
     this._phase     = 'stopped';
     this._canChoose = true;
@@ -526,11 +753,15 @@ class DiveScene extends Phaser.Scene {
     this._hintText.setText('라운드 유형을 선택하십시오');
     this._hintText.setStyle({ fill: '#8a6040' });
 
-    // 재굴림 버튼 표시 (심해화폐 있을 때)
+    // 레버 → 재굴림 모드
     if (this._deepCoin > 0) {
-      this._rerollBg.setAlpha(1);
-      this._rerollTxt.setAlpha(1).setText(`◈ 재굴림  (심해화폐 ${this._deepCoin})`);
-      this._rerollHit.setAlpha(1).setInteractive({ useHandCursor: true });
+      this._drawLever('active');
+      this._leverLabelTxt.setText('◈ 재굴림').setStyle({ fill: '#2a3a50' });
+      this._rerollTxt.setText(`심해화폐 ${this._deepCoin}`).setAlpha(1);
+      this._leverHit.setInteractive({ useHandCursor: true });
+    } else {
+      this._drawLever('disabled');
+      this._leverLabelTxt.setText('재굴림 불가').setStyle({ fill: '#2a1a0a' });
     }
 
     this._enableCardSelection();
@@ -567,10 +798,9 @@ class DiveScene extends Phaser.Scene {
     this._canChoose = false;
     this._phase     = 'chosen';
 
-    // 재굴림 숨김
-    this._rerollBg.setAlpha(0);
+    this._drawLever('disabled');
+    this._leverHit.disableInteractive();
     this._rerollTxt.setAlpha(0);
-    this._rerollHit.disableInteractive().setAlpha(0);
 
     // 선택 카드 강조
     const chosen = this._slots[idx];
@@ -592,55 +822,25 @@ class DiveScene extends Phaser.Scene {
     });
 
     const card = chosen.targetCard;
-    this._hintText.setText(`${card.label.replace(/\s/g, '')}  —  전투 시작`);
+    this._hintText.setText(`${card.label.replace(/\s/g, '')}  —  전투 진입`);
     this._hintText.setStyle({ fill: card.color });
 
-    // 기록지 추가
-    this._log.push({ round: this._round, type: card.type, result: 'pending', note: `R${this._round} ${card.label.replace(/\s/g, '')}` });
+    this._log.push({
+      round:  this._round,
+      type:   card.type,
+      result: 'pending',
+      note:   `R${this._round}  ${card.label.replace(/\s/g, '')}`,
+    });
 
     this.time.delayedCall(800, () => this._enterBattle(card.type));
   }
 
-  // ════════════════════════════════════════════════════════════════
-  //  씬 전환
-  // ════════════════════════════════════════════════════════════════
-  _enterBattle(battleType) {
-    const flash = this.add.rectangle(0, 0, this.W, this.H, 0x050407, 0)
-      .setOrigin(0).setDepth(999);
-    this.tweens.add({
-      targets: flash, alpha: 1, duration: 350, ease: 'Sine.easeIn',
-      onComplete: () => {
-        this.scene.start('BattleReadyScene', {
-          cogMax:      this._cogMax,
-          battleParty: this._battleParty,
-          round:       this._round,
-          battleType:  battleType,   // ← BattleScene으로 전달
-          maxRound:    this._maxRound,
-          deepCoin:    this._deepCoin,
-          log:         this._log,
-        });
-      },
-    });
-  }
-
-  _exitExpedition() {
-    const flash = this.add.rectangle(0, 0, this.W, this.H, 0x050407, 0)
-      .setOrigin(0).setDepth(999);
-    this.tweens.add({
-      targets: flash, alpha: 1, duration: 400, ease: 'Sine.easeIn',
-      onComplete: () => {
-        this.scene.start('AtelierScene');
-      },
-    });
-  }
-
-  // ── 슬롯 리셋 (재굴림용) ─────────────────────────────────────────
+  // ── 슬롯 리셋 ────────────────────────────────────────────────────
   _resetSlots() {
     this._slots.forEach(slot => {
       slot.stopped = false;
       const newStrip = _makeDiveStrip(22);
       slot.strip = newStrip;
-      // 스트립 컨테이너 자식 재생성
       slot.stripCt.removeAll(true);
       const { cw, ch } = slot;
       newStrip.forEach((card, j) => {
@@ -668,8 +868,40 @@ class DiveScene extends Phaser.Scene {
       slot.hitArea.disableInteractive();
     });
     this._phase = 'idle';
-    this._drawSpinBtn('normal');
-    this._spinHit.setInteractive({ useHandCursor: true });
+    this._drawLever('active');
+    this._leverLabelTxt.setText('▶ 당기기').setStyle({ fill: '#50a050' });
+    this._leverHit.setInteractive({ useHandCursor: true });
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  //  씬 전환
+  // ════════════════════════════════════════════════════════════════
+  _enterBattle(battleType) {
+    const flash = this.add.rectangle(0, 0, this.W, this.H, 0x050407, 0)
+      .setOrigin(0).setDepth(999);
+    this.tweens.add({
+      targets: flash, alpha: 1, duration: 350, ease: 'Sine.easeIn',
+      onComplete: () => {
+        this.scene.start('BattleScene', {
+          cogMax:      this._cogMax,
+          battleParty: this._battleParty,
+          round:       this._round,
+          battleType,
+          maxRound:    this._maxRound,
+          deepCoin:    this._deepCoin,
+          log:         this._log,
+        });
+      },
+    });
+  }
+
+  _exitExpedition() {
+    const flash = this.add.rectangle(0, 0, this.W, this.H, 0x050407, 0)
+      .setOrigin(0).setDepth(999);
+    this.tweens.add({
+      targets: flash, alpha: 1, duration: 400, ease: 'Sine.easeIn',
+      onComplete: () => this.scene.start('AtelierScene'),
+    });
   }
 
   // ── 씬 정리 ──────────────────────────────────────────────────────

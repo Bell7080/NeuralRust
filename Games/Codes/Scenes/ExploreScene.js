@@ -287,9 +287,15 @@ class ExploreScene extends Phaser.Scene {
     this.tweens.add({
       targets: flash, alpha: 1, duration: 400, ease: 'Sine.easeIn',
       onComplete: () => {
-        // 난이도 선택 확정 → BattleReadyScene (전투 파티 재편성)으로 진입
+        // 난이도 선택 확정 → DiveScene (탐사 로비 + 라운드 슬롯)으로 진입
         // 탐사 파티(nr_party)는 PartyScene에서 이미 저장됨
-        this.scene.start('BattleReadyScene', { cogMax: card.cog });
+        this.scene.start('DiveScene', {
+          cogMax:   card.cog,
+          round:    1,
+          maxRound: 5,
+          deepCoin: 0,
+          log:      [],
+        });
       },
     });
   }
