@@ -132,8 +132,9 @@ class ExploreScene extends Phaser.Scene {
     const bg = this.add.graphics();
     bg.fillStyle(0x0c0a07, 1);
     bg.lineStyle(1, card.border, 0.35);
-    bg.strokeRect(-cw / 2 + 1, itemY - ch / 2 + 1, cw - 2, ch - 2);
-    bg.fillRect(-cw / 2 + 1, itemY - ch / 2 + 1, cw - 2, ch - 2);
+    const inset = Math.round(cw * 0.004);
+    bg.strokeRect(-cw / 2 + inset, itemY - ch / 2 + inset, cw - inset * 2, ch - inset * 2);
+    bg.fillRect(-cw / 2 + inset, itemY - ch / 2 + inset, cw - inset * 2, ch - inset * 2);
     container.add(bg);
 
     if (card.type === 'combat') {

@@ -17,9 +17,11 @@
 //    - 종료 → 결산 팝업 → DiveScene 복귀 or AtelierScene
 //
 //  진입 데이터:
-//    { cogMax, battleParty, round, battleType, maxRound, deepCoin, log }
+//    { cogMax, battleParty, round, battleType, maxRound, deepCoin, log,
+//      inventory, submarine, shopItems }
 //    battleParty = 탐사 파티 전원 id (편성 풀)
 //    battleType  = 'normal' | 'wave' | 'raid'
+//    inventory / submarine / shopItems = 탐사 내 라운드 간 유지 데이터
 //
 //  전투 유형:
 //    normal — 가중치 추첨
@@ -39,12 +41,16 @@ class BattleScene extends Phaser.Scene {
   // ── 진입 데이터 ──────────────────────────────────────────────────
   init(data) {
     this._cogMax      = data.cogMax      || 1;
-    this._battleParty = data.battleParty || [];  // 탐사 파티 전원 id
+    this._battleParty = data.battleParty || [];
     this._round       = data.round       || 1;
     this._battleType  = data.battleType  || 'normal';
     this._maxRound    = data.maxRound    || 5;
     this._deepCoin    = data.deepCoin    || 0;
     this._log         = data.log         || [];
+    // 탐사 내 라운드 간 유지 데이터 (DiveScene ↔ BattleScene 왕복)
+    this._inventory   = data.inventory   || null;
+    this._submarine   = data.submarine   || null;
+    this._shopItems   = data.shopItems   || null;
   }
 
   // ── 씬 생성 ──────────────────────────────────────────────────────
@@ -229,17 +235,17 @@ class BattleScene extends Phaser.Scene {
     shape.fillRect(cx - half, cy - half, half * 2, half * 2);
     shape.strokeRect(cx - half, cy - half, half * 2, half * 2);
 
-    const nameTxt = this.add.text(cx, cy - half - 4, enemy.name, {
+    const nameTxt = this.add.text(cx, cy - half - Math.round(size * 0.04), enemy.name, {
       fontSize: fs(11), fill: '#c8a060', fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 1);
 
     const barW = size * 0.9, barH = Math.max(6, Math.round(size * 0.1));
-    const barY = cy + half + 4;
+    const barY = cy + half + Math.round(size * 0.06);
     const hpBg = this.add.graphics();
     hpBg.fillStyle(0x1a0a06, 1);
     hpBg.fillRect(cx - barW / 2, barY, barW, barH);
     const hpFg = this.add.graphics();
-    const hpNumTxt = this.add.text(cx, barY + barH + 2, '', {
+    const hpNumTxt = this.add.text(cx, barY + barH + Math.round(size * 0.03), '', {
       fontSize: fs(9), fill: '#a06040', fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 0);
 
@@ -292,7 +298,7 @@ class BattleScene extends Phaser.Scene {
     const cols      = 3;
     const cardW     = Math.round((panelW - 16) / cols) - 4;
     const cardH     = Math.round(cardW * 1.18);
-    const gapX = 4, gapY = 4;
+    const gapX = Math.round(H * 0.004), gapY = Math.round(H * 0.004);
     const gridW     = cols * cardW + (cols - 1) * gapX;
     const gridStartX = panelW / 2 - gridW / 2 + cardW / 2;
 
@@ -391,12 +397,13 @@ class BattleScene extends Phaser.Scene {
     const slotAreaH = H * 0.14;
     const availW    = W - panelW - W * 0.01;
     const maxSlots  = Math.max(1, this._partyChars.length);
+    const slotGap    = Math.round(H * 0.006);
     const slotW     = Math.min(
-      Math.floor((availW - (maxSlots - 1) * 6) / maxSlots),
+      Math.floor((availW - (maxSlots - 1) * slotGap) / maxSlots),
       Math.round(slotAreaH * 0.76)
     );
     const slotH     = slotW;
-    const totalSW   = maxSlots * slotW + (maxSlots - 1) * 6;
+    const totalSW   = maxSlots * slotW + (maxSlots - 1) * slotGap;
     const startX    = panelW + (availW - totalSW) / 2 + slotW / 2;
     const slotY     = slotAreaY + slotAreaH / 2;
 
@@ -414,7 +421,7 @@ class BattleScene extends Phaser.Scene {
 
     this._combatSlotObjs = [];
     for (let i = 0; i < maxSlots; i++) {
-      const cx   = startX + i * (slotW + 6);
+      const cx   = startX + i * (slotW + slotGap);
       const objs = this._makeCombatSlot(cx, slotY, slotW, slotH, i, fs);
       this._combatSlotObjs.push(objs);
     }
@@ -437,7 +444,7 @@ class BattleScene extends Phaser.Scene {
     this._setupContainer.add(bg);
 
     // 포지션 번호
-    const numTxt = this.add.text(cx, cy - h / 2 + 3, `${idx + 1}`, {
+    const numTxt = this.add.text(cx, cy - h / 2 + Math.round(h * 0.06), `${idx + 1}`, {
       fontSize: fs(8), fill: '#1e1008', fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 0);
     this._setupContainer.add(numTxt);
@@ -449,7 +456,7 @@ class BattleScene extends Phaser.Scene {
 
     const nameTxt = this.add.text(cx, cy + h * 0.22, '', {
       fontSize: fs(7), fill: '#c8bfb0', fontFamily: FontManager.TITLE,
-      wordWrap: { width: w - 2 }, align: 'center',
+      wordWrap: { width: w * 0.96 }, align: 'center',
     }).setOrigin(0.5).setAlpha(0);
     this._setupContainer.add(nameTxt);
 
@@ -632,11 +639,11 @@ class BattleScene extends Phaser.Scene {
     bg.fillRect(logX, logY, logW, logH);
     bg.strokeRect(logX, logY, logW, logH);
 
-    this._logAreaX    = logX + 6;
+    this._logAreaX    = logX + W * 0.004;
     this._logAreaY    = logY;
     this._logAreaH    = logH;
-    this._logAreaW    = logW - 12;
-    this._logLineH    = parseInt(FontManager.adjustedSize(12, this.scale)) + 4;
+    this._logAreaW    = logW - W * 0.008;
+    this._logLineH    = parseInt(FontManager.adjustedSize(12, this.scale)) + Math.round(H * 0.004);
     this._logMaxLines = Math.floor(logH / this._logLineH) - 1;
 
     const maskG = this.make.graphics({});
@@ -698,7 +705,7 @@ class BattleScene extends Phaser.Scene {
     const cogC = CharacterManager.getCogColor(ally.cog);
     const rad  = size * 0.38;
 
-    this.add.text(cx, cy - rad - 16, `${posIdx + 1}`, {
+    this.add.text(cx, cy - rad - Math.round(size * 0.16), `${posIdx + 1}`, {
       fontSize: fs(9), fill: '#2a1a0a', fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 1);
 
@@ -714,13 +721,13 @@ class BattleScene extends Phaser.Scene {
         .setDisplaySize(rad * 1.5, rad * 1.5).setAlpha(0.9);
     }
 
-    const nameTxt = this.add.text(cx, cy + rad + 4, ally.name, {
+    const nameTxt = this.add.text(cx, cy + rad + Math.round(size * 0.04), ally.name, {
       fontSize: fs(10), fill: '#c8bfb0', fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 0);
 
     const barW = size * 0.95, barH = Math.max(5, Math.round(size * 0.09));
-    const hpBarY    = cy + rad + parseInt(fs(14)) + 6;
-    const gaugeBarY = hpBarY + barH + 3;
+    const hpBarY    = cy + rad + parseInt(fs(14)) + Math.round(size * 0.06);
+    const gaugeBarY = hpBarY + barH + Math.round(size * 0.03);
 
     const hpBg = this.add.graphics();
     hpBg.fillStyle(0x0a0808, 1);
@@ -735,13 +742,13 @@ class BattleScene extends Phaser.Scene {
     const hpTxt = this.add.text(cx, hpBarY - 1, '', {
       fontSize: fs(8), fill: '#7a6040', fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 1);
-    const gaugeTxt = this.add.text(cx, gaugeBarY + barH + 1, '', {
+    const gaugeTxt = this.add.text(cx, gaugeBarY + barH + Math.round(size * 0.01), '', {
       fontSize: fs(8), fill: '#4a5870', fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 0);
 
     const deadOverlay = this.add.graphics().setAlpha(0);
     deadOverlay.fillStyle(0x000000, 0.65);
-    deadOverlay.fillCircle(cx, cy, rad + 2);
+    deadOverlay.fillCircle(cx, cy, rad + Math.round(size * 0.02));
     const deadTxt = this.add.text(cx, cy, '전투불능', {
       fontSize: fs(9), fill: '#cc2222', fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setAlpha(0);
@@ -1019,6 +1026,9 @@ class BattleScene extends Phaser.Scene {
                 maxRound:    this._maxRound,
                 deepCoin:    this._deepCoin,
                 log:         this._log,
+                inventory:   this._inventory,
+                submarine:   this._submarine,
+                shopItems:   this._shopItems,
               });
             }
           } else {
