@@ -58,11 +58,11 @@ function DiveBuildSlotArea(scene, W, H) {
   lineG.lineStyle(1, 0x2a1a0a, 0.6);
   lineG.lineBetween(areaX + 8, areaY + areaH * 0.16, areaX + areaW * 0.88, areaY + areaH * 0.16);
 
-  // 슬롯 3칸
+  // 슬롯 3칸 — 카드 크기는 화면 비율 기반 최대값으로 고정
   const slotZoneW = areaW * 0.86;
-  const cardW     = slotZoneW * 0.26;
-  const cardH     = areaH * 0.72;
-  const cardY     = areaY + areaH * 0.57;
+  const cardW     = Math.round(slotZoneW * 0.26);
+  const cardH     = Math.min(Math.round(areaH * 0.62), Math.round(H * 0.55));  // 최대 화면 55%
+  const cardY     = areaY + areaH * 0.50;   // 가용 영역 세로 중앙
   const gap       = (slotZoneW - cardW * 3) / 4;
   const startX    = areaX + gap + cardW / 2;
 
