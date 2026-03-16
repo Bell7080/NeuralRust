@@ -56,29 +56,29 @@ function DivePanelShop(scene, px, py, pw, ph, fs) {
   const title = scene.add.text(px, py, '심  해  상  점', {
     fontSize: fs(12), fill: '#4a2a10', fontFamily: FontManager.TITLE,
   });
-  scene._tabContentContainer.add(title);
+  scene._panelContent.add(title);
 
   const coinTxt = scene.add.text(px + pw - 4, py, `보유 심해화폐  ◈ ${scene._deepCoin}`, {
     fontSize: fs(10), fill: '#4a8ac0', fontFamily: FontManager.MONO,
   }).setOrigin(1, 0);
-  scene._tabContentContainer.add(coinTxt);
+  scene._panelContent.add(coinTxt);
 
   // 구분선
   const lg = scene.add.graphics();
   lg.lineStyle(1, 0x2a1a0a, 0.6);
   lg.lineBetween(px, py + parseInt(fs(18)), px + pw, py + parseInt(fs(18)));
-  scene._tabContentContainer.add(lg);
+  scene._panelContent.add(lg);
 
   // 섹션 라벨
   const lblConsume = scene.add.text(px, py + parseInt(fs(22)), '▸ 소모품', {
     fontSize: fs(9), fill: '#3a2010', fontFamily: FontManager.MONO,
   });
-  scene._tabContentContainer.add(lblConsume);
+  scene._panelContent.add(lblConsume);
 
   const lblAug = scene.add.text(px + pw * 0.52, py + parseInt(fs(22)), '▸ 증강', {
     fontSize: fs(9), fill: '#3a2010', fontFamily: FontManager.MONO,
   });
-  scene._tabContentContainer.add(lblAug);
+  scene._panelContent.add(lblAug);
 
   // 아이템 카드 렌더
   const itemH    = Math.round((ph - parseInt(fs(34))) / 3);
@@ -107,13 +107,13 @@ function _diveRenderShopCard(scene, item, cx, cy, cw, ch, fs, onBuy) {
   bg.lineStyle(1, sold ? 0x1a1008 : (canAfford ? 0x4a3818 : 0x1a1008), sold ? 0.3 : 0.8);
   bg.fillRect(cx, cy, cw, ch);
   bg.strokeRect(cx, cy, cw, ch);
-  scene._tabContentContainer.add(bg);
+  scene._panelContent.add(bg);
 
   if (sold) {
     const soldTxt = scene.add.text(cx + cw / 2, cy + ch / 2, 'SOLD', {
       fontSize: fs(11), fill: '#3a2010', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
-    scene._tabContentContainer.add(soldTxt);
+    scene._panelContent.add(soldTxt);
     return;
   }
 
@@ -121,19 +121,19 @@ function _diveRenderShopCard(scene, item, cx, cy, cw, ch, fs, onBuy) {
   const iconGfx = scene.add.graphics();
   iconGfx.fillStyle(Phaser.Display.Color.HexStringToColor(item.color || '#808080').color, 0.7);
   iconGfx.fillCircle(cx + ch * 0.5, cy + ch / 2, ch * 0.28);
-  scene._tabContentContainer.add(iconGfx);
+  scene._panelContent.add(iconGfx);
 
   // 이름 + 설명
   const nameTxt = scene.add.text(cx + ch + 4, cy + 3, item.name, {
     fontSize: fs(10), fill: '#c8a070', fontFamily: FontManager.TITLE,
   });
-  scene._tabContentContainer.add(nameTxt);
+  scene._panelContent.add(nameTxt);
 
   const descTxt = scene.add.text(cx + ch + 4, cy + 3 + parseInt(fs(13)), item.desc, {
     fontSize: fs(8), fill: '#6a5040', fontFamily: FontManager.MONO,
     wordWrap: { width: cw - ch - 8 - 40 },
   });
-  scene._tabContentContainer.add(descTxt);
+  scene._panelContent.add(descTxt);
 
   // 가격 + 구매 버튼
   const btnW = 36, btnH = ch - 8;
@@ -154,19 +154,19 @@ function _diveRenderShopCard(scene, item, cx, cy, cw, ch, fs, onBuy) {
     btnBg.strokeRect(btnX, btnY, btnW, btnH);
   };
   drawBtn(false);
-  scene._tabContentContainer.add(btnBg);
+  scene._panelContent.add(btnBg);
 
   const priceTxt = scene.add.text(btnX + btnW / 2, btnY + btnH / 2,
     `◈${item.price}`, {
       fontSize: fs(9), fill: canAfford ? '#c8a070' : '#2a1a08',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
-  scene._tabContentContainer.add(priceTxt);
+  scene._panelContent.add(priceTxt);
 
   if (canAfford) {
     const hit = scene.add.rectangle(btnX + btnW/2, btnY + btnH/2, btnW, btnH, 0, 0)
       .setInteractive({ useHandCursor: true }).setDepth(7);
-    scene._tabContentContainer.add(hit);
+    scene._panelContent.add(hit);
     hit.on('pointerover', () => drawBtn(true));
     hit.on('pointerout',  () => drawBtn(false));
     hit.on('pointerdown', () => {

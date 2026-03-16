@@ -39,7 +39,7 @@ function DivePanelInventory(scene, px, py, pw, ph, fs) {
   const lbl = scene.add.text(px, py, `인벤토리  (${scene._inventory.filter(Boolean).length} / ${INVENTORY_MAX})`, {
     fontSize: fs(11), fill: '#4a2a10', fontFamily: FontManager.TITLE,
   });
-  scene._tabContentContainer.add(lbl);
+  scene._panelContent.add(lbl);
 
   // 칸 렌더
   for (let row = 0; row < INVENTORY_ROWS; row++) {
@@ -54,26 +54,26 @@ function DivePanelInventory(scene, px, py, pw, ph, fs) {
       cellBg.lineStyle(1, item ? 0x6a4020 : 0x1e1008, item ? 0.8 : 0.4);
       cellBg.fillRect(cx - cellSize/2, cy - cellSize/2, cellSize, cellSize);
       cellBg.strokeRect(cx - cellSize/2, cy - cellSize/2, cellSize, cellSize);
-      scene._tabContentContainer.add(cellBg);
+      scene._panelContent.add(cellBg);
 
       if (item) {
         // 아이템 아이콘 (색상 원형)
         const icon = scene.add.graphics();
         icon.fillStyle(Phaser.Display.Color.HexStringToColor(item.color || '#a05018').color, 0.8);
         icon.fillCircle(cx, cy - cellSize * 0.1, cellSize * 0.26);
-        scene._tabContentContainer.add(icon);
+        scene._panelContent.add(icon);
 
         // 아이템 이름
         const nameTxt = scene.add.text(cx, cy + cellSize * 0.28, item.name, {
           fontSize: fs(7), fill: '#c8bfb0', fontFamily: FontManager.MONO,
           wordWrap: { width: cellSize - 4 }, align: 'center',
         }).setOrigin(0.5);
-        scene._tabContentContainer.add(nameTxt);
+        scene._panelContent.add(nameTxt);
 
         // 호버 툴팁 hit
         const hit = scene.add.rectangle(cx, cy, cellSize, cellSize, 0, 0)
           .setInteractive({ useHandCursor: true }).setDepth(6);
-        scene._tabContentContainer.add(hit);
+        scene._panelContent.add(hit);
         hit.on('pointerover', () => _diveShowItemTooltip(scene, cx, cy, item, cellSize));
         hit.on('pointerout',  () => _diveHideItemTooltip(scene));
       }
@@ -83,7 +83,7 @@ function DivePanelInventory(scene, px, py, pw, ph, fs) {
         const numTxt = scene.add.text(cx, cy, `${idx + 1}`, {
           fontSize: fs(8), fill: '#1a1008', fontFamily: FontManager.MONO,
         }).setOrigin(0.5);
-        scene._tabContentContainer.add(numTxt);
+        scene._panelContent.add(numTxt);
       }
     }
   }

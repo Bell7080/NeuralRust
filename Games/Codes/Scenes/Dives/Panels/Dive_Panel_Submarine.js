@@ -56,7 +56,7 @@ function _subBuildAbyssArea(scene, px, py, pw, ph, fs) {
   bg.lineStyle(1, 0x1a1a2a, 0.5);
   bg.fillRect(px, py, pw, ph);
   bg.strokeRect(px, py, pw, ph);
-  scene._tabContentContainer.add(bg);
+  scene._panelContent.add(bg);
 
   // 배경 별 (고정 분위기 파티클)
   const starGfx = scene.add.graphics();
@@ -71,13 +71,13 @@ function _subBuildAbyssArea(scene, px, py, pw, ph, fs) {
     starGfx.fillStyle(col, alpha);
     starGfx.fillCircle(sx, sy, r);
   }
-  scene._tabContentContainer.add(starGfx);
+  scene._panelContent.add(starGfx);
 
   // 섹션 라벨
   const lbl = scene.add.text(px + 6, py + 4, '대  기  —  클릭하여 장착', {
     fontSize: fs(8), fill: '#2a2a3a', fontFamily: FontManager.MONO, letterSpacing: 1,
   }).setDepth(6);
-  scene._tabContentContainer.add(lbl);
+  scene._panelContent.add(lbl);
 
   // 대기 증강 렌더
   scene._submarine.pending.forEach(aug => {
@@ -105,12 +105,12 @@ function _subRenderPendingAug(scene, aug, areaX, areaY, areaW, areaH, fs) {
     glow.fillStyle(col, hover ? 1.0  : 0.75); glow.fillCircle(aug.x, aug.y, size * 0.42);
   };
   drawGlow(false);
-  scene._tabContentContainer.add(glow);
+  scene._panelContent.add(glow);
 
   // hit
   const hit = scene.add.circle(aug.x, aug.y, size * 2.0, 0, 0)
     .setInteractive({ useHandCursor: true }).setDepth(7);
-  scene._tabContentContainer.add(hit);
+  scene._panelContent.add(hit);
 
   hit.on('pointerover', () => {
     drawGlow(true);
@@ -148,7 +148,7 @@ function _subBuildSteampunkGrid(scene, px, py, pw, ph, fs) {
     '잠  수  정  —  장착 시 효과 발동', {
       fontSize: fs(8), fill: '#3a2a10', fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 0).setDepth(6);
-  scene._tabContentContainer.add(lbl);
+  scene._panelContent.add(lbl);
 
   // 그리드 외곽 — 스팀펑크 파이프 느낌 테두리
   const outerBg = scene.add.graphics().setDepth(5);
@@ -158,7 +158,7 @@ function _subBuildSteampunkGrid(scene, px, py, pw, ph, fs) {
   outerBg.strokeRect(startX - 6, startY - 6, gridW + 12, gridH + 12);
   // 모서리 볼트 장식
   _subDrawCornerBolts(scene, outerBg, startX - 6, startY - 6, gridW + 12, gridH + 12);
-  scene._tabContentContainer.add(outerBg);
+  scene._panelContent.add(outerBg);
 
   // 셀 렌더
   for (let row = 0; row < SUB_ROWS; row++) {
@@ -170,7 +170,7 @@ function _subBuildSteampunkGrid(scene, px, py, pw, ph, fs) {
 
       const cell = scene.add.graphics().setDepth(6);
       _subDrawCell(cell, cx, cy, cellSize, aug);
-      scene._tabContentContainer.add(cell);
+      scene._panelContent.add(cell);
 
       if (aug) {
         // 배치된 증강 첫 칸에 이름
@@ -180,13 +180,13 @@ function _subBuildSteampunkGrid(scene, px, py, pw, ph, fs) {
             fontSize: fs(7), fill: aug.color || '#c8a060',
             fontFamily: FontManager.MONO,
           }).setOrigin(0, 0.5).setDepth(8);
-          scene._tabContentContainer.add(t);
+          scene._panelContent.add(t);
         }
 
         // 제거 hit
         const rmHit = scene.add.rectangle(cx, cy, cellSize, cellSize, 0, 0)
           .setInteractive({ useHandCursor: true }).setDepth(9);
-        scene._tabContentContainer.add(rmHit);
+        scene._panelContent.add(rmHit);
         rmHit.on('pointerover', () => {
           cell.clear();
           _subDrawCell(cell, cx, cy, cellSize, aug, true);

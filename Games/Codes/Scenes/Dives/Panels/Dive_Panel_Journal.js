@@ -10,7 +10,7 @@ function DivePanelJournal(scene, px, py, pw, ph, fs) {
   const lbl = scene.add.text(px, py, '탐  사  일  지', {
     fontSize: fs(11), fill: '#4a2a10', fontFamily: FontManager.TITLE,
   });
-  scene._tabContentContainer.add(lbl);
+  scene._panelContent.add(lbl);
 
   const logLines = scene._log.length
     ? scene._log.slice().reverse()
@@ -29,6 +29,6 @@ function DivePanelJournal(scene, px, py, pw, ph, fs) {
         fontSize: fs(10), fill: col, fontFamily: FontManager.MONO,
         wordWrap: { width: pw - 8 },
       });
-    scene._tabContentContainer.add(line);
+    scene._panelContent.add(line);
   });
 }
