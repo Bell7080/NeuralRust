@@ -36,11 +36,10 @@ function DiveBuildSlotArea(scene, W, H) {
   const fs       = n => FontManager.adjustedSize(n, scene.scale);
   const tabW     = W * 0.10;
   const topH     = H * 0.13;
-  const botH     = H * 0.30;
   const areaX    = tabW;
   const areaY    = topH;
   const areaW    = W - tabW;
-  const areaH    = H - topH - botH;
+  const areaH    = H - topH;   // 하단 패널 없음 — 풀 높이
 
   // 힌트 텍스트
   scene._hintText = scene.add.text(
