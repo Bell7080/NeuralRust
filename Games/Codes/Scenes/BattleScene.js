@@ -32,7 +32,6 @@
 //    - 스킬 발동 (게이지 충전 후 초상화 클릭)
 //    - 포지션(공격 범위) 적용
 //    - 패시브 자동 발동
-//    - 전투불능 영구사망 판정
 // ================================================================
 
 class BattleScene extends Phaser.Scene {
@@ -69,10 +68,10 @@ class BattleScene extends Phaser.Scene {
     this._sceneHits    = [];
     this._allChars     = CharacterManager.loadAll() || [];
 
-    // 탐사 파티 (편성 풀)
+    // 탐사 파티 (편성 풀) — dead_chip/gone 제외
     this._partyChars = this._battleParty
       .map(id => this._allChars.find(c => c.id === id))
-      .filter(Boolean);
+      .filter(c => c && (!c.status || c.status === 'alive' || c.status === 'ai'));
 
     // 전투 편성 결과
     this._combatParty = [];
@@ -746,12 +745,8 @@ class BattleScene extends Phaser.Scene {
       fontSize: fs(8), fill: '#4a5870', fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 0);
 
-    const deadOverlay = this.add.graphics().setAlpha(0);
-    deadOverlay.fillStyle(0x000000, 0.65);
-    deadOverlay.fillCircle(cx, cy, rad + Math.round(size * 0.02));
-    const deadTxt = this.add.text(cx, cy, '전투불능', {
-      fontSize: fs(9), fill: '#cc2222', fontFamily: FontManager.MONO,
-    }).setOrigin(0.5).setAlpha(0);
+    const deadOverlay = this.add.graphics();
+    const deadTxt     = this.add.text(cx, cy, '', { fontSize: fs(9) });
 
     const skillHit = this.add.circle(cx, cy, rad, 0x000000, 0)
       .setInteractive({ useHandCursor: false });
@@ -787,17 +782,11 @@ class BattleScene extends Phaser.Scene {
       }
     };
 
-    const setDead = () => {
-      ally._dead = true;
-      shape.clear();
-      shape.fillStyle(0x0a0808, 1);
-      shape.lineStyle(1, 0x3a1a1a, 0.5);
-      shape.fillCircle(cx, cy, rad);
-      shape.strokeCircle(cx, cy, rad);
-      if (spriteImg) spriteImg.setAlpha(0.2);
-      deadOverlay.setAlpha(1);
-      deadTxt.setAlpha(1);
-      skillHit.disableInteractive();
+    // destroy — 사망 시 UI에서 완전 제거
+    const destroyAll = () => {
+      [shape, spriteImg, nameTxt, hpBg, hpFg, hpTxt,
+       gaugeBg, gaugeFg, gaugeTxt, deadOverlay, deadTxt, skillHit]
+        .forEach(o => { try { if (o && o.active !== false) o.destroy(); } catch(e){} });
     };
 
     refreshHp();
@@ -807,7 +796,7 @@ class BattleScene extends Phaser.Scene {
       ally, shape, spriteImg, nameTxt,
       hpBg, hpFg, hpTxt, gaugeBg, gaugeFg, gaugeTxt,
       deadOverlay, deadTxt, skillHit,
-      refreshHp, refreshGauge, setDead, cx, cy, rad,
+      refreshHp, refreshGauge, destroyAll, cx, cy, rad,
     };
   }
 
@@ -872,7 +861,7 @@ class BattleScene extends Phaser.Scene {
     if (target._hp <= 0) {
       target._dead = true;
       if (eObj) { eObj.shape.setAlpha(0.2); eObj.nameTxt.setStyle({ fill: '#3a1a0a' }); }
-      this._addLog(`${target.name}  전투불능`, '#804020');
+      this._addLog(`${target.name}  처치`, '#804020');
       this._checkBattleEnd();
     }
   }
@@ -905,10 +894,36 @@ class BattleScene extends Phaser.Scene {
     this._addLog(`${enemy.name} → ${target.name}  ${dmg}${critTxt}`, '#c06040');
 
     if (target._hp <= 0) {
-      if (aObj) aObj.setDead();
-      this._addLog(`${target.name}  전투불능`, '#803020');
+      this._killAlly(target, enemy.name);
       this._checkBattleEnd();
     }
+  }
+
+  // ── 아군 사망 처리 ───────────────────────────────────────────────
+  // UI에서 즉시 소멸 + CharacterManager에 dead_chip/gone 기록
+  _killAlly(ally, killedBy) {
+    ally._dead = true;
+
+    // 공격 타이머 즉시 중단
+    // (loop 타이머에서 ally._dead 체크하므로 별도 제거 불필요)
+
+    // UI 즉시 제거
+    const aIdx = this._allies.indexOf(ally);
+    const aObj = this._allyObjs[aIdx];
+    if (aObj && aObj.destroyAll) aObj.destroyAll();
+
+    // CharacterManager에 사망 기록 + 상태 전환
+    const day   = (() => {
+      try { return SaveManager.load()?.day || 1; } catch(e) { return 1; }
+    })();
+    const char = this._allChars.find(c => c.id === ally.id);
+    if (char) {
+      CharacterManager.killCharacter(char, {
+        day, cog: this._cogMax, round: this._round, killedBy,
+      });
+    }
+
+    this._addLog(`${ally.name}  사망`, '#cc3030');
   }
 
   _flashDamage(shape) {
@@ -931,11 +946,14 @@ class BattleScene extends Phaser.Scene {
     this._attackTimers.forEach(t => { try { t.remove(); } catch(e) {} });
     this._attackTimers = [];
 
+    // 생존자만 HP/게이지 반영 (사망자는 _killAlly에서 이미 처리됨)
+    const chars = CharacterManager.loadAll() || [];
     this._allies.forEach(ally => {
-      const char = this._allChars.find(c => c.id === ally.id);
+      if (ally._dead) return;
+      const char = chars.find(c => c.id === ally.id);
       if (char) { char.currentHp = ally._hp; char._gauge = ally._gauge; }
     });
-    CharacterManager.saveAll(this._allChars);
+    CharacterManager.saveAll(chars);
 
     if (result === 'victory') {
       this._addLog('── 전투 승리 ──', '#60c060');
@@ -976,7 +994,7 @@ class BattleScene extends Phaser.Scene {
 
     this._allies.forEach(ally => {
       const col  = ally._dead ? '#5a2222' : '#c8bfb0';
-      const stat = ally._dead ? '전투불능' : `HP ${ally._hp} / ${ally._maxHp}`;
+      const stat = ally._dead ? '사망' : `HP ${ally._hp} / ${ally._maxHp}`;
       this.add.text(W / 2, listY, `${ally.name}  —  ${stat}`, {
         fontSize: fs(11), fill: col, fontFamily: FontManager.MONO,
       }).setOrigin(0.5).setDepth(52);

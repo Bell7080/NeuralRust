@@ -149,7 +149,50 @@ const CharacterManager = (() => {
   function _pick(a) { return a[Math.floor(Math.random() * a.length)]; }
 
   const SPRITE_COUNT = 72;
-  function _randSpriteKey() {
+
+  // ── gone 블랙리스트 (이번 판에서 완전 소멸한 초상화 — 재사용 금지) ──
+  const GONE_KEY = 'nr_gone_sprites';
+
+  function loadGoneSprites() {
+    try { return new Set(JSON.parse(localStorage.getItem(GONE_KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+
+  function addGoneSprite(spriteKey) {
+    const s = loadGoneSprites();
+    s.add(spriteKey);
+    localStorage.setItem(GONE_KEY, JSON.stringify([...s]));
+  }
+
+  function clearGoneSprites() {
+    localStorage.removeItem(GONE_KEY);
+  }
+
+  // ── 중복 없는 spriteKey 뽑기 ─────────────────────────────────────
+  // 우선순위: 현재 캐릭터 목록 + gone 블랙리스트 모두 제외
+  // 풀 고갈 시: gone 블랙리스트만 제외 (살아있는 캐릭터와는 겹칠 수 있음)
+  // 완전 고갈 시: 랜덤 fallback
+  function _uniqueSpriteKey(extraExclude) {
+    const used    = new Set((loadAll() || []).map(c => c.spriteKey).filter(Boolean));
+    const gone    = loadGoneSprites();
+    const exclude = new Set([...used, ...gone, ...(extraExclude || [])]);
+
+    const available = [];
+    for (let i = 0; i < SPRITE_COUNT; i++) {
+      const k = `char_${String(i).padStart(3, '0')}`;
+      if (!exclude.has(k)) available.push(k);
+    }
+    if (available.length) return available[Math.floor(Math.random() * available.length)];
+
+    // gone만 제외한 fallback
+    const fallback = [];
+    for (let i = 0; i < SPRITE_COUNT; i++) {
+      const k = `char_${String(i).padStart(3, '0')}`;
+      if (!gone.has(k)) fallback.push(k);
+    }
+    if (fallback.length) return fallback[Math.floor(Math.random() * fallback.length)];
+
+    // 완전 고갈 — 그냥 랜덤
     return `char_${String(Math.floor(Math.random() * SPRITE_COUNT)).padStart(3, '0')}`;
   }
 
@@ -284,7 +327,8 @@ const CharacterManager = (() => {
       mastery:      0,
       pendingStats: 0,
       currentHp: stats.hp * 10, maxHp: stats.hp * 10,
-      spriteKey: _randSpriteKey(),
+      status:    'alive',
+      spriteKey: _uniqueSpriteKey(),
     };
   }
 
@@ -304,7 +348,8 @@ const CharacterManager = (() => {
       mastery:      0,
       pendingStats: 0,
       currentHp: stats.hp * 10, maxHp: stats.hp * 10,
-      spriteKey: _randSpriteKey(),
+      status:    'alive',
+      spriteKey: _uniqueSpriteKey(),
     };
   }
 
@@ -331,6 +376,25 @@ const CharacterManager = (() => {
     if (idx !== -1) { chars[idx] = updated; saveAll(chars); }
   }
 
+  // ── 전투 사망 처리 ───────────────────────────────────────────────
+  // · status가 'ai'면 → 완전 소멸(gone): nr_characters에서 삭제 + gone 블랙리스트 등록
+  // · status가 'alive'면 → dead_chip: nr_characters에 상태 업데이트 (기록칩 아이템 유지)
+  // · 기록칩 사망 연대기는 두 경우 모두 기록
+  function killCharacter(char, { day, cog, round, killedBy }) {
+    recordDeath(char.spriteKey, { day, cog, round, killedBy });
+
+    if (char.status === 'ai') {
+      // AI 상태 사망 → 완전 소멸, 이번 판 초상화 재사용 불가
+      addGoneSprite(char.spriteKey);
+      saveAll((loadAll() || []).filter(c => c.id !== char.id));
+    } else {
+      // 일반 사망 → dead_chip 상태로 전환 (기록칩 아이템화)
+      char.status    = 'dead_chip';
+      char.currentHp = 0;
+      updateCharacter(char);
+    }
+  }
+
   // ── 초기화 ───────────────────────────────────────────────────────
   function initIfEmpty() {
     _validatePools();
@@ -346,7 +410,9 @@ const CharacterManager = (() => {
       ex.forEach(c => {
         const idx = parseInt((c.spriteKey||'').replace('char_',''), 10);
         if (!c.spriteKey || isNaN(idx) || idx >= SPRITE_COUNT)
-          { c.spriteKey = _randSpriteKey(); dirty = true; }
+          { c.spriteKey = _uniqueSpriteKey(); dirty = true; }
+
+        if (!c.status) { c.status = 'alive'; dirty = true; }
 
         const fl = _getJobLabel(c.job);
         if (c.jobLabel !== fl) { c.jobLabel = fl; dirty = true; }
@@ -492,9 +558,11 @@ const CharacterManager = (() => {
     loadAll, saveAll,
     createCharacter, createCharacterOfCog,
     addCharacter, removeCharacter, updateCharacter,
+    killCharacter,
     loadSquad, saveSquad,
     saveParty, loadParty,
     getRecordChip, updateRecordChip, recordDeath, recordFirstDay,
+    loadGoneSprites, addGoneSprite, clearGoneSprites,
     calcCog, getCogColor, COG_COLORS,
     SKILL_POOL, JOB_LABEL,
     STAT_COLORS, STAT_LABEL_MAP,

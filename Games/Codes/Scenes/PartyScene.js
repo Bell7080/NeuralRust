@@ -35,8 +35,10 @@ class PartyScene extends Phaser.Scene {
 
     InputManager.reinit(this);
 
-    this._chars    = CharacterManager.loadAll() || [];
-    this._filtered = this._chars; // 탐사 파티는 전원 선택 가능 (cogMax 필터 없음)
+    // dead_chip / gone 상태 제외 — 탐사에 데려갈 수 있는 캐릭터만
+    const all = CharacterManager.loadAll() || [];
+    this._chars    = all.filter(c => !c.status || c.status === 'alive' || c.status === 'ai');
+    this._filtered = this._chars;
 
     this._buildBackground(W, H);
     this._buildHeader(W, H);
