@@ -91,10 +91,10 @@ function DivePanelParty(scene, px, py, pw, ph, fs) {
   const maskGfx = scene.make.graphics({});
   maskGfx.fillStyle(0xffffff, 1);
   maskGfx.fillRect(absX, absY, listW, bodyH);
+  maskGfx.setVisible(false); // 렌더링 안 되도록 — add하면 흰 박스로 보임
 
   const listCt = scene.add.container(0, 0)
     .setMask(maskGfx.createGeometryMask());
-  scene._panelContent.add(maskGfx);
   scene._panelContent.add(listCt);
 
   const totalRows = Math.ceil(partyChars.length / cols);

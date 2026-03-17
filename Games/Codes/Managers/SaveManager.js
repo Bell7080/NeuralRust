@@ -68,6 +68,39 @@ const SaveManager = {
     return data;
   },
 
+  // ── 현재 진행 씬 저장/로드 ───────────────────────────────────
+  // 로비 "돌아가기" 시 중단된 씬으로 바로 복귀하기 위해 사용
+  // sceneKey: 'AtelierScene' | 'DiveScene' | 'BattleScene' 등
+  // sceneData: 해당 씬 init()에 전달할 데이터 (라운드, cogMax 등)
+  saveCurrentScene(sceneKey, sceneData) {
+    const d = this.load() || {};
+    d._currentScene     = sceneKey;
+    d._currentSceneData = sceneData || {};
+    this._write(this.SAVE_KEY, d);
+  },
+
+  loadCurrentScene() {
+    const d = this.load();
+    if (!d) return null;
+    return {
+      scene: d._currentScene     || 'AtelierScene',
+      data:  d._currentSceneData || {},
+    };
+  },
+
+  // ── 게임 진행 전체 초기화 (설정·기록칩 유지) ─────────────────
+  // 새로하기에서 호출 — 인게임 데이터만 삭제, 설정/기록칩은 남김
+  newGameFull() {
+    this.deleteSave();
+    this.deleteStory();
+    localStorage.removeItem('nr_characters');
+    localStorage.removeItem('nr_party');
+    localStorage.removeItem('nr_gone_sprites');
+    localStorage.removeItem('nr_squad');
+    return this.newGame();
+  },
+
+
   // arc 단독 읽기 / 쓰기 (HUD, Tab_Recruit 등에서 사용)
   getArc() {
     const d = this.load();
@@ -190,9 +223,11 @@ const SaveManager = {
     localStorage.removeItem('settings_font');
     localStorage.removeItem('neural_rust_keybinds');
     localStorage.removeItem('neural_rust_audio');
-    // 캐릭터 & 탐사대 데이터도 초기화
+    // 캐릭터 & 탐사대·파티·gone 데이터도 초기화
     localStorage.removeItem('nr_characters');
     localStorage.removeItem('nr_squad');
+    localStorage.removeItem('nr_party');
+    localStorage.removeItem('nr_gone_sprites');
     // 구버전 키 정리
     localStorage.removeItem('project001_keybinds');
     localStorage.removeItem('project001_save');

@@ -184,7 +184,7 @@ class LobbyScene extends Phaser.Scene {
     const items = hasSave
       ? [
           { label: '새로 시작하기',  key: 'new',      delay: 900  },
-          { label: '불러오기',       key: 'load',     delay: 1050 },
+          { label: '이어  하기',      key: 'load',     delay: 1050 },
           { label: '설    정',       key: 'settings', delay: 1200 },
           { label: '나가기',         key: 'quit',     delay: 1350 },
         ]
@@ -236,16 +236,28 @@ class LobbyScene extends Phaser.Scene {
   _onMenuClick(key) {
     switch (key) {
       case 'new':
-        SaveManager.deleteSave();
-        SaveManager.deleteStory();
-        SaveManager.newGame();
+        // 게임 진행 전체 초기화 (설정·기록칩 유지)
+        SaveManager.newGameFull();
         SaveManager.setProgress(1, 'start');
+        // 새 게임 진입 씬 기록
+        SaveManager.saveCurrentScene('AtelierScene');
         this._transition(() => this.scene.start('LoadingScene', { next: 'AtelierScene' }));
         break;
-      case 'load':
-        if (SaveManager.hasSave())
-          this._transition(() => this.scene.start('LoadingScene', { next: 'AtelierScene' }));
+      case 'load': {
+        // 중단된 씬으로 복귀 — saveCurrentScene()에 기록된 씬으로 이동
+        const cur = SaveManager.loadCurrentScene();
+        const targetScene = cur ? cur.scene : 'AtelierScene';
+        const targetData  = cur ? cur.data  : {};
+        // LoadingScene을 거치는 씬 목록 (스프라이트 로드가 필요한 씬)
+        const needsLoading = ['AtelierScene', 'PartyScene', 'ExploreScene'];
+        if (needsLoading.includes(targetScene)) {
+          this._transition(() => this.scene.start('LoadingScene', { next: targetScene, data: targetData }));
+        } else {
+          // DiveScene / BattleScene 등 직접 복귀
+          this._transition(() => this.scene.start(targetScene, targetData));
+        }
         break;
+      }
       case 'settings':
         this._transition(() => this.scene.start('SettingsScene', { from: 'LobbyScene' }));
         break;
