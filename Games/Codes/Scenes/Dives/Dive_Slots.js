@@ -1,3 +1,26 @@
+// ── 슬롯 상태 저장/로드 (로비 이탈 후 복귀 시 결과 복원) ──────────
+const DIVE_SLOT_STATE_KEY = 'nr_dive_slot_state';
+
+function _saveSlotState(scene) {
+  const state = {
+    phase:   scene._phase,
+    chosen:  scene._chosen,
+    results: scene._results.map(r => r ? r.type : null),
+  };
+  localStorage.setItem(DIVE_SLOT_STATE_KEY, JSON.stringify(state));
+}
+
+function _loadSlotState() {
+  try {
+    const s = localStorage.getItem(DIVE_SLOT_STATE_KEY);
+    return s ? JSON.parse(s) : null;
+  } catch(e) { return null; }
+}
+
+function _clearSlotState() {
+  localStorage.removeItem(DIVE_SLOT_STATE_KEY);
+}
+
 // ================================================================
 //  Dive_Slots.js
 //  경로: Games/Codes/Scenes/Dives/Dive_Slots.js
@@ -10,6 +33,13 @@
 //    DiveEnableCardSelection(scene)        → 전체 정지 후
 //    DiveChooseCard(scene, idx)            → 카드 선택 시
 //    DiveResetSlots(scene)                 → 재굴림 시
+//
+//  ── 슬롯 상태 저장 규칙 ─────────────────────────────────────
+//  · 초기 / 라운드 진입: 슬롯 비어있음, 레버 당겨야 배치
+//  · 레버 당긴 후: 결과를 SaveManager(nr_dive_slots)에 저장
+//    → 게임 나갔다 와도 결과 유지, 선택 가능
+//  · 카드 선택 확정: nr_dive_slots 삭제 (번복 불가)
+//  · 재굴림: 기존 저장 삭제 후 새 결과 저장
 // ================================================================
 
 // ── 슬롯 카드 정의 ────────────────────────────────────────────────
@@ -74,6 +104,70 @@ function DiveBuildSlotArea(scene, W, H) {
 
   // 레버
   _diveBuildLever(scene, areaX, areaY, areaW, areaH, fs);
+
+  // ── 저장된 슬롯 결과 복원 (나갔다 복귀 시) ───────────────────
+  const savedState = _loadSlotState();
+  if (savedState && savedState.phase === 'stopped' && savedState.results) {
+    // 결과 타입으로 카드 객체 복원
+    const restoredCards = savedState.results.map(type =>
+      type ? DIVE_SLOT_CARDS.find(c => c.type === type) || null : null
+    );
+    const allValid = restoredCards.every(c => c !== null);
+
+    if (allValid) {
+      // 각 슬롯에 결과 카드 직접 표시 (스핀 없이 즉시)
+      scene._slots.forEach((slot, i) => {
+        const card = restoredCards[i];
+        slot.targetCard = card;
+        slot.stopped    = true;
+        if (slot.emptyBg) slot.emptyBg.setVisible(false);
+
+        // 결과 카드 1장만 렌더
+        slot.stripCt.removeAll(true);
+        const bg = scene.add.graphics();
+        bg.fillStyle(0x0e0c08, 1);
+        bg.lineStyle(1, card.borderHex, 0.8);
+        bg.fillRect(-slot.cw / 2, 0, slot.cw, slot.ch);
+        bg.strokeRect(-slot.cw / 2, 0, slot.cw, slot.ch);
+        const mainTxt = scene.add.text(0, slot.ch * 0.38, card.label, {
+          fontSize: FontManager.adjustedSize(16, scene.scale),
+          fill: card.color, fontFamily: FontManager.TITLE,
+          align: 'center', wordWrap: { width: slot.cw * 0.85 },
+        }).setOrigin(0.5);
+        const descTxt = scene.add.text(0, slot.ch * 0.62, card.desc, {
+          fontSize: FontManager.adjustedSize(9, scene.scale),
+          fill: card.color, fontFamily: FontManager.MONO,
+          alpha: 0.7, align: 'center', wordWrap: { width: slot.cw * 0.82 },
+        }).setOrigin(0.5);
+        slot.stripCt.add([bg, mainTxt, descTxt]);
+        slot.stripCt.setY(slot.cy - slot.ch / 2);
+
+        // 프레임 강조
+        slot.frame.clear();
+        slot.frame.lineStyle(2, card.borderHex, 1);
+        slot.frame.strokeRect(slot.cx - slot.cw/2, slot.cy - slot.ch/2, slot.cw, slot.ch);
+      });
+
+      scene._results   = restoredCards;
+      scene._phase     = 'stopped';
+      scene._canChoose = true;
+      scene._hintText.setText('라운드 유형을 선택하십시오');
+      scene._hintText.setStyle({ fill: '#8a6040' });
+
+      // 레버 상태 복원
+      if (scene._deepCoin > 0) {
+        scene._drawLever('active');
+        scene._leverLabelTxt.setText('◈ 재굴림').setStyle({ fill: '#2a3a50' });
+        scene._rerollTxt.setText(`심해화폐 ${scene._deepCoin}`).setAlpha(1);
+        scene._leverHit.setInteractive({ useHandCursor: true });
+      } else {
+        scene._drawLever('disabled');
+        scene._leverLabelTxt.setText('재굴림 불가').setStyle({ fill: '#2a1a0a' });
+      }
+
+      DiveEnableCardSelection(scene);
+    }
+  }
 }
 
 function _diveBuildOneSlot(scene, cx, cy, cw, ch) {
@@ -81,19 +175,22 @@ function _diveBuildOneSlot(scene, cx, cy, cw, ch) {
   frame.lineStyle(1, 0x2a1a0a, 0.6);
   frame.strokeRect(cx - cw / 2, cy - ch / 2, cw, ch);
 
+  // 초기 빈 슬롯 배경 (레버를 당기기 전까지 어둡게만 표시)
+  const emptyBg = scene.add.graphics();
+  emptyBg.fillStyle(0x080806, 1);
+  emptyBg.fillRect(cx - cw / 2, cy - ch / 2, cw, ch);
+
   const maskShape = scene.make.graphics({});
   maskShape.fillStyle(0xffffff, 1);
   maskShape.fillRect(cx - cw / 2, cy - ch / 2, cw, ch);
   const mask = maskShape.createGeometryMask();
 
-  const strip   = _makeDiveStrip(22);
+  // strip은 스핀 시작 시 생성 — 초기엔 null
   const stripCt = scene.add.container(cx, cy - ch / 2);
   stripCt.setMask(mask);
 
-  _diveRenderStrip(scene, stripCt, strip, cw, ch);
-
   const hitArea = scene.add.rectangle(cx, cy, cw, ch, 0, 0).setDepth(5);
-  return { frame, stripCt, mask, strip, cx, cy, cw, ch, stopped: false, targetCard: null, hitArea };
+  return { frame, emptyBg, stripCt, mask, strip: null, cx, cy, cw, ch, stopped: false, targetCard: null, hitArea };
 }
 
 function _diveRenderStrip(scene, container, strip, cw, ch) {
@@ -232,6 +329,12 @@ function DiveStartSpin(scene) {
 
   const stopDelays = [1400, 2200, 3000];
   scene._slots.forEach((slot, i) => {
+    // 스핀 시작 시 스트립 생성 (초기 빈 슬롯 배경 숨김)
+    if (slot.emptyBg) slot.emptyBg.setVisible(false);
+    slot.strip = _makeDiveStrip(22);
+    slot.stripCt.removeAll(true);
+    _diveRenderStrip(scene, slot.stripCt, slot.strip, slot.cw, slot.ch);
+
     slot.targetCard = slot.strip[slot.strip.length - 2];
     slot.stopped    = false;
     slot.stripCt.setY(slot.cy - slot.ch / 2);
@@ -281,6 +384,9 @@ function DiveOnSlotStopped(scene, idx) {
     scene._drawLever('disabled');
     scene._leverLabelTxt.setText('재굴림 불가').setStyle({ fill: '#2a1a0a' });
   }
+
+  // 슬롯 결과 저장 — 나갔다 와도 복원 가능
+  _saveSlotState(scene);
 
   DiveEnableCardSelection(scene);
 }
@@ -345,16 +451,21 @@ function DiveChooseCard(scene, idx) {
     note:  `R${scene._round}  ${card.label.replace(/\s/g,'')}`,
   });
 
+  // 선택 확정 — 슬롯 상태 삭제 (번복 불가)
+  _clearSlotState();
+
   scene.time.delayedCall(800, () => scene._enterBattle(card.type));
 }
 
 function DiveResetSlots(scene) {
+  _clearSlotState();
   scene._slots.forEach(slot => {
-    slot.stopped = false;
-    const ns = _makeDiveStrip(22);
-    slot.strip = ns;
+    slot.stopped    = false;
+    slot.targetCard = null;
+    slot.strip      = null;
     slot.stripCt.removeAll(true);
-    _diveRenderStrip(scene, slot.stripCt, ns, slot.cw, slot.ch);
+    // 빈 슬롯 배경 다시 표시
+    if (slot.emptyBg) slot.emptyBg.setVisible(true);
     slot.frame.clear();
     slot.frame.lineStyle(1, 0x2a1a0a, 0.6);
     slot.frame.strokeRect(slot.cx-slot.cw/2, slot.cy-slot.ch/2, slot.cw, slot.ch);
