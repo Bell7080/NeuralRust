@@ -21,6 +21,9 @@ class AtelierScene extends Phaser.Scene {
   }
 
   create() {
+    // 현재 씬 기록 — 로비 이어하기 복귀용
+    SaveManager.saveCurrentScene('AtelierScene');
+
     const W = this.scale.width;
     const H = this.scale.height;
     this.W = W;

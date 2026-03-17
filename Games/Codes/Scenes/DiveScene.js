@@ -72,6 +72,19 @@ class DiveScene extends Phaser.Scene {
     this.W = W; this.H = H;
     InputManager.reinit(this);
 
+    // 현재 씬 기록 — 로비 이어하기 시 탐사 로비로 복귀
+    SaveManager.saveCurrentScene('DiveScene', {
+      cogMax:      this._cogMax,
+      round:       this._round,
+      maxRound:    this._maxRound,
+      deepCoin:    this._deepCoin,
+      log:         this._log,
+      battleParty: this._battleParty,
+      inventory:   this._inventory,
+      submarine:   this._submarine,
+      shopItems:   this._shopItems,
+    });
+
     // 슬롯 상태
     this._phase      = 'idle';
     this._results    = [null, null, null];

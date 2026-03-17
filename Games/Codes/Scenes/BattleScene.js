@@ -59,6 +59,20 @@ class BattleScene extends Phaser.Scene {
     this.W = W; this.H = H;
     InputManager.reinit(this);
 
+    // 전투 중엔 DiveScene으로 복귀 기록 — 전투 상태 재현은 불가하므로
+    // 라운드는 현재 라운드 그대로 유지 (같은 라운드 슬롯부터 재시작)
+    SaveManager.saveCurrentScene('DiveScene', {
+      cogMax:      this._cogMax,
+      round:       this._round,
+      maxRound:    this._maxRound,
+      deepCoin:    this._deepCoin,
+      log:         this._log,
+      battleParty: this._battleParty,
+      inventory:   this._inventory,
+      submarine:   this._submarine,
+      shopItems:   this._shopItems,
+    });
+
     this._phase        = 'setup';
     this._battleActive = false;
     this._attackTimers = [];
