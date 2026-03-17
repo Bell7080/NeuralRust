@@ -51,7 +51,8 @@ function DiveBuildTabs(scene, W, H) {
   scene._panelTween = null;
 
   // ── 탭 열 배경 ───────────────────────────────────────────────
-  const colBg = scene.add.graphics().setDepth(8);
+  // depth 29: _panelDim(28) 위에 렌더되어 딤 오버레이에 덮이지 않음
+  const colBg = scene.add.graphics().setDepth(29);
   colBg.fillStyle(0x080607, 0.92);
   colBg.lineStyle(1, 0x1e1008, 0.6);
   colBg.fillRect(0, 0, tabW, H);
@@ -63,7 +64,7 @@ function DiveBuildTabs(scene, W, H) {
 
   DIVE_TABS.forEach((tab, i) => {
     const cy = startY + i * (tabH + gapY) + tabH / 2;
-    const bg = scene.add.graphics().setDepth(9);
+    const bg = scene.add.graphics().setDepth(31);
 
     const drawTab = (active, hover) => {
       bg.clear();
@@ -79,10 +80,10 @@ function DiveBuildTabs(scene, W, H) {
       fontSize: fs(10), fill: '#6b4020',
       fontFamily: FontManager.TITLE, align: 'center',
       wordWrap: { width: tabW - W * 0.008 },
-    }).setOrigin(0.5).setDepth(10);
+    }).setOrigin(0.5).setDepth(32);
 
     const hit = scene.add.rectangle(tabW/2, cy, tabW, tabH, 0, 0)
-      .setInteractive({ useHandCursor: true }).setDepth(15);
+      .setInteractive({ useHandCursor: true }).setDepth(33);
     scene._sceneHits.push(hit);
 
     hit.on('pointerover', () => {
@@ -99,7 +100,7 @@ function DiveBuildTabs(scene, W, H) {
   });
 
   // 탭 열 우측 구분선
-  scene.add.graphics().setDepth(8)
+  scene.add.graphics().setDepth(29)
     .lineStyle(1, 0x2a1a0a, 0.7)
     .lineBetween(tabW, 0, tabW, H);
 
@@ -113,7 +114,7 @@ function DiveBuildTabs(scene, W, H) {
 // ── 닫기 버튼 (패널 열린 동안만 표시) ────────────────────────────
 function _diveBuildCloseBtn(scene, W, H, tabW, tabH, fs) {
   const closeY = H * 0.90;
-  const closeBg = scene.add.graphics().setDepth(9).setAlpha(0);
+  const closeBg = scene.add.graphics().setDepth(31).setAlpha(0);
 
   const _draw = (hover) => {
     closeBg.clear();
@@ -126,10 +127,10 @@ function _diveBuildCloseBtn(scene, W, H, tabW, tabH, fs) {
 
   const closeTxt = scene.add.text(tabW/2, closeY, '닫  기', {
     fontSize: fs(10), fill: '#804020', fontFamily: FontManager.TITLE,
-  }).setOrigin(0.5).setDepth(10).setAlpha(0);
+  }).setOrigin(0.5).setDepth(32).setAlpha(0);
 
   const closeHit = scene.add.rectangle(tabW/2, closeY, tabW - W * 0.004, tabH, 0, 0)
-    .setDepth(15).setAlpha(0);
+    .setDepth(33).setAlpha(0);
   scene._sceneHits.push(closeHit);
 
   closeHit.on('pointerover',  () => { _draw(true);  closeTxt.setStyle({ fill: '#c8a070' }); });

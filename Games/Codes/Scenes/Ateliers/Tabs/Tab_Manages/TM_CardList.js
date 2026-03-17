@@ -55,7 +55,10 @@ const TM_CardList = {
   buildCardList(tab, fs) {
     const { scene } = tab;
     const fsFn  = fs || (n => FontManager.adjustedSize(n, scene.scale));
-    const chars = tab._applyFilter(CharacterManager.initIfEmpty());
+    // dead_chip / gone 상태 제외 (탐사 중 사망한 캐릭터는 카드 목록에서 제거)
+    const allChars = CharacterManager.initIfEmpty();
+    const alive    = allChars.filter(c => !c.status || c.status === 'alive' || c.status === 'ai');
+    const chars    = tab._applyFilter(alive);
     const cw    = tab._cardAreaW;
     const ch    = parseInt(fsFn(72));
     const gap   = parseInt(fsFn(5));
