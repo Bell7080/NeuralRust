@@ -76,9 +76,9 @@ class Tab_Manage_Full {
     const pm = Math.round(W * 0.012);
     this._panelMargin = pm;
 
-    this._listW   = Math.round(W * 0.20);
-    this._centerW = Math.round(W * 0.47);
-    this._rightW  = W - this._listW - this._centerW;
+    this._listW   = Math.round(W * 0.30);   // ✏️ 20% → 30% (3열 그리드 수용)
+    this._centerW = Math.round(W * 0.40);   // ✏️ 47% → 40%
+    this._rightW  = W - this._listW - this._centerW;  // 나머지 ~30%
     this._bodyY   = hdrH + 1 + pm;
     this._bodyH   = H - hdrH - 1 - pm * 2 - backBtnH;
 

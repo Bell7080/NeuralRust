@@ -49,10 +49,11 @@ const TM_CardList = {
     tab._filterBarObjs = [];
     TM_CardList.buildFilterBar(tab, fs);
 
-    // 필터 높이 계산 (직업행 + Cog행 + 정렬행)
-    const filterRowH = parseInt(fs(26)) + parseInt(fs(8));
-    const filterJobH = parseInt(fs(26)) + parseInt(fs(4));
-    const sortRowH   = parseInt(fs(26)) + parseInt(fs(6));
+    // 필터 높이 계산 (직업행 + Cog행 + 정렬행) — rowH는 buildFilterBar와 동일하게 fs(32)
+    const rowH       = parseInt(fs(32));
+    const filterRowH = rowH + parseInt(fs(4));   // 직업행 + 간격
+    const filterJobH = rowH + parseInt(fs(4));   // Cog행  + 간격
+    const sortRowH   = rowH + parseInt(fs(6));   // 정렬행 + 간격
 
     tab._cardAreaX = pm + 4;
     tab._cardAreaY = tab._filterY + filterRowH + filterJobH + sortRowH + parseInt(fs(4));
@@ -82,8 +83,8 @@ const TM_CardList = {
     const chars    = TM_CardList._applyFilterAndSort(tab, alive);
 
     // ── 그리드 치수 ────────────────────────────────────────────
-    const cols  = 2;
-    const gap   = parseInt(fsFn(5));
+    const cols  = 3;
+    const gap   = parseInt(fsFn(4));
     const cardW = Math.floor((tab._cardAreaW - gap * (cols - 1)) / cols);
     const cardH = Math.round(cardW * 1.22);   // 세로형 비율 (초상화 꽉 채움)
 
@@ -123,7 +124,7 @@ const TM_CardList = {
     const { scene } = tab;
     const fsFn = fs || (n => FontManager.adjustedSize(n, scene.scale));
     const fy   = tab._filterY;
-    const rowH = parseInt(fsFn(26));
+    const rowH = parseInt(fsFn(32));   // ✏️ 26 → 32 (버튼 높이 증가)
 
     const JOB_FILTERS = [
       { key:'all',    label:'전체'   },
@@ -138,12 +139,12 @@ const TM_CardList = {
 
     // ── 직업 필터 행 ───────────────────────────────────────────
     const jobLbl = scene.add.text(6, fy + rowH / 2, '직업', {
-      fontSize: fsFn(8), fill: '#4a2e10', fontFamily: FontManager.MONO,
+      fontSize: fsFn(10), fill: '#4a2e10', fontFamily: FontManager.MONO,  // ✏️ 8 → 10
     }).setOrigin(0, 0.5);
     tab._listPanel.add(jobLbl);
     tab._filterBarObjs.push(jobLbl);
 
-    let bx = 6 + parseInt(fsFn(22));
+    let bx = 6 + parseInt(fsFn(26));  // ✏️ 22 → 26
     JOB_FILTERS.forEach(f => {
       bx = TM_CardList._makeChip(tab, bx, fy, f.label, rowH, fsFn,
         () => { tab._filterJob = f.key; tab._refreshCards(); TM_CardList._rebuildFilterBar(tab, fsFn); },
@@ -153,12 +154,12 @@ const TM_CardList = {
     // ── Cog 필터 행 ───────────────────────────────────────────
     const cogFy  = fy + rowH + parseInt(fsFn(4));
     const cogLbl = scene.add.text(6, cogFy + rowH / 2, 'Cog', {
-      fontSize: fsFn(8), fill: '#4a2e10', fontFamily: FontManager.MONO,
+      fontSize: fsFn(10), fill: '#4a2e10', fontFamily: FontManager.MONO,  // ✏️ 8 → 10
     }).setOrigin(0, 0.5);
     tab._listPanel.add(cogLbl);
     tab._filterBarObjs.push(cogLbl);
 
-    let cbx = 6 + parseInt(fsFn(22));
+    let cbx = 6 + parseInt(fsFn(26));  // ✏️ 22 → 26
     COG_FILTERS.forEach(f => {
       cbx = TM_CardList._makeChip(tab, cbx, cogFy, f.label, rowH, fsFn,
         () => { tab._filterCog = f.key; tab._refreshCards(); TM_CardList._rebuildFilterBar(tab, fsFn); },
@@ -168,7 +169,7 @@ const TM_CardList = {
     // ── 정렬 행 ───────────────────────────────────────────────
     const sortFy  = cogFy + rowH + parseInt(fsFn(6));
     const sortLbl = scene.add.text(6, sortFy + rowH / 2, '정렬', {
-      fontSize: fsFn(8), fill: '#4a2e10', fontFamily: FontManager.MONO,
+      fontSize: fsFn(10), fill: '#4a2e10', fontFamily: FontManager.MONO,  // ✏️ 8 → 10
     }).setOrigin(0, 0.5);
     tab._listPanel.add(sortLbl);
     tab._filterBarObjs.push(sortLbl);
@@ -345,11 +346,9 @@ const TM_CardList = {
     c.add(hpBar);
 
     // ── 히트 영역 ─────────────────────────────────────────────
+    // ✏️ 컨테이너(c) 안에 add — scene._panelContent 없는 씬에서 depth 꼬임 방지
     const hit = scene.add.rectangle(cw / 2, ch / 2, cw, ch, 0, 0)
-      .setInteractive({ useHandCursor: true }).setDepth(20);
-    scene._panelContent
-      ? scene._panelContent.add(hit)
-      : scene.add.existing(hit);
+      .setInteractive({ useHandCursor: true });
 
     // 씬 절대좌표로 카드 영역 판별용 (마스크 밖 hover 방지)
     const _inArea = (ptr) => {
@@ -375,15 +374,13 @@ const TM_CardList = {
     c.add(hit);
     return c;
   },
-
-  // ── 필터 칩 공통 ────────────────────────────────────────────
   // isSortBtn: true이면 너비를 조금 더 여유 있게
   _makeChip(tab, x, y, label, h, fs, onClick, active, isSortBtn = false) {
     const { scene } = tab;
     const tmp = scene.add.text(-9999, -9999, label, {
-      fontSize: fs(9), fontFamily: FontManager.MONO,
+      fontSize: fs(12), fontFamily: FontManager.MONO,  // ✏️ 9 → 12
     });
-    const bw = tmp.width + (isSortBtn ? 16 : 10);
+    const bw = tmp.width + (isSortBtn ? 20 : 14);  // ✏️ 패딩 증가
     tmp.destroy();
 
     const bg = scene.add.graphics();
@@ -400,20 +397,21 @@ const TM_CardList = {
     draw(false);
 
     const txt = scene.add.text(x + bw / 2, y + h / 2, label, {
-      fontSize: fs(9),
+      fontSize: fs(12),          // ✏️ 9 → 12
       fill: active ? '#e8a040' : '#5a3818',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
 
+    // ✏️ hit: 씬에 직접 추가 (컨테이너 좌표계 충돌 방지), depth 21로 필터 위
     const hit = scene.add.rectangle(x + bw / 2, y + h / 2, bw, h, 0, 0)
-      .setInteractive({ useHandCursor: true }).setDepth(20);
+      .setInteractive({ useHandCursor: true }).setDepth(21);
     hit.on('pointerover', () => draw(true));
     hit.on('pointerout',  () => draw(false));
     hit.on('pointerup',   onClick);
 
     tab._listPanel.add([bg, txt]);
     tab._filterBarObjs.push(bg, txt, hit);
-    return x + bw + 3;
+    return x + bw + 4;  // ✏️ 3 → 4 (칩 간격 살짝 증가)
   },
 
   // ── 드래그 스크롤 설정 (TM_Main에서 호출) ───────────────────
