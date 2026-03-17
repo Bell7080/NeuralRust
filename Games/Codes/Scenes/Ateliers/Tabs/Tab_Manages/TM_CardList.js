@@ -229,19 +229,32 @@ const TM_CardList = {
 
     // 정렬
     if (tab._sortMode === 'date') {
-      // 최신순: recruitedDay 또는 id 기준
-      result.sort((a, b) => {
-        const da = a.recruitedDay || 0;
-        const db = b.recruitedDay || 0;
-        return tab._sortOrder === 'desc' ? db - da : da - db;
-      });
-    } else if (tab._sortMode === 'stat') {
-      // 스탯순: attack + agility + luck + health + hp 합산
-      const statSum = c => {
-        const eff = (CharacterManager.getEffectiveStat ? CharacterManager.getEffectiveStat(c) : null) || c;
-        return (eff.attack || 0) + (eff.agility || 0) + (eff.luck || 0) + (eff.health || 0) + (eff.hp || 0);
+      // 최신순: id = 'c_타임스탬프_xxx' 형태에서 두 번째 세그먼트가 Date.now() 값
+      const parseTs = id => {
+        if (!id) return 0;
+        const parts = id.split('_');
+        const ts = parseInt(parts[1], 10);
+        return isNaN(ts) ? 0 : ts;
       };
-      result.sort((a, b) => tab._sortOrder === 'desc' ? statSum(b) - statSum(a) : statSum(a) - statSum(b));
+      result.sort((a, b) =>
+        tab._sortOrder === 'desc'
+          ? parseTs(b.id) - parseTs(a.id)
+          : parseTs(a.id) - parseTs(b.id)
+      );
+    } else if (tab._sortMode === 'stat') {
+      // 스탯순: char.statSum 필드 직접 사용 (CharacterManager 생성 시 자동 계산)
+      // statSum 없을 경우 char.stats 객체 합산으로 폴백
+      const getSum = c => {
+        if (c.statSum != null) return c.statSum;
+        if (c.stats && typeof c.stats === 'object')
+          return Object.values(c.stats).reduce((a, v) => a + (v || 0), 0);
+        return 0;
+      };
+      result.sort((a, b) =>
+        tab._sortOrder === 'desc'
+          ? getSum(b) - getSum(a)
+          : getSum(a) - getSum(b)
+      );
     }
 
     return result;
