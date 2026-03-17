@@ -114,11 +114,13 @@ class Tab_Manage_Full {
       this._maskGfx = null;
     }
 
-    TM_CardList.buildCardList(this);
+    // ✏️ fs 함수 전달 — 없으면 FontManager 직접 참조로 폴백
+    const fs = n => FontManager.adjustedSize(n, this.scene.scale);
+    TM_CardList.buildCardList(this, fs);
   }
 
-  // ✏️ _applyFilter: 정렬 포함한 버전으로 TM_CardList에 위임
-  //   (기존 buildCardList 내 tab._applyFilter 호출이 있으면 이걸 타게 됨)
+  // ✏️ _applyFilter: buildCardList 내부에서 TM_CardList._applyFilterAndSort 직접 호출하므로
+  //    이 메서드는 호환성 유지용으로만 남겨둠 (실제로는 호출되지 않음)
   _applyFilter(chars) {
     return TM_CardList._applyFilterAndSort(this, chars);
   }

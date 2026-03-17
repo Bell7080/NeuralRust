@@ -310,14 +310,9 @@ const TM_CardList = {
     }).setOrigin(0, 0);
     c.add([cogBadgeBg, cogTxt]);
 
-    // ── 선택 마크 (우상단) ─────────────────────────────────────
-    if (tab._selectedChar && tab._selectedChar.id === char.id) {
-      const selMark = scene.add.text(cw - 3, 3, '✓', {
-        fontSize: fs(9), fill: '#e8c060', fontFamily: FontManager.MONO,
-      }).setOrigin(1, 0);
-      c.add(selMark);
-      c._selMark = selMark;
-    }
+    // ── 선택 마크 (우상단) — _drawCbg로 테두리로 표현하므로 별도 마크 불필요
+    // ✏️ 제거: 첫 번째 카드에 ✓가 기본으로 찍히는 버그 원인이었음
+    //    선택 표시는 drawCbg(sel=true)의 금색 테두리로만 표현
 
     // ── 하단 정보 영역 ─────────────────────────────────────────
     const infoY = portH + 2;
