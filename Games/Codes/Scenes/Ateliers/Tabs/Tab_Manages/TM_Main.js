@@ -1,5 +1,5 @@
 // ================================================================
-//  TM_Main.js
+//  TM_Main.js  (GRID REWORK PATCH)
 //  경로: Games/Codes/Scenes/Atelier/tabs/Tab_Manages/TM_Main.js
 //
 //  역할: Tab_Manage_Full 진입점 — 상태 관리, 생명주기, 패널 조립
@@ -7,13 +7,16 @@
 //  로드 순서 (index.html):
 //    TM_Layout.js → TM_CardList.js → TM_Center.js → TM_RightPanel.js → TM_Main.js
 //
-//  ✏️ 버그 수정:
-//    - _container.setDepth(10) 적용
-//      → depth 0이면 컨테이너 내부 interactive 객체들이 씬 depth 0 기준으로 동작하여
-//         사이드버튼/HUD 등 다른 UI와 입력 이벤트 충돌 발생 → 버튼 클릭 불가 버그
-//      → 10으로 설정하면 모든 자식 패널/버튼이 이 컨테이너 위에 올바르게 동작
-//    - destroy() 에 _bgPlaceholder, _rightDetailObjs 정리 추가
-//      → TM_Layout.buildBackground 비동기 로드 중 destroy 시 참조 누수 방지
+//  ✏️ 변경사항 (Grid Rework):
+//    - 생성자에 _sortMode / _sortOrder 초기 상태 추가
+//    - _applyFilter() → TM_CardList._applyFilterAndSort() 위임으로 교체
+//      (필터 + 정렬을 TM_CardList에서 일원화 관리)
+//    - _refreshCards(): cardRow/maskGfx destroy 시 참조 오염 방지 강화
+//    - 나머지 구조(destroy, _doHeal, _showToast 등) 동일 유지
+//
+//  ✏️ 기존 버그 수정 유지:
+//    - _container.setDepth(10)
+//    - destroy() 비동기 BG 로드 콜백 / 트윈 / 타이머 / 토스트 정리
 // ================================================================
 
 class Tab_Manage_Full {
@@ -36,25 +39,28 @@ class Tab_Manage_Full {
     this._filterCog     = 'all';
     this._filterBarObjs = [];
 
+    // ✏️ 정렬 상태 — TM_CardList.buildListPanel에서도 초기화하지만
+    //   _refreshCards 호출 타이밍 보호를 위해 여기서도 선언
+    this._sortMode  = 'none';   // 'none' | 'date' | 'stat'
+    this._sortOrder = 'desc';   // 'desc'(높은순) | 'asc'(낮은순)
+
     this._detailObjs        = [];
     this._detailTweens      = [];
-    this._rightDetailObjs   = [];  // TM_RightPanel.buildDetail 추적용
-    this._centerDetailObjs  = [];  // TM_Center.buildDetail 추적용
-    this._bgPlaceholder     = null; // TM_Layout.buildBackground 비동기 플레이스홀더
-    this._bgLoadCb          = null; // TM_Layout.buildBackground 로드 콜백 (리스너 제거용)
-    this._layoutTweens      = [];   // TM_Layout hover 트윈 추적
-    this._dragTimer         = null; // TM_CardList.setupDrag delayedCall 추적
-    this._toastObjs         = [];   // _showToast scene 직접 오브젝트 추적
+    this._rightDetailObjs   = [];
+    this._centerDetailObjs  = [];
+    this._bgPlaceholder     = null;
+    this._bgLoadCb          = null;
+    this._layoutTweens      = [];
+    this._dragTimer         = null;
+    this._toastObjs         = [];
 
-    // AtelierScene 애니메이션용 패널 참조
     this._headerPanel = null;
     this._listPanel   = null;
     this._centerPanel = null;
     this._rightPanel  = null;
     this._backBtn     = null;
 
-    // ✏️ depth 10 설정: 모든 자식 UI(패널/버튼/히트박스)가 이 컨테이너의 depth 기준으로 처리
-    //    사이드버튼/HUD(depth 0) 위에 렌더되어 클릭 이벤트 정상 수신
+    // depth 10: 모든 자식 UI가 사이드버튼/HUD 위에 올바르게 동작
     this._container = scene.add.container(0, 0).setDepth(10);
     this._build();
   }
@@ -67,7 +73,6 @@ class Tab_Manage_Full {
     const backBtnH = parseInt(fs(60));
     this._hdrH     = hdrH;
 
-    // 패널 여백 (뒷배경이 테두리 주변에 보이도록)
     const pm = Math.round(W * 0.012);
     this._panelMargin = pm;
 
@@ -99,16 +104,23 @@ class Tab_Manage_Full {
   _refreshCards() {
     this._cardObjs = [];
     this._scrollY  = 0;
-    if (this._cardRow)  { this._cardRow.destroy();  this._cardRow  = null; }
-    if (this._maskGfx)  { this._maskGfx.destroy();  this._maskGfx  = null; }
+
+    if (this._cardRow) {
+      try { this._cardRow.destroy(); } catch(e) {}
+      this._cardRow = null;
+    }
+    if (this._maskGfx) {
+      try { this._maskGfx.destroy(); } catch(e) {}
+      this._maskGfx = null;
+    }
+
     TM_CardList.buildCardList(this);
   }
 
+  // ✏️ _applyFilter: 정렬 포함한 버전으로 TM_CardList에 위임
+  //   (기존 buildCardList 내 tab._applyFilter 호출이 있으면 이걸 타게 됨)
   _applyFilter(chars) {
-    return chars.filter(c =>
-      (this._filterJob === 'all' || c.job === this._filterJob) &&
-      (this._filterCog === 'all' || c.cog === parseInt(this._filterCog))
-    );
+    return TM_CardList._applyFilterAndSort(this, chars);
   }
 
   _inCardArea(ptr) {
@@ -119,7 +131,9 @@ class Tab_Manage_Full {
   _showToast(msg) {
     const { scene, W, H } = this;
     const t = scene.add.text(W / 2, H * 0.5, msg, {
-      fontSize: FontManager.adjustedSize(15, scene.scale), fill: '#cc5533', fontFamily: FontManager.MONO,
+      fontSize: FontManager.adjustedSize(15, scene.scale),
+      fill: '#cc5533',
+      fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(700).setAlpha(0);
     this._toastObjs.push(t);
     scene.tweens.add({
@@ -159,54 +173,40 @@ class Tab_Manage_Full {
   hide()  { this._container.setVisible(false); }
 
   destroy() {
-    // 비동기 BG 로드 콜백 리스너 제거 (로드 중 destroy 시 참조 누수 방지)
     if (this._bgLoadCb) {
       try { this.scene.load.off('complete', this._bgLoadCb); } catch(e) {}
       this._bgLoadCb = null;
     }
-
-    // 비동기 BG 로드 중 destroy 시 플레이스홀더 정리
     if (this._bgPlaceholder) {
       try { this._bgPlaceholder.destroy(); } catch(e) {}
       this._bgPlaceholder = null;
     }
-
-    // TM_Layout hover 트윈 정리
     if (this._layoutTweens) {
       this._layoutTweens.forEach(tw => { try { tw.stop(); } catch(e){} });
       this._layoutTweens = [];
     }
-
-    // drag delayedCall 타이머 정리
     if (this._dragTimer) {
       try { this._dragTimer.remove(); } catch(e) {}
       this._dragTimer = null;
     }
-
-    // 토스트 텍스트 정리 (scene 직접 추가 오브젝트)
     if (this._toastObjs) {
       this._toastObjs.forEach(o => { try { o.destroy(); } catch(e){} });
       this._toastObjs = [];
     }
-
-    // 우측 패널 디테일 오브젝트 정리
     if (this._rightDetailObjs) {
       this._rightDetailObjs.forEach(o => { try { o.destroy(); } catch(e){} });
       this._rightDetailObjs = [];
     }
-
-    // 중앙 패널 디테일 오브젝트 정리
     if (this._centerDetailObjs) {
       this._centerDetailObjs.forEach(o => { try { o.destroy(); } catch(e){} });
       this._centerDetailObjs = [];
     }
-
     if (this._detailTweens) {
       this._detailTweens.forEach(tw => { try { tw.stop(); tw.remove(); } catch(e){} });
     }
     this._detailObjs.forEach(o    => { try { o.destroy(); } catch(e){} });
     this._filterBarObjs.forEach(o => { try { o.destroy(); } catch(e){} });
-    if (this._maskGfx) { this._maskGfx.destroy(); this._maskGfx = null; }
+    if (this._maskGfx) { try { this._maskGfx.destroy(); } catch(e){} this._maskGfx = null; }
 
     const si = this.scene.input;
     if (this._dragDown)  si.off('pointerdown', this._dragDown);
