@@ -38,7 +38,6 @@ const PS_RightPanel = {
   buildPartySlots(scene) {
     scene._slotHits.forEach(h=>{ try{h.destroy();}catch(e){} });
     scene._slotHits = [];
-    scene._slotContainer.removeAll(true);
 
     const fs    = scene._fs.bind(scene);
     const pm    = scene._pm;
@@ -48,7 +47,10 @@ const PS_RightPanel = {
     const aH    = scene._slotAreaH - pm * 2;
     const count = scene._party.length;
 
+    // ── 빈 상태 ─────────────────────────────────────────────────
     if(count === 0){
+      scene._slotContainer.removeAll(true);
+      scene._slotConMap = {};
       scene._slotContainer.add(scene.add.text(aX + aW/2, aY + aH/2,
         '캐릭터를 선택하면\n파티에 추가됩니다', {
           fontSize:fs(11), fill:'#2a1808', fontFamily:FontManager.MONO, align:'center', lineSpacing:4,
@@ -56,135 +58,205 @@ const PS_RightPanel = {
       return;
     }
 
-    // ── 레이아웃 계산 ─────────────────────────────────────────────
-    // 세로 한 열에 최대 6칸, 7번째부터 옆 열로 확장
-    const PER_COL  = 6;
-    const cols     = Math.ceil(count / PER_COL);  // 현재 열 수
-    const gap      = parseInt(fs(3));
-    const colGap   = parseInt(fs(4));
+    // ── 고정 슬롯 크기 (정사각형, 패널 좌상단 기준 배치) ────────
+    //  - 한 열에 최대 6칸
+    //  - 슬롯 크기는 고정 (aH / 6의 ~80%) — 패널을 가득 채우지 않음
+    const PER_COL = 6;
+    const slotSz  = Math.floor((aH - parseInt(fs(3)) * (PER_COL - 1)) / PER_COL * 0.82);
+    scene._slotSzCache = slotSz;
+    const gap     = parseInt(fs(3));
+    const colGap  = parseInt(fs(5));
 
-    // 열 너비: 열이 늘수록 좁아짐
-    const colW  = Math.floor((aW - colGap * (cols - 1)) / cols);
+    const posOf = (idx) => {
+      const col = Math.floor(idx / PER_COL);
+      const row = idx % PER_COL;
+      return {
+        cx: aX + col * (slotSz + colGap) + slotSz / 2,
+        cy: aY + row * (slotSz + gap)    + slotSz / 2,
+        col, row,
+      };
+    };
 
-    // 슬롯 높이: 1칸일 땐 크게, 6칸이면 영역 꽉 맞게 자동 축소
-    // aH 기준으로 현재 열의 칸 수(perThisCol)에 맞게 계산
-    const slotH = Math.floor((aH - gap * (PER_COL - 1)) / PER_COL);
-    const slotW = colW;
+    // ── 맵 초기화 ────────────────────────────────────────────────
+    if(!scene._slotConMap) scene._slotConMap = {};
+
+    // 빈 힌트가 있으면(이전 count===0) 컨테이너 초기화
+    const hadHint = Object.keys(scene._slotConMap).length === 0 && count === 1;
+    if(hadHint) scene._slotContainer.removeAll(true);
+
+    // 파티에서 빠진 id 제거
+    const currentSet = new Set(scene._party);
+    Object.keys(scene._slotConMap).forEach(id => {
+      if(!currentSet.has(id)){
+        try{ scene._slotConMap[id].destroy(); }catch(e){}
+        delete scene._slotConMap[id];
+      }
+    });
+
+    // 열이 늘었는지 판별 (밀기 애니메이션 트리거)
+    const prevCount = scene._slotPrevCount || 0;
+    const prevCols  = Math.ceil(Math.max(prevCount, 1) / PER_COL);
+    const newCols   = Math.ceil(count / PER_COL);
+    const colAdded  = newCols > prevCols;
+    scene._slotPrevCount = count;
 
     scene._party.forEach((charId, idx) => {
-      const char = scene._chars.find(c => c.id === charId);
+      const { cx, cy, row } = posOf(idx);
+      const isNew = !scene._slotConMap[charId];
+
+      // ── 기존 슬롯: 열이 늘 때만 위치 트윈, 나머지는 그대로 ───
+      if(!isNew){
+        const con = scene._slotConMap[charId];
+        if(colAdded){
+          scene.tweens.add({ targets:con, x:cx, y:cy, duration:220, ease:'Cubic.easeOut' });
+        } else {
+          con.setPosition(cx, cy);
+        }
+        con._refreshSel && con._refreshSel();
+
+        // 히트박스 재등록 (월드 좌표)
+        const hit = scene.add.rectangle(cx, cy, slotSz, slotSz, 0, 0)
+          .setInteractive({ useHandCursor:true }).setDepth(22);
+        scene._slotHits.push(hit);
+        PS_RightPanel._bindHit(scene, hit, charId);
+        return;
+      }
+
+      // ── 신규 슬롯 빌드 ───────────────────────────────────────
+      const char  = scene._chars.find(c => c.id === charId);
       if(!char) return;
-
-      const col    = Math.floor(idx / PER_COL);   // 몇 번째 열
-      const row    = idx % PER_COL;               // 열 안에서 몇 번째 칸
-      const isNewCol = idx > 0 && row === 0;      // 새 열의 첫 칸
-
-      const tX    = aX + col * (colW + colGap);
-      const tY    = aY + row * (slotH + gap);
-      const isSel = scene._slotSelected === charId;
       const cogC  = CharacterManager.getCogColor(char.cog);
+      const isSel = () => scene._slotSelected === charId;
 
-      // 슬롯 컨테이너
-      const cx = tX + slotW / 2;
-      const cy = tY + slotH / 2;
-      const slotCon = scene.add.container(cx, cy).setAlpha(0);
-      scene._slotContainer.add(slotCon);
+      const con = scene.add.container(cx, cy).setAlpha(0);
+      scene._slotContainer.add(con);
+      scene._slotConMap[charId] = con;
 
-      // ── 배경 ──────────────────────────────────────────────────
+      // 배경
       const bg = scene.add.graphics();
       const drawBg = (hov) => {
         bg.clear();
-        if(isSel)     { bg.fillStyle(0x2a0808,1); bg.lineStyle(2,0xff4444,1); }
+        if(isSel())   { bg.fillStyle(0x2a0808,1); bg.lineStyle(2,0xff4444,1); }
         else if(hov)  { bg.fillStyle(0x1e1a10,1); bg.lineStyle(2,cogC.phaser,1); }
-        else          { bg.fillStyle(0x110e08,1); bg.lineStyle(1,cogC.phaser,0.60); }
-        bg.fillRect(-slotW/2,-slotH/2,slotW,slotH);
-        bg.strokeRect(-slotW/2,-slotH/2,slotW,slotH);
+        else          { bg.fillStyle(0x110e08,1); bg.lineStyle(1,cogC.phaser,0.55); }
+        bg.fillRect(-slotSz/2,-slotSz/2,slotSz,slotSz);
+        bg.strokeRect(-slotSz/2,-slotSz/2,slotSz,slotSz);
       };
       drawBg(false);
-      slotCon.add(bg);
+      con.add(bg);
 
-      // ── 스프라이트 (슬롯 좌측 정사각 영역) ───────────────────
-      const portSz = slotH - 4;
-      const portX  = -slotW/2 + portSz/2 + 2;
-      const portBg = scene.add.graphics();
-      portBg.fillStyle(0x030303, 0.65);
-      portBg.fillRect(-slotW/2+1, -slotH/2+1, portSz+2, slotH-2);
-      slotCon.add(portBg);
+      // 스프라이트 (상단 62%)
+      const portH = Math.round(slotSz * 0.62);
+      const portY = -slotSz/2 + portH/2;
+      const pBg = scene.add.graphics();
+      pBg.fillStyle(0x030303,0.65);
+      pBg.fillRect(-slotSz/2+1,-slotSz/2+1,slotSz-2,portH-1);
+      con.add(pBg);
 
       if(char.spriteKey && scene.textures.exists(char.spriteKey)){
-        const img = scene.add.image(portX, 0, char.spriteKey).setOrigin(0.5);
-        img.setScale(Math.min(portSz / img.width, portSz / img.height));
-        slotCon.add(img);
+        const img = scene.add.image(0, portY, char.spriteKey).setOrigin(0.5);
+        img.setScale(Math.min((slotSz-4)/img.width, (portH-4)/img.height));
+        con.add(img);
       } else {
-        const JS = {fisher:'F', diver:'D', ai:'AI'};
-        slotCon.add(scene.add.text(portX, 0, JS[char.job]||'?', {
+        const JS = {fisher:'F',diver:'D',ai:'AI'};
+        con.add(scene.add.text(0, portY, JS[char.job]||'?', {
           fontSize:fs(11), fill:'#2a3038', fontFamily:FontManager.MONO,
         }).setOrigin(0.5));
       }
 
-      // ── 이름 + Cog (우측 텍스트 영역) ─────────────────────────
-      const textX  = -slotW/2 + portSz + parseInt(fs(4)) + 2;
-      const textW  = slotW - portSz - parseInt(fs(6));
-      const nameFs = Math.max(6, Math.round(8 - cols * 0.5));  // 열 많을수록 살짝 작아짐
+      // 이름 (하단)
+      const nameY = -slotSz/2 + portH + (slotSz - portH)/2;
+      con.add(scene.add.text(0, nameY, char.name, {
+        fontSize:fs(6), fill:'#c8bfb0', fontFamily:FontManager.TITLE,
+        wordWrap:{width:slotSz-4}, align:'center',
+      }).setOrigin(0.5));
 
-      slotCon.add(scene.add.text(textX, -slotH * 0.14, char.name, {
-        fontSize: fs(nameFs), fill: isSel ? '#ff8888' : '#c8bfb0',
-        fontFamily: FontManager.TITLE, wordWrap: { width: textW },
-      }).setOrigin(0, 0.5));
+      // Cog 뱃지 좌상단
+      con.add(scene.add.text(-slotSz/2+2,-slotSz/2+2, `C${char.cog}`, {
+        fontSize:fs(6), fill:cogC.css, fontFamily:FontManager.MONO,
+      }).setOrigin(0,0));
 
-      slotCon.add(scene.add.text(textX, slotH * 0.22, `C${char.cog}`, {
-        fontSize: fs(Math.max(6, nameFs - 1)), fill: cogC.css,
-        fontFamily: FontManager.MONO,
-      }).setOrigin(0, 0.5));
+      // × 마크 우상단 (선택 시만 표시)
+      const xMark = scene.add.text(slotSz/2-2,-slotSz/2+1, '×', {
+        fontSize:fs(9), fill:'#ff4444', fontFamily:FontManager.MONO,
+      }).setOrigin(1,0).setVisible(false);
+      con.add(xMark);
 
-      // ── 선택 시 × (우상단) ────────────────────────────────────
-      if(isSel){
-        slotCon.add(scene.add.text(slotW/2 - 2, -slotH/2 + 1, '×', {
-          fontSize: fs(10), fill: '#ff4444', fontFamily: FontManager.MONO,
-        }).setOrigin(1, 0));
-      }
+      con._drawBg    = drawBg;
+      con._refreshSel = () => { xMark.setVisible(isSel()); drawBg(false); };
 
-      // ── 히트박스 ──────────────────────────────────────────────
-      const hit = scene.add.rectangle(0, 0, slotW, slotH, 0, 0)
-        .setInteractive({ useHandCursor: true }).setDepth(22);
-      slotCon.add(hit);
+      // 히트박스
+      const hit = scene.add.rectangle(cx, cy, slotSz, slotSz, 0, 0)
+        .setInteractive({ useHandCursor:true }).setDepth(22);
       scene._slotHits.push(hit);
+      PS_RightPanel._bindHit(scene, hit, charId);
 
-      hit.on('pointerover', () => drawBg(true));
-      hit.on('pointerout',  () => drawBg(false));
-      hit.on('pointerup', () => {
-        if(scene._slotSelected === charId){
-          scene._slotSelected = null;
-          scene._removeFromPartyById(charId);
-        } else {
-          scene._slotSelected = charId;
-          PS_RightPanel.buildPartySlots(scene);
-          const ch = scene._chars.find(c => c.id === charId);
-          if(ch) PS_CenterPanel.openProfile(scene, ch);
-        }
-      });
-
-      // ── 애니메이션 ────────────────────────────────────────────
-      // 기존 칸(같은 열): 위에서 차례로 내려오며 페이드
-      // 새 열(7번째~): 오른쪽에서 스윽 밀려 들어옴
-      if(isNewCol){
-        // 새 열 전체 — 오른쪽 바깥에서 슬라이드 인
-        slotCon.setX(cx + parseInt(fs(18)));
+      // ── 등장 애니메이션 ──────────────────────────────────────
+      // 새 열(colAdded) → 오른쪽에서 스윽 슬라이드 인, 열 내 칸 순차
+      // 같은 열 추가   → 페이드 인만 (깜빡임 없이 부드럽게)
+      if(colAdded){
+        con.setX(cx + slotSz * 0.6);
         scene.tweens.add({
-          targets: slotCon, x: cx, alpha: 1,
-          duration: 220, ease: 'Cubic.easeOut',
-          delay: row * 22,   // 열 안 칸들도 순차 등장
+          targets:con, x:cx, alpha:1,
+          duration:220, ease:'Cubic.easeOut', delay: row * 20,
         });
       } else {
-        // 같은 열 — 살짝 위에서 내려오며 페이드 인
-        slotCon.setY(cy - parseInt(fs(6)));
         scene.tweens.add({
-          targets: slotCon, y: cy, alpha: 1,
-          duration: 180, ease: 'Cubic.easeOut',
-          delay: row * 30,
+          targets:con, alpha:1,
+          duration:160, ease:'Sine.easeOut',
         });
       }
     });
+  },
+
+  // 슬롯 히트박스 이벤트 바인딩
+  _bindHit(scene, hit, charId) {
+    const con = () => scene._slotConMap && scene._slotConMap[charId];
+    hit.on('pointerover', () => { con() && con()._drawBg && con()._drawBg(true);  });
+    hit.on('pointerout',  () => { con() && con()._drawBg && con()._drawBg(false); });
+    hit.on('pointerup', () => {
+      if(scene._slotSelected === charId){
+        scene._slotSelected = null;
+        scene._removeFromPartyById(charId);
+      } else {
+        scene._slotSelected = charId;
+        // 선택 상태 시각만 갱신 — 전체 재빌드 없이
+        Object.values(scene._slotConMap||{}).forEach(c => c._refreshSel && c._refreshSel());
+        // 히트박스만 재등록
+        scene._slotHits.forEach(h=>{ try{h.destroy();}catch(e){} });
+        scene._slotHits = [];
+        scene._party.forEach((id, idx) => {
+          const { cx, cy } = PS_RightPanel._posOf(scene, idx);
+          const sz = scene._slotSzCache;
+          if(!sz) return;
+          const h = scene.add.rectangle(cx, cy, sz, sz, 0, 0)
+            .setInteractive({ useHandCursor:true }).setDepth(22);
+          scene._slotHits.push(h);
+          PS_RightPanel._bindHit(scene, h, id);
+        });
+        const ch = scene._chars.find(c => c.id === charId);
+        if(ch) PS_CenterPanel.openProfile(scene, ch);
+      }
+    });
+  },
+
+  // 위치 계산 (외부 재사용용)
+  _posOf(scene, idx) {
+    const sz     = scene._slotSzCache || 0;
+    const pm     = scene._pm;
+    const aX     = scene._slotAreaX + pm;
+    const aY     = scene._slotAreaY + pm;
+    const fs     = n => FontManager.adjustedSize(n, scene.scale);
+    const gap    = parseInt(fs(3));
+    const colGap = parseInt(fs(5));
+    const PER_COL = 6;
+    const col = Math.floor(idx / PER_COL);
+    const row = idx % PER_COL;
+    return {
+      cx: aX + col * (sz + colGap) + sz / 2,
+      cy: aY + row * (sz + gap)    + sz / 2,
+      col, row,
+    };
   },
 
   buildManagePanel(scene) {
