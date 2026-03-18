@@ -10,9 +10,9 @@
 
 const PS_RightPanel = {
 
-  _buildRightPanel() {
-    const { H } = this;
-    const pm    = scene._pm;
+  buildRightPanel(scene) {
+    const H  = scene.H;
+    const pm = scene._pm;
     const right = scene._rightContainer;
 
     const rBg = scene.add.graphics();
@@ -35,7 +35,7 @@ const PS_RightPanel = {
   },
 
   // 파티 슬롯 (6칸 초과 시 2열)
-  _buildPartySlots() {
+  buildPartySlots(scene) {
     scene._slotHits.forEach(h=>{ try{h.destroy();}catch(e){} });
     scene._slotHits = [];
     scene._slotContainer.removeAll(true);
@@ -128,13 +128,13 @@ const PS_RightPanel = {
           scene._slotSelected = charId;
           PS_RightPanel.buildPartySlots(scene);
           const ch = scene._chars.find(c => c.id === charId);
-          if(ch) scene._openProfile(ch);
+          if(ch) PS_CenterPanel.openProfile(scene, ch);
         }
       });
     });
   },
 
-  _buildManagePanel() {
+  buildManagePanel(scene) {
     scene._manageContainer.removeAll(true);
     // 이전 출발버튼 sceneHit 정리
     scene._manageHits = scene._manageHits || [];

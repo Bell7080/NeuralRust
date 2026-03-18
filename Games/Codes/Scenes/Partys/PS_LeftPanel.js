@@ -243,7 +243,7 @@ const PS_LeftPanel = {
         inP() ? scene._removeFromPartyById(char.id) : scene._addToParty(char.id);
       } else {
         scene._lastClickId = char.id;
-        scene._openProfile(char);
+        PS_CenterPanel.openProfile(scene, char);
         if (scene._dblTimer) scene._dblTimer.remove();
         scene._dblTimer = scene.time.delayedCall(400, () => { scene._lastClickId = null; });
       }

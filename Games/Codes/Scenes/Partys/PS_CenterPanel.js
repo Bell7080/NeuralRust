@@ -10,8 +10,8 @@
 
 const PS_CenterPanel = {
 
-  _buildCenterBg() {
-    const { H }  = this;
+  buildCenterBg(scene) {
+    const H      = scene.H;
     const pm     = scene._pm;
     const lw     = scene._lw;
     const cw     = scene._cw;
@@ -50,7 +50,7 @@ const PS_CenterPanel = {
     scene._centerFadeW = fadeW;
   },
 
-  _buildCenterEmpty() {
+  buildCenterEmpty(scene) {
     PS_CenterPanel.clearProfile(scene);
     const lw  = scene._lw;
     const cw  = scene._cw;
@@ -62,18 +62,18 @@ const PS_CenterPanel = {
     scene._profileContainer.add(hint);
   },
 
-  _clearProfile() {
+  clearProfile(scene) {
     scene._profileContainer.removeAll(true);
   },
 
-  _openProfile(char) {
+  openProfile(scene, char) {
     scene._selectedChar = char;
     scene._cardObjs.forEach(({container:c})=>{ if(c._drawCbg) c._drawCbg(false); });
     PS_CenterPanel.clearProfile(scene);
     PS_CenterPanel.buildProfile(scene, char);
   },
 
-  _buildProfile(char) {
+  buildProfile(scene, char) {
     const fs    = scene._fs.bind(scene);
     const pm    = scene._pm;
     const lw    = scene._lw;
