@@ -292,8 +292,8 @@ const CharacterManager = (() => {
     char.stats[key]    = (char.stats[key] || 0) + 1;
     char.pendingStats -= 1;
     if (key === 'hp') {
-      char.maxHp     = (char.maxHp     || 0) + 10;
-      char.currentHp = Math.min((char.currentHp || 0) + 10, char.maxHp);
+      char.maxHp     = (char.maxHp     || 0) + 5;
+      char.currentHp = Math.min((char.currentHp || 0) + 5, char.maxHp);
     }
     char.statSum = Object.values(char.stats).reduce((a, v) => a + v, 0);
     updateCharacter(char);
@@ -326,7 +326,7 @@ const CharacterManager = (() => {
       overclock:    _rollInitialOverclock(),
       mastery:      0,
       pendingStats: 0,
-      currentHp: stats.hp * 10, maxHp: stats.hp * 10,
+      currentHp: stats.hp * 5, maxHp: stats.hp * 5,
       status:    'alive',
       spriteKey: _uniqueSpriteKey(),
     };
@@ -347,7 +347,7 @@ const CharacterManager = (() => {
       overclock:    _rollInitialOverclock(),
       mastery:      0,
       pendingStats: 0,
-      currentHp: stats.hp * 10, maxHp: stats.hp * 10,
+      currentHp: stats.hp * 5, maxHp: stats.hp * 5,
       status:    'alive',
       spriteKey: _uniqueSpriteKey(),
     };
@@ -445,6 +445,26 @@ const CharacterManager = (() => {
           dirty = true;
         }
         if (c.pendingStats === undefined) { c.pendingStats = 0; dirty = true; }
+
+        // ✏️ HP 스케일 마이그레이션 — 체력 1스탯 = HP 10 → HP 5 패치
+        //    maxHp 가 stats.hp * 10 기준으로 저장된 경우 → * 5 기준으로 교정
+        //    판별: maxHp > stats.hp * 5 이고 _hpMigrated 플래그 없을 때
+        if (!c._hpMigrated && c.stats && c.stats.hp != null) {
+          const expected5  = c.stats.hp * 5;
+          const expected10 = c.stats.hp * 10;
+          if (c.maxHp >= expected10 * 0.9) {
+            // * 10 기준으로 저장된 것 → * 5 로 재계산
+            const hpRatio  = c.maxHp > 0 ? (c.currentHp / c.maxHp) : 1;
+            c.maxHp        = expected5;
+            c.currentHp    = Math.round(expected5 * hpRatio);
+            c._hpMigrated  = true;
+            dirty = true;
+          } else {
+            // 이미 * 5 기준이거나 아이템·오버클럭 보정된 경우 — 플래그만 세움
+            c._hpMigrated = true;
+            dirty = true;
+          }
+        }
       });
 
       if (dirty) saveAll(ex);

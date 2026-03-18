@@ -843,8 +843,8 @@ Tab_Recruit.prototype._confirmHire = function () {
     // ✅ 폴백 키를 CharacterSpriteManager.getKey(0) = 'char_000'으로 통일
     spriteKey:    result.spriteKey || (typeof CharacterSpriteManager !== 'undefined'
       ? CharacterSpriteManager.getKey(0) : 'char_000'),
-    maxHp:        statObj.hp * 10,
-    currentHp:    statObj.hp * 10,
+    maxHp:        statObj.hp * 5,
+    currentHp:    statObj.hp * 5,
     mastery:      0,
     pendingStats: 0,
   };
