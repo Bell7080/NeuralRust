@@ -43,9 +43,9 @@ const PS_RightPanel = {
     const fs    = scene._fs.bind(scene);
     const pm    = scene._pm;
     const aX    = scene._slotAreaX + pm;
-    const aY    = scene._slotAreaY + parseInt(fs(16));
+    const aY    = scene._slotAreaY + parseInt(fs(14));
     const aW    = scene._slotAreaW - pm * 2;
-    const aH    = scene._slotAreaH - parseInt(fs(16)) - pm;
+    const aH    = scene._slotAreaH - parseInt(fs(14)) - pm;
     const count = scene._party.length;
 
     if(count === 0){
@@ -56,70 +56,98 @@ const PS_RightPanel = {
       return;
     }
 
-    // 6칸까지는 1열, 초과 시 2열
-    const COL_BREAK  = 6;
-    const cols       = count > COL_BREAK ? 2 : 1;
-    const perCol     = Math.ceil(count / cols);
-    const colW       = cols === 2 ? Math.floor(aW / 2) - parseInt(fs(2)) : aW;
-    const slotH      = Math.min(
-      Math.floor(aH / perCol) - parseInt(fs(3)),
-      Math.round(colW * 0.50)
-    );
-    const slotW      = colW;
-    const gap        = Math.max(parseInt(fs(3)), Math.floor((aH - perCol * slotH) / (perCol + 1)));
+    // ── 레이아웃 계산 ────────────────────────────────────────────
+    // 가로 줄세우기: 한 줄 최대 6칸, 7번째부터 다음 줄
+    const PER_ROW  = 6;
+    const gap      = parseInt(fs(3));
+    const rowGap   = parseInt(fs(4));
+    const slotW    = Math.floor((aW - gap * (PER_ROW - 1)) / PER_ROW);
+    const slotH    = Math.round(slotW * 0.72);   // 가로형 비율
+    const rows     = Math.ceil(count / PER_ROW);
+
+    // 전체 슬롯 블록을 슬롯 영역 상단에 밀착
+    const totalH   = rows * slotH + (rows - 1) * rowGap;
+    const startY   = aY + Math.min(pm, Math.floor((aH - totalH) / 2));
 
     scene._party.forEach((charId, idx) => {
       const char = scene._chars.find(c => c.id === charId);
       if(!char) return;
 
-      const colIdx = cols === 2 ? Math.floor(idx / perCol) : 0;
-      const rowIdx = cols === 2 ? idx % perCol : idx;
-      const cx     = aX + colIdx * (colW + parseInt(fs(2))) + slotW / 2;
-      const cy     = aY + gap + rowIdx * (slotH + gap) + slotH / 2;
-      const isSel  = scene._slotSelected === charId;
-      const cogC   = CharacterManager.getCogColor(char.cog);
+      const col   = idx % PER_ROW;
+      const row   = Math.floor(idx / PER_ROW);
+      const tX    = aX + col * (slotW + gap);         // 목표 X
+      const tY    = startY + row * (slotH + rowGap);  // 목표 Y
+      const isSel = scene._slotSelected === charId;
+      const cogC  = CharacterManager.getCogColor(char.cog);
 
+      // 슬롯 컨테이너 — 슬라이드 인 애니메이션용
+      const slotCon = scene.add.container(tX + slotW / 2, tY + slotH / 2);
+      slotCon.setAlpha(0);
+      scene._slotContainer.add(slotCon);
+
+      // ── 배경 ─────────────────────────────────────────────────
       const bg = scene.add.graphics();
       const drawBg = (sel) => {
         bg.clear();
         if(sel){ bg.fillStyle(0x2a0808,1); bg.lineStyle(2,0xff4444,1); }
-        else   { bg.fillStyle(0x1a1008,1); bg.lineStyle(2,cogC.phaser,0.85); }
-        bg.fillRect(cx-slotW/2, cy-slotH/2, slotW, slotH);
-        bg.strokeRect(cx-slotW/2, cy-slotH/2, slotW, slotH);
+        else   { bg.fillStyle(0x110e08,1); bg.lineStyle(1,cogC.phaser,0.70); }
+        bg.fillRect(-slotW/2, -slotH/2, slotW, slotH);
+        bg.strokeRect(-slotW/2, -slotH/2, slotW, slotH);
       };
       drawBg(isSel);
-      scene._slotContainer.add(bg);
+      slotCon.add(bg);
 
-      // 스프라이트 (슬롯 좌측)
-      const portSize = slotH * 0.78;
-      const portCX   = cx - slotW/2 + portSize/2 + parseInt(fs(3));
-      if(scene.textures.exists(char.spriteKey)){
-        const img = scene.add.image(portCX, cy, char.spriteKey).setDisplaySize(portSize, portSize);
-        scene._slotContainer.add(img);
+      // ── 스프라이트 (슬롯 상단 절반) ─────────────────────────
+      const portH   = Math.round(slotH * 0.58);
+      const portY   = -slotH/2 + portH/2;
+      const portBg  = scene.add.graphics();
+      portBg.fillStyle(0x030303, 0.7);
+      portBg.fillRect(-slotW/2 + 1, -slotH/2 + 1, slotW - 2, portH - 1);
+      slotCon.add(portBg);
+
+      if(char.spriteKey && scene.textures.exists(char.spriteKey)){
+        const img = scene.add.image(0, portY, char.spriteKey).setOrigin(0.5);
+        img.setScale(Math.min((slotW - 4) / img.width, (portH - 4) / img.height));
+        slotCon.add(img);
+      } else {
+        const JS = {fisher:'F', diver:'D', ai:'AI'};
+        slotCon.add(scene.add.text(0, portY, JS[char.job]||'?', {
+          fontSize:fs(12), fill:'#2a3038', fontFamily:FontManager.MONO,
+        }).setOrigin(0.5));
       }
 
-      // 이름 + Cog (슬롯 우측)
-      const textX = cx - slotW/2 + portSize + parseInt(fs(5));
-      const textW = slotW - portSize - parseInt(fs(7));
-      scene._slotContainer.add([
-        scene.add.text(textX, cy - slotH*0.16, char.name, {
-          fontSize:fs(9), fill:'#c8bfb0', fontFamily:FontManager.TITLE, wordWrap:{width:textW},
-        }).setOrigin(0, 0.5),
-        scene.add.text(textX, cy + slotH*0.18, `Cog ${char.cog}  ${char.jobLabel||''}`, {
-          fontSize:fs(8), fill:cogC.css, fontFamily:FontManager.MONO,
-        }).setOrigin(0, 0.5),
-      ]);
+      // ── 이름 (슬롯 하단) ────────────────────────────────────
+      const nameY = -slotH/2 + portH + (slotH - portH) / 2;
+      slotCon.add(scene.add.text(0, nameY, char.name, {
+        fontSize: fs(7),
+        fill: isSel ? '#ff8888' : '#c8bfb0',
+        fontFamily: FontManager.TITLE,
+        wordWrap: { width: slotW - 4 },
+        align: 'center',
+      }).setOrigin(0.5));
 
-      // 선택 시 × 표시
+      // ── Cog 뱃지 (좌상단) ────────────────────────────────────
+      slotCon.add(scene.add.text(-slotW/2 + 2, -slotH/2 + 2, `C${char.cog}`, {
+        fontSize: fs(6), fill: cogC.css, fontFamily: FontManager.MONO,
+      }).setOrigin(0, 0));
+
+      // ── 선택 시 × (우상단) ──────────────────────────────────
       if(isSel){
-        scene._slotContainer.add(scene.add.text(cx + slotW/2 - parseInt(fs(3)), cy, '×', {
-          fontSize:fs(13), fill:'#ff4444', fontFamily:FontManager.MONO,
-        }).setOrigin(1, 0.5));
+        slotCon.add(scene.add.text(slotW/2 - 2, -slotH/2 + 1, '×', {
+          fontSize: fs(10), fill: '#ff4444', fontFamily: FontManager.MONO,
+        }).setOrigin(1, 0));
       }
 
-      const hit = scene.add.rectangle(cx, cy, slotW, slotH, 0, 0)
-        .setInteractive({useHandCursor:true}).setDepth(22);
+      // ── 히트박스 ────────────────────────────────────────────
+      const hit = scene.add.rectangle(0, 0, slotW, slotH, 0, 0)
+        .setInteractive({ useHandCursor: true }).setDepth(22);
+      slotCon.add(hit);
       scene._slotHits.push(hit);
+
+      hit.on('pointerover', () => {
+        if(!isSel) { bg.clear(); bg.fillStyle(0x1e1a10,1); bg.lineStyle(2,cogC.phaser,1); bg.fillRect(-slotW/2,-slotH/2,slotW,slotH); bg.strokeRect(-slotW/2,-slotH/2,slotW,slotH); }
+      });
+      hit.on('pointerout', () => drawBg(isSel));
       hit.on('pointerup', () => {
         if(scene._slotSelected === charId){
           scene._slotSelected = null;
@@ -131,6 +159,24 @@ const PS_RightPanel = {
           if(ch) PS_CenterPanel.openProfile(scene, ch);
         }
       });
+
+      // ── 슬라이드 인 애니메이션 ──────────────────────────────
+      // 같은 줄은 왼쪽에서 순차 등장, 새 줄(7번째~)은 아래서 올라오며 등장
+      const isNewRow = row > 0 && col === 0;
+      const delay    = col * 28 + row * 60;
+      if(isNewRow){
+        slotCon.setY(tY + slotH / 2 + parseInt(fs(10)));
+        scene.tweens.add({
+          targets: slotCon, y: tY + slotH / 2, alpha: 1,
+          duration: 200, ease: 'Cubic.easeOut', delay,
+        });
+      } else {
+        slotCon.setX(tX + slotW / 2 - parseInt(fs(8)));
+        scene.tweens.add({
+          targets: slotCon, x: tX + slotW / 2, alpha: 1,
+          duration: 180, ease: 'Cubic.easeOut', delay,
+        });
+      }
     });
   },
 

@@ -204,8 +204,7 @@ const PS_CenterPanel = {
       const ocName   = ocData.name  || '오버클럭';
       const ocLabel  = ocData.label || `오버클럭 : ${ocName}`;
       const ocDesc   = ocData.description || '';
-      const ocBonus  = ocData.bonus != null ? `+${Math.round(ocData.bonus*100)}%` : '';
-      const ocLine   = add(scene.add.text(colX, curY, `${ocLabel}  ${ocBonus}`, {
+      const ocLine   = add(scene.add.text(colX, curY, ocLabel, {
         fontSize:rfs(11), fill:ocColor, fontFamily:FontManager.MONO,
       }).setOrigin(0,0));
       mkHit(colX, curY, ocLine.width+8, parseInt(rfs(14)), `${ocName}\n${ocDesc}`);
