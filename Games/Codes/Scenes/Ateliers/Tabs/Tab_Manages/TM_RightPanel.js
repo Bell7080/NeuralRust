@@ -380,11 +380,11 @@ const TM_RightPanel = {
     const plusW = parseInt(rfs(26));
 
     const STAT_DEFS = [
-      { key:'hp',      label:'체력', tip: `체력\n${getStatTooltip('hp')}`      },
-      { key:'health',  label:'건강', tip: `건강\n${getStatTooltip('health')}`   },
-      { key:'attack',  label:'공격', tip: `공격\n${getStatTooltip('attack')}`   },
-      { key:'agility', label:'민첩', tip: `민첩\n${getStatTooltip('agility')}`  },
-      { key:'luck',    label:'행운', tip: `행운\n${getStatTooltip('luck')}`     },
+      { key:'hp',      label:'체력' },
+      { key:'health',  label:'건강' },
+      { key:'attack',  label:'공격' },
+      { key:'agility', label:'민첩' },
+      { key:'luck',    label:'행운' },
     ];
 
     const statBH  = STAT_DEFS.length * rowH + parseInt(rfs(3));
@@ -437,7 +437,7 @@ const TM_RightPanel = {
       }
     };
 
-    STAT_DEFS.forEach(({ key, label, tip }, i) => {
+    STAT_DEFS.forEach(({ key, label }, i) => {
       const sy   = statStartY + i * rowH;
       const midY = sy + rowH / 2;
 
@@ -453,6 +453,11 @@ const TM_RightPanel = {
       const effVal  = (typeof CharacterManager !== 'undefined')
         ? CharacterManager.getEffectiveStat(char, key)
         : (char.stats[key] || 0);
+
+      // ✏️ 동적 툴팁 — 캐릭터 스탯 수치 포함
+      const tip = (typeof getStatTooltipDynamic === 'function')
+        ? getStatTooltipDynamic(key, effVal)
+        : getStatTooltip(key);
 
       if (isOc) {
         const gB     = scene.add.graphics();

@@ -260,13 +260,13 @@ const CharProfile = {
     }).setOrigin(0,0));
     curY += parseInt(fs(14));
 
-    // ✏️ tip 텍스트 → Data_Tooltips.js getStatTooltip() 참조
+    // ✏️ tip → 동적 생성 (getStatTooltipDynamic) — forEach 내부에서 effVal 기준으로 생성
     const STAT_DEFS = [
-      { key:'hp',      label:'체력', tip: getStatTooltip('hp')      },
-      { key:'health',  label:'건강', tip: getStatTooltip('health')   },
-      { key:'attack',  label:'공격', tip: getStatTooltip('attack')   },
-      { key:'agility', label:'민첩', tip: getStatTooltip('agility')  },
-      { key:'luck',    label:'행운', tip: getStatTooltip('luck')     },
+      { key:'hp',      label:'체력' },
+      { key:'health',  label:'건강' },
+      { key:'attack',  label:'공격' },
+      { key:'agility', label:'민첩' },
+      { key:'luck',    label:'행운' },
     ];
 
     const rowH   = parseInt(fs(20));
@@ -321,7 +321,7 @@ const CharProfile = {
       });
     };
 
-    STAT_DEFS.forEach(({ key, label, tip }, i) => {
+    STAT_DEFS.forEach(({ key, label }, i) => {
       const sy   = statStartY + i * rowH;
       const midY = sy + rowH / 2;
 
@@ -337,6 +337,11 @@ const CharProfile = {
       const effVal  = (typeof CharacterManager !== 'undefined')
         ? CharacterManager.getEffectiveStat(char, key)
         : (char.stats[key] || 0);
+
+      // ✏️ 동적 툴팁 — 캐릭터 스탯 수치 포함
+      const tip = (typeof getStatTooltipDynamic === 'function')
+        ? getStatTooltipDynamic(key, effVal)
+        : getStatTooltip(key);
 
       if (isOc) {
         const glowBar = scene.add.graphics();

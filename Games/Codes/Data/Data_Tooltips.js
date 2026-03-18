@@ -18,14 +18,14 @@
 // ================================================================
 
 
-// ── 스탯 툴팁 ────────────────────────────────────────────────────
-// TM_RightPanel._buildStats / Tab_CharProfile STAT_DEFS 에서 참조
+// ── 스탯 툴팁 (정적 설명) ────────────────────────────────────────
+// 동적 수치 포함 버전 → getStatTooltipDynamic(key, effVal) 사용
 const TOOLTIP_STATS = {
-  hp:      '체력 — 스탯당 최대 체력 + 10.',
-  health:  '건강 — 라운드 종료 시 해당 스탯 만큼 잃은 체력을 회복합니다.',
-  attack:  '공격 — 피해에 직접적인 영향을 끼치는 스탯입니다.',
-  agility: '민첩 — 스탯당 공격속도 + 0.1 ( 공격속도 1 = 초당 1대 ).',
-  luck:    '행운 — 스탯당 크리티컬 확률 + 1% ( 100% 초과 시 초과 스탯당 공격 + 1 )\n회피 확률 + 0.1% ( 50% 초과 시 스탯당 민첩 + 1 ).',
+  hp:      '최대 체력에 영향을 줍니다.',
+  health:  '라운드 종료 시 잃은 체력 회복에 영향을 줍니다.',
+  attack:  '피해에 영향을 줍니다.',
+  agility: '공격속도에 영향을 줍니다.',
+  luck:    '크리티컬 확률과 회피율에 영향을 줍니다.',
 };
 
 
@@ -91,4 +91,40 @@ function getPassiveTooltip(name) {
 function getSkillTooltip(name) {
   if (typeof getSkillDescription === 'function') return getSkillDescription(name);
   return name || '';
+}
+
+/**
+ * 캐릭터 실효 스탯값을 포함한 동적 툴팁 텍스트 반환
+ * 첫 줄 = 제목 (스탯 이름), 이후 = 설명 + 현재 수치
+ * @param {string} key     - 'hp' | 'health' | 'attack' | 'agility' | 'luck'
+ * @param {number} effVal  - getEffectiveStat(char, key) 결과값
+ * @returns {string}
+ */
+function getStatTooltipDynamic(key, effVal) {
+  if (typeof StatFormulas === 'undefined') return getStatTooltip(key);
+
+  switch (key) {
+    case 'hp':
+      return `체력\n${TOOLTIP_STATS.hp}\n현재 최대 체력  ${effVal * 5}`;
+
+    case 'health':
+      return `건강\n${TOOLTIP_STATS.health}\n현재 회복량  ${effVal}`;
+
+    case 'attack':
+      return `공격\n${TOOLTIP_STATS.attack}\n현재 공격력  ${effVal}`;
+
+    case 'agility': {
+      const spd = StatFormulas.attackSpeed(effVal);
+      return `민첩\n${TOOLTIP_STATS.agility}\n현재 공격속도  ${spd}회/s`;
+    }
+
+    case 'luck': {
+      const crit = StatFormulas.critRate(effVal);
+      const eva  = StatFormulas.evasionRate(effVal);
+      return `행운\n${TOOLTIP_STATS.luck}\n크리티컬  ${crit}%\n회피  ${eva}%`;
+    }
+
+    default:
+      return getStatTooltip(key);
+  }
 }
