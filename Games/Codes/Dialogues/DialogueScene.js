@@ -206,11 +206,14 @@ class DialogueScene extends Phaser.Scene {
     const TXL = 160, TXR = 1880, TXT = 430, TXB = 895;
 
     // ── 게임 화면에서의 대화창 크기 결정 ─────────────────────
-    // 프레임(FW:FH) 비율을 유지하면서 화면 너비의 75%로
-    const BOX_W = Math.round(W * 0.75);
+    // 너비: 기존 대화창과 동일한 W * 0.68
+    // 높이: 프레임 원본 비율(1785:739) 유지
+    // Y위치: 화면 하단 기준 + 캐릭터 일러스트 잘린 하단을 가리도록 배치
+    const BOX_W = Math.round(W * 0.68);
     const BOX_H = Math.round(BOX_W * (FH / FW));
     const BOX_X = Math.round((W - BOX_W) / 2);
-    const BOX_Y = Math.round(H - BOX_H - H * 0.04);
+    // 하단을 H*0.96에 고정 → 상단이 자연스럽게 캐릭터 하단을 가림
+    const BOX_Y = Math.round(H * 0.96 - BOX_H);
 
     // ── 이미지 전체를 프레임 크기에 맞게 렌더링할 스케일 ─────
     // 이미지를 BOX_W x BOX_H 로 표시할 때의 배율
@@ -323,10 +326,10 @@ class DialogueScene extends Phaser.Scene {
       ease:     'Sine.easeInOut',
     });
 
-    // 하단 힌트 텍스트
+    // 하단 힌트 텍스트 (BOX 하단 바로 밑)
     const hint = this.add.text(
       NEXT_X,
-      BOX_Y + BOX_H + fsPx(4),
+      BOX_Y + BOX_H + fsPx(3),
       'SPACE / CLICK', {
       fontSize:      fs(9),
       fill:          '#5a4a28',
@@ -449,9 +452,11 @@ class DialogueScene extends Phaser.Scene {
   }
 
   // ── 캐릭터 슬롯 ───────────────────────────────────────────────
+  // 발끝이 BOX_Y에 닿도록 배치 (대화창이 캐릭터 하단 잘린 부분을 가림)
   _buildCharacterSlot(W, H, BOX_X, BOX_Y, fs) {
-    this._charH = Math.round(H * 0.75 * 0.85);
+    this._charH = Math.round(BOX_Y * 0.92);  // BOX_Y까지 꽉 차게
     this._charX = Math.round(W / 2);
+    // origin(0.5) 기준: 발끝(중심 + charH/2)이 BOX_Y에 맞닿음
     this._charY = BOX_Y - Math.round(this._charH / 2);
   }
 
