@@ -163,9 +163,9 @@ class DialogueScene extends Phaser.Scene {
     if (!this._charSprite) {
       this._charSprite = this.add.image(this._charX, this._charY, texKey);
       const scale = this._charH / this._charSprite.height;
-      this._charSprite.setScale(scale).setAlpha(0).setDepth(-1); // 대화창 뒤
+      this._charSprite.setScale(scale).setAlpha(0);
     } else {
-      this._charSprite.setPosition(this._charX, this._charY).setAlpha(0).setDepth(-1);
+      this._charSprite.setPosition(this._charX, this._charY).setAlpha(0);
     }
     this.tweens.add({
       targets:  this._charSprite,
@@ -206,10 +206,10 @@ class DialogueScene extends Phaser.Scene {
     const TXL = 160, TXR = 1880, TXT = 430, TXB = 895;
 
     // ── 게임 화면에서의 대화창 크기 결정 ─────────────────────
-    const BOX_W = Math.round(W * 0.68 * 0.65 * 1.08); // 살짝 가로 확장 (+8%)
+    const BOX_W = Math.round(W * 0.68 * 0.65 * 1.08);
     const BOX_H = Math.round(BOX_W * (FH / FW));
     const BOX_X = Math.round((W - BOX_W) / 2);
-    const BOX_Y = 500;                                  // 하단으로 내림 (450→500)
+    const BOX_Y = 560;   // 더 아래로 (500→560)
 
     // ── 이미지 전체를 프레임 크기에 맞게 렌더링할 스케일 ─────
     // 이미지를 BOX_W x BOX_H 로 표시할 때의 배율
@@ -230,9 +230,12 @@ class DialogueScene extends Phaser.Scene {
     const N_H  = (NB - NT) * SCALE_Y;
 
     // ── 텍스트 영역 위치 ─────────────────────────────────────
-    const TEXT_X      = IMG_RENDER_X + TXL * SCALE_X;
-    const TEXT_Y      = IMG_RENDER_Y + TXT * SCALE_Y;
-    const TEXT_W      = (TXR - TXL) * SCALE_X;
+    // 원본 픽셀 기준에서 추가 여백 적용 (구석에서 중앙으로)
+    const TEXT_PAD_X = Math.round(BOX_W * 0.04);   // 좌측 추가 여백 (오른쪽으로)
+    const TEXT_PAD_Y = Math.round(BOX_H * 0.05);   // 상단 추가 여백 (아래로)
+    const TEXT_X      = IMG_RENDER_X + TXL * SCALE_X + TEXT_PAD_X;
+    const TEXT_Y      = IMG_RENDER_Y + TXT * SCALE_Y + TEXT_PAD_Y;
+    const TEXT_W      = (TXR - TXL) * SCALE_X - TEXT_PAD_X * 2;
     const TEXT_BOTTOM = IMG_RENDER_Y + TXB * SCALE_Y;
 
     this._layout = { BOX_W, BOX_H, BOX_X, BOX_Y, TEXT_X, TEXT_Y, TEXT_W, fs: fsPx };
@@ -265,7 +268,8 @@ class DialogueScene extends Phaser.Scene {
     if (this.textures.exists('textbox_001')) {
       const texImg = this.add.image(IMG_RENDER_X, IMG_RENDER_Y, 'textbox_001')
         .setOrigin(0, 0)
-        .setDisplaySize(IMG_RENDER_W, IMG_RENDER_H);
+        .setDisplaySize(IMG_RENDER_W, IMG_RENDER_H)
+        .setDepth(1);   // 캐릭터(기본 depth 0) 앞으로
       this._uiContainer.add(texImg);
     } else {
       // 텍스처 로드 실패 시 폴백
@@ -301,9 +305,9 @@ class DialogueScene extends Phaser.Scene {
     });
     this._uiContainer.add(this._bodyTxt);
 
-    // ── ▶ 다음 줄 아이콘 (텍스트 영역 우하단) ────────────────
+    // ── ▶ 다음 줄 아이콘 (텍스트 영역 우하단, 살짝 위로)
     const NEXT_X = TEXT_X + TEXT_W;
-    const NEXT_Y = TEXT_BOTTOM - fsPx(2);
+    const NEXT_Y = TEXT_BOTTOM - fsPx(10);
 
     this._nextIcon = this.add.text(
       NEXT_X, NEXT_Y, '▶', {
@@ -451,7 +455,7 @@ class DialogueScene extends Phaser.Scene {
   // ── 캐릭터 슬롯 ───────────────────────────────────────────────
   // 발끝이 BOX_Y에 닿도록 배치 (대화창이 캐릭터 하단 잘린 부분을 가림)
   _buildCharacterSlot(W, H, BOX_X, BOX_Y, fs) {
-    const BOX_H    = Math.round(W * 0.68 * 0.65 * 1.08 * (739 / 1785));
+    const BOX_H      = Math.round(W * 0.68 * 0.65 * 1.08 * (739 / 1785));
     const namePanelH = Math.round(BOX_H * 0.176);
     const mainBoxTop = BOX_Y + namePanelH;  // 메인박스 실제 상단 y
 
@@ -602,13 +606,13 @@ class DialogueScene extends Phaser.Scene {
     if (!this._charSprite) {
       this._charSprite = this.add.image(this._charX, this._charY, texKey);
       const scale = this._charH / this._charSprite.height;
-      this._charSprite.setScale(scale).setAlpha(0).setDepth(-1);
+      this._charSprite.setScale(scale).setAlpha(0);
       this.tweens.add({ targets: this._charSprite, alpha: 1, duration: 250 });
     } else {
       if (this._charSprite.texture.key !== texKey) {
         this._charSprite.setTexture(texKey);
         const scale = this._charH / this._charSprite.height;
-        this._charSprite.setScale(scale).setVisible(true).setDepth(-1);
+        this._charSprite.setScale(scale).setVisible(true);
       }
     }
   }
@@ -665,9 +669,9 @@ class DialogueScene extends Phaser.Scene {
     const BTN_W   = Math.round(TEXT_W * 0.96);
     const GAP     = fsPx(7);
     const totalH  = choices.length * BTN_H + (choices.length - 1) * GAP;
-    const textAreaH = BOX_Y + BOX_H - TEXT_Y;
+    // 텍스트 시작 위치 기준 + 살짝 위로 배치
     const startX  = TEXT_X + (TEXT_W - BTN_W) / 2;
-    const startY  = TEXT_Y + (textAreaH - totalH) / 2;
+    const startY  = TEXT_Y + fsPx(8);
 
     this._choiceCont.removeAll(true);
     this.children.bringToTop(this._choiceCont);

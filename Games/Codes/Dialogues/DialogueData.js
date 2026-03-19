@@ -45,7 +45,7 @@ const BGM_DATA = {
 //    - NONE     → 배경 제거 (어둠 처리)
 //
 const BG_DATA = {
-  "A": "Background_003"
+  "A": "Background_007"
 };
 
 // ── SFX_DATA ──────────────────────────────────────────────────────
