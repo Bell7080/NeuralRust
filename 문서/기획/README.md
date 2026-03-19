@@ -1,7 +1,7 @@
 # ⚙️ NEURAL RUST — 뉴럴 러스트
 
 > 스토리 중심 인디게임 개발 저장소
-> Phaser 3 (웹) → Electron (exe 패키징) → Unity (이식)
+> Phaser 3 (웹) → Electron (exe 패키징) → Steam (출시)
 
 ---
 

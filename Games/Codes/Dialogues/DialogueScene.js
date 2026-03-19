@@ -209,11 +209,11 @@ class DialogueScene extends Phaser.Scene {
     // 너비: 기존 대화창과 동일한 W * 0.68
     // 높이: 프레임 원본 비율(1785:739) 유지
     // Y위치: 화면 하단 기준 + 캐릭터 일러스트 잘린 하단을 가리도록 배치
-    const BOX_W = Math.round(W * 0.68);
+    const BOX_W = Math.round(W * 0.68 * 0.65);   // 기존 68% → 35% 축소
     const BOX_H = Math.round(BOX_W * (FH / FW));
     const BOX_X = Math.round((W - BOX_W) / 2);
-    // 하단을 H*0.96에 고정 → 상단이 자연스럽게 캐릭터 하단을 가림
-    const BOX_Y = Math.round(H * 0.96 - BOX_H);
+    // 대화창 상단이 y=450에 오도록 배치 (캐릭터 하단 가림)
+    const BOX_Y = 450;
 
     // ── 이미지 전체를 프레임 크기에 맞게 렌더링할 스케일 ─────
     // 이미지를 BOX_W x BOX_H 로 표시할 때의 배율
@@ -454,10 +454,15 @@ class DialogueScene extends Phaser.Scene {
   // ── 캐릭터 슬롯 ───────────────────────────────────────────────
   // 발끝이 BOX_Y에 닿도록 배치 (대화창이 캐릭터 하단 잘린 부분을 가림)
   _buildCharacterSlot(W, H, BOX_X, BOX_Y, fs) {
-    this._charH = Math.round(BOX_Y * 0.92);  // BOX_Y까지 꽉 차게
+    // 이름판 높이만큼 내려서 메인박스 실제 상단에 발끝을 맞춤
+    // 원본 이미지: 이름판 y=273~403, 프레임 y=273~1012 → 이름판 높이 = 130/739 ≈ 17.6%
+    const BOX_H = Math.round(W * 0.68 * 0.65 * (739 / 1785));
+    const namePanelH = Math.round(BOX_H * 0.176);
+    const mainBoxTop = BOX_Y + namePanelH;  // 메인박스 실제 상단 y
+
+    this._charH = Math.round(mainBoxTop * 0.95);
     this._charX = Math.round(W / 2);
-    // origin(0.5) 기준: 발끝(중심 + charH/2)이 BOX_Y에 맞닿음
-    this._charY = BOX_Y - Math.round(this._charH / 2);
+    this._charY = mainBoxTop - Math.round(this._charH / 2);
   }
 
   // ════════════════════════════════════════════════════════════════
