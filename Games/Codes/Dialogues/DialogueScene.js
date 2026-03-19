@@ -209,7 +209,9 @@ class DialogueScene extends Phaser.Scene {
     const BOX_W = Math.round(W * 0.68 * 0.65 * 1.08);
     const BOX_H = Math.round(BOX_W * (FH / FW));
     const BOX_X = Math.round((W - BOX_W) / 2);
-    const BOX_Y = 560;   // 더 아래로 (500→560)
+    // 대화창 상단 Y — H 비율 기반 (해상도 대응)
+    // H=1080 기준 약 62% 지점 → y≈670
+    const BOX_Y = Math.round(H * 0.62);
 
     // ── 이미지 전체를 프레임 크기에 맞게 렌더링할 스케일 ─────
     // 이미지를 BOX_W x BOX_H 로 표시할 때의 배율
@@ -453,15 +455,18 @@ class DialogueScene extends Phaser.Scene {
   }
 
   // ── 캐릭터 슬롯 ───────────────────────────────────────────────
-  // 발끝이 BOX_Y에 닿도록 배치 (대화창이 캐릭터 하단 잘린 부분을 가림)
+  // 발끝 = BOX_Y (대화창 프레임 상단) 기준
+  // 캐릭터 키(charH)는 BOX_Y까지의 공간 전체를 활용
   _buildCharacterSlot(W, H, BOX_X, BOX_Y, fs) {
+    // 발끝을 BOX_Y + 살짝 아래(이름판 중단)에 맞춤
     const BOX_H      = Math.round(W * 0.68 * 0.65 * 1.08 * (739 / 1785));
     const namePanelH = Math.round(BOX_H * 0.176);
-    const mainBoxTop = BOX_Y + namePanelH;  // 메인박스 실제 상단 y
+    const charFootY  = BOX_Y + namePanelH * 0.5;   // 이름판 절반쯤
 
-    this._charH = Math.round(mainBoxTop * 0.95);
+    // 캐릭터 높이 = 발끝까지의 거리(charFootY)를 거의 다 사용
+    this._charH = Math.round(charFootY * 0.92);
     this._charX = Math.round(W / 2);
-    this._charY = mainBoxTop - Math.round(this._charH / 2);
+    this._charY = charFootY - Math.round(this._charH / 2);
   }
 
   // ════════════════════════════════════════════════════════════════
