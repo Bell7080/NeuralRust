@@ -177,56 +177,99 @@ class DialogueScene extends Phaser.Scene {
 
   // ════════════════════════════════════════════════════════════════
   //  씬 빌드
+  //
+  //  Textbox_001.png 원본: 2000 x 1331
+  //  실제 프레임 픽셀 영역: x=114~1899, y=273~1012  (1785 x 739)
+  //  이름판 픽셀 영역:       x=118~576,  y=273~403   (458 x 130)
+  //  텍스트 내부 영역:       x=160~1880, y=430~895
+  //  하단 톱니 장식:         y=895~1012
+  //
+  //  핵심: 이미지 전체(2000x1331)를 BOX 크기에 맞게 scale 후
+  //        각 요소 좌표를 동일한 scale로 환산
   // ════════════════════════════════════════════════════════════════
   _buildScene(W, H) {
     const fs   = n => FontManager.adjustedSize(n, this.scale);
     const fsPx = n => parseInt(FontManager.adjustedSize(n, this.scale), 10);
     this._fs = fsPx;
 
-    // ── 배경 ─────────────────────────────────────────────────
     this._buildBackground(W, H);
 
-    // ── 대화창 크기 계산 (현재와 동일한 비율 유지) ───────────────
-    // Textbox_001.png 원본 비율: 1400×800 (약 16:9 비율에서 세로 30% 영역)
-    const BOX_W  = Math.round(W * 0.68);
-    const BOX_H  = Math.round(H * 0.30);
-    const BOX_X  = Math.round((W - BOX_W) / 2);
-    const BOX_Y  = Math.round(H - BOX_H - H * 0.04);
+    // ── 이미지 원본 기준 상수 (픽셀) ─────────────────────────
+    const IMG_W = 2000, IMG_H = 1331;
+    // 프레임 경계
+    const FL = 114, FR = 1899, FT = 273, FB = 1012;
+    const FW = FR - FL;  // 1785
+    const FH = FB - FT;  // 739
+    // 이름판
+    const NL = 118, NR = 576, NT = 273, NB = 403;
+    // 텍스트 내부
+    const TXL = 160, TXR = 1880, TXT = 430, TXB = 895;
 
-    // 텍스트 영역 — 이미지 내부 여백 고려
-    // 이미지: 상단 이름판 높이 약 11%, 하단 톱니 장식 약 13%
-    // 실제 텍스트는 이름판 아래 ~ 하단 장식 위 구간
-    const NAME_PANEL_H = Math.round(BOX_H * 0.16);  // 이름판 (이미지 좌상단 박스)
-    const GEAR_H       = Math.round(BOX_H * 0.15);  // 하단 톱니 장식
-    const SIDE_PAD     = Math.round(BOX_W * 0.045); // 좌우 내부 여백
+    // ── 게임 화면에서의 대화창 크기 결정 ─────────────────────
+    // 프레임(FW:FH) 비율을 유지하면서 화면 너비의 75%로
+    const BOX_W = Math.round(W * 0.75);
+    const BOX_H = Math.round(BOX_W * (FH / FW));
+    const BOX_X = Math.round((W - BOX_W) / 2);
+    const BOX_Y = Math.round(H - BOX_H - H * 0.04);
 
-    const TEXT_X = BOX_X + SIDE_PAD + Math.round(BOX_W * 0.02);
-    const TEXT_Y = BOX_Y + NAME_PANEL_H + Math.round(fsPx(8));
-    const TEXT_W = BOX_W - SIDE_PAD * 2 - Math.round(BOX_W * 0.04);
-    const TEXT_BOTTOM = BOX_Y + BOX_H - GEAR_H - fsPx(6);
+    // ── 이미지 전체를 프레임 크기에 맞게 렌더링할 스케일 ─────
+    // 이미지를 BOX_W x BOX_H 로 표시할 때의 배율
+    const SCALE_X = BOX_W / FW;
+    const SCALE_Y = BOX_H / FH;
+
+    // 이미지 anchor = 프레임 좌상단 (FL, FT) 을 BOX_X, BOX_Y 에 맞춤
+    // → 이미지 전체 렌더 시작점
+    const IMG_RENDER_X = BOX_X - FL * SCALE_X;
+    const IMG_RENDER_Y = BOX_Y - FT * SCALE_Y;
+    const IMG_RENDER_W = IMG_W * SCALE_X;
+    const IMG_RENDER_H = IMG_H * SCALE_Y;
+
+    // ── 이름판 위치 (이미지 픽셀 → 화면 좌표) ────────────────
+    const N_X  = IMG_RENDER_X + NL * SCALE_X;
+    const N_Y  = IMG_RENDER_Y + NT * SCALE_Y;
+    const N_W  = (NR - NL) * SCALE_X;
+    const N_H  = (NB - NT) * SCALE_Y;
+
+    // ── 텍스트 영역 위치 ─────────────────────────────────────
+    const TEXT_X      = IMG_RENDER_X + TXL * SCALE_X;
+    const TEXT_Y      = IMG_RENDER_Y + TXT * SCALE_Y;
+    const TEXT_W      = (TXR - TXL) * SCALE_X;
+    const TEXT_BOTTOM = IMG_RENDER_Y + TXB * SCALE_Y;
 
     this._layout = { BOX_W, BOX_H, BOX_X, BOX_Y, TEXT_X, TEXT_Y, TEXT_W, fs: fsPx };
 
     this._uiContainer = this.add.container(0, 0);
-    this._buildBox(W, H, BOX_W, BOX_H, BOX_X, BOX_Y,
-                   NAME_PANEL_H, TEXT_X, TEXT_Y, TEXT_W, TEXT_BOTTOM, fs, fsPx);
+    this._buildBox(
+      W, H,
+      BOX_X, BOX_Y, BOX_W, BOX_H,
+      IMG_RENDER_X, IMG_RENDER_Y, IMG_RENDER_W, IMG_RENDER_H,
+      N_X, N_Y, N_W, N_H,
+      TEXT_X, TEXT_Y, TEXT_W, TEXT_BOTTOM,
+      fs, fsPx
+    );
     this._buildCharacterSlot(W, H, BOX_X, BOX_Y, fsPx);
     this._choiceCont = this.add.container(0, 0);
     this.children.bringToTop(this._choiceCont);
   }
 
-  // ── 대화창 박스 — Textbox_001.png 사용 ───────────────────────
-  _buildBox(W, H, BOX_W, BOX_H, BOX_X, BOX_Y,
-            NAME_PANEL_H, TEXT_X, TEXT_Y, TEXT_W, TEXT_BOTTOM, fs, fsPx) {
-
-    // ── Textbox_001.png 이미지 배치 ───────────────────────────
+  // ── 대화창 박스 — Textbox_001.png 정확한 비율 배치 ───────────
+  _buildBox(
+    W, H,
+    BOX_X, BOX_Y, BOX_W, BOX_H,
+    IMG_RENDER_X, IMG_RENDER_Y, IMG_RENDER_W, IMG_RENDER_H,
+    N_X, N_Y, N_W, N_H,
+    TEXT_X, TEXT_Y, TEXT_W, TEXT_BOTTOM,
+    fs, fsPx
+  ) {
+    // ── Textbox_001.png 이미지 ────────────────────────────────
+    // origin(0,0) 사용: 이미지 좌상단을 IMG_RENDER_X, IMG_RENDER_Y 에 배치
     if (this.textures.exists('textbox_001')) {
-      const texImg = this.add.image(BOX_X + BOX_W / 2, BOX_Y + BOX_H / 2, 'textbox_001')
-        .setOrigin(0.5)
-        .setDisplaySize(BOX_W, BOX_H);
+      const texImg = this.add.image(IMG_RENDER_X, IMG_RENDER_Y, 'textbox_001')
+        .setOrigin(0, 0)
+        .setDisplaySize(IMG_RENDER_W, IMG_RENDER_H);
       this._uiContainer.add(texImg);
     } else {
-      // 텍스처 로드 실패 시 폴백 — 기존 코드 스타일 대화창
+      // 텍스처 로드 실패 시 폴백
       const g = this.add.graphics();
       g.fillStyle(0x06090f, 0.92);
       g.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
@@ -235,51 +278,36 @@ class DialogueScene extends Phaser.Scene {
       this._uiContainer.add(g);
     }
 
-    // ── 이름판 위치 계산 ──────────────────────────────────────
-    // Textbox_001.png 에서 이름판은:
-    //   X: 이미지 좌측에서 약 1% ~ 24%
-    //   Y: 이미지 상단에서 약 -14% ~ 0% (이미지 위로 살짝 올라옴)
-    // BOX 기준으로 계산:
-    const NW = Math.round(BOX_W * 0.23);   // 이름판 너비 (이미지 비율 맞춤)
-    const NH = Math.round(BOX_H * 0.20);   // 이름판 높이
-    const NX = BOX_X + Math.round(BOX_W * 0.005);  // 이미지 좌측 여백
-    // 이름판이 메인 박스 상단과 겹치는 위치 (이미지 구조상 메인 박스 상단에 붙어있음)
-    const NY = BOX_Y - Math.round(NH * 0.55);  // 이미지의 이름판은 메인 박스 위로 살짝 올라옴
-
-    // 이름 텍스트 (이름판 중앙)
+    // ── 이름 텍스트 (이름판 중앙) ────────────────────────────
+    // 이름판이 베이지/황갈색이므로 어두운 갈색 텍스트
     this._nameTxt = this.add.text(
-      NX + NW / 2,
-      NY + NH / 2,
+      N_X + N_W / 2,
+      N_Y + N_H / 2,
       '', {
-      fontSize:        fs(22),
-      fill:            '#2a1505',       // 이름판이 베이지/황갈색이므로 어두운 갈색 텍스트
+      fontSize:        fs(20),
+      fill:            '#2a1505',
       fontFamily:      FontManager.TITLE,
-      stroke:          '#c8a060',
-      strokeThickness: 1,
     }).setOrigin(0.5).setVisible(false);
     this._uiContainer.add(this._nameTxt);
 
     // ── 본문 텍스트 ───────────────────────────────────────────
-    // 텍스트가 하단 톱니 장식과 겹치지 않도록 wordWrap 높이 제한
     this._bodyTxt = this.add.text(
       TEXT_X, TEXT_Y, '', {
-      fontSize:    fs(24),
+      fontSize:    fs(22),
       fill:        '#d8cbb8',
       fontFamily:  FontManager.BODY,
       wordWrap:    { width: TEXT_W },
-      lineSpacing: fsPx(6),
+      lineSpacing: fsPx(5),
     });
     this._uiContainer.add(this._bodyTxt);
 
-    // ── ▶ 다음 줄 아이콘 ─────────────────────────────────────
-    // 이미지 우측 하단 (톱니 장식 바로 위)
-    const NEXT_X = BOX_X + BOX_W - Math.round(BOX_W * 0.045);
+    // ── ▶ 다음 줄 아이콘 (텍스트 영역 우하단) ────────────────
+    const NEXT_X = TEXT_X + TEXT_W;
     const NEXT_Y = TEXT_BOTTOM - fsPx(2);
 
     this._nextIcon = this.add.text(
-      NEXT_X, NEXT_Y,
-      '▶', {
-      fontSize:   fs(12),
+      NEXT_X, NEXT_Y, '▶', {
+      fontSize:   fs(11),
       fill:       '#c89040',
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 1).setVisible(false);
@@ -297,7 +325,7 @@ class DialogueScene extends Phaser.Scene {
 
     // 하단 힌트 텍스트
     const hint = this.add.text(
-      BOX_X + BOX_W - Math.round(BOX_W * 0.045),
+      NEXT_X,
       BOX_Y + BOX_H + fsPx(4),
       'SPACE / CLICK', {
       fontSize:      fs(9),
@@ -625,21 +653,16 @@ class DialogueScene extends Phaser.Scene {
 
     const fsPx = this._fs;
     const fs   = n => FontManager.adjustedSize(n, this.scale);
-    const { BOX_X, BOX_W, BOX_Y, BOX_H } = this._layout;
+    const { BOX_X, BOX_W, BOX_Y, BOX_H, TEXT_X, TEXT_Y, TEXT_W } = this._layout;
 
-    // 선택지는 메인 박스 내부 텍스트 영역에 배치
-    const NAME_PANEL_H = Math.round(BOX_H * 0.16);
-    const GEAR_H       = Math.round(BOX_H * 0.15);
-    const SIDE_PAD     = Math.round(BOX_W * 0.045);
-
-    const BTN_H   = fsPx(40);
-    const BTN_W   = Math.round(BOX_W * 0.80);
-    const GAP     = fsPx(6);
-    const innerH  = BOX_H - NAME_PANEL_H - GEAR_H - fsPx(10);
-    const innerTop = BOX_Y + NAME_PANEL_H + fsPx(6);
+    // 선택지는 텍스트 영역 기준으로 배치
+    const BTN_H   = fsPx(42);
+    const BTN_W   = Math.round(TEXT_W * 0.96);
+    const GAP     = fsPx(7);
     const totalH  = choices.length * BTN_H + (choices.length - 1) * GAP;
-    const startX  = BOX_X + (BOX_W - BTN_W) / 2;
-    const startY  = innerTop + (innerH - totalH) / 2;
+    const textAreaH = BOX_Y + BOX_H - TEXT_Y;
+    const startX  = TEXT_X + (TEXT_W - BTN_W) / 2;
+    const startY  = TEXT_Y + (textAreaH - totalH) / 2;
 
     this._choiceCont.removeAll(true);
     this.children.bringToTop(this._choiceCont);
