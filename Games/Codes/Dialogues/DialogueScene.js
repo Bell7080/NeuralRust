@@ -210,8 +210,8 @@ class DialogueScene extends Phaser.Scene {
     const BOX_H = Math.round(BOX_W * (FH / FW));
     const BOX_X = Math.round((W - BOX_W) / 2);
     // 대화창 상단 Y — H 비율 기반 (해상도 대응)
-    // H=1080 기준 약 62% 지점 → y≈670
-    const BOX_Y = Math.round(H * 0.62);
+    // H=1080 기준 약 59% 지점 → y≈637
+    const BOX_Y = Math.round(H * 0.59);
 
     // ── 이미지 전체를 프레임 크기에 맞게 렌더링할 스케일 ─────
     // 이미지를 BOX_W x BOX_H 로 표시할 때의 배율
@@ -240,9 +240,9 @@ class DialogueScene extends Phaser.Scene {
     const TEXT_W      = (TXR - TXL) * SCALE_X - TEXT_PAD_X * 2;
     const TEXT_BOTTOM = IMG_RENDER_Y + TXB * SCALE_Y;
 
-    this._layout = { BOX_W, BOX_H, BOX_X, BOX_Y, TEXT_X, TEXT_Y, TEXT_W, fs: fsPx };
+    this._layout = { BOX_W, BOX_H, BOX_X, BOX_Y, TEXT_X, TEXT_Y, TEXT_W, TEXT_BOTTOM, fs: fsPx };
 
-    this._uiContainer = this.add.container(0, 0);
+    this._uiContainer = this.add.container(0, 0).setDepth(11);  // 대화창 이미지(10) 위
     this._buildBox(
       W, H,
       BOX_X, BOX_Y, BOX_W, BOX_H,
@@ -252,8 +252,7 @@ class DialogueScene extends Phaser.Scene {
       fs, fsPx
     );
     this._buildCharacterSlot(W, H, BOX_X, BOX_Y, fsPx);
-    this._choiceCont = this.add.container(0, 0);
-    this.children.bringToTop(this._choiceCont);
+    this._choiceCont = this.add.container(0, 0).setDepth(12);   // 선택지는 최상단
   }
 
   // ── 대화창 박스 — Textbox_001.png 정확한 비율 배치 ───────────
@@ -271,7 +270,7 @@ class DialogueScene extends Phaser.Scene {
       const texImg = this.add.image(IMG_RENDER_X, IMG_RENDER_Y, 'textbox_001')
         .setOrigin(0, 0)
         .setDisplaySize(IMG_RENDER_W, IMG_RENDER_H)
-        .setDepth(1);   // 캐릭터(기본 depth 0) 앞으로
+        .setDepth(10);   // 캐릭터(기본 depth 0)보다 위
       this._uiContainer.add(texImg);
     } else {
       // 텍스처 로드 실패 시 폴백
@@ -667,16 +666,16 @@ class DialogueScene extends Phaser.Scene {
 
     const fsPx = this._fs;
     const fs   = n => FontManager.adjustedSize(n, this.scale);
-    const { BOX_X, BOX_W, BOX_Y, BOX_H, TEXT_X, TEXT_Y, TEXT_W } = this._layout;
+    const { BOX_X, BOX_W, BOX_Y, BOX_H, TEXT_X, TEXT_Y, TEXT_W, TEXT_BOTTOM } = this._layout;
 
-    // 선택지는 텍스트 영역 기준으로 배치
+    // 선택지는 텍스트 영역(TEXT_Y ~ TEXT_BOTTOM) 세로 정중앙에 배치
     const BTN_H   = fsPx(42);
     const BTN_W   = Math.round(TEXT_W * 0.96);
     const GAP     = fsPx(7);
     const totalH  = choices.length * BTN_H + (choices.length - 1) * GAP;
-    // 텍스트 시작 위치 기준 + 살짝 위로 배치
+    const textAreaMidY = TEXT_Y + (TEXT_BOTTOM - TEXT_Y) / 2;
     const startX  = TEXT_X + (TEXT_W - BTN_W) / 2;
-    const startY  = TEXT_Y + fsPx(8);
+    const startY  = Math.round(textAreaMidY - totalH / 2);
 
     this._choiceCont.removeAll(true);
     this.children.bringToTop(this._choiceCont);
