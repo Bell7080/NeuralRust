@@ -163,9 +163,9 @@ class DialogueScene extends Phaser.Scene {
     if (!this._charSprite) {
       this._charSprite = this.add.image(this._charX, this._charY, texKey);
       const scale = this._charH / this._charSprite.height;
-      this._charSprite.setScale(scale).setAlpha(0);
+      this._charSprite.setScale(scale).setAlpha(0).setDepth(-1); // 대화창 뒤
     } else {
-      this._charSprite.setPosition(this._charX, this._charY).setAlpha(0);
+      this._charSprite.setPosition(this._charX, this._charY).setAlpha(0).setDepth(-1);
     }
     this.tweens.add({
       targets:  this._charSprite,
@@ -206,14 +206,10 @@ class DialogueScene extends Phaser.Scene {
     const TXL = 160, TXR = 1880, TXT = 430, TXB = 895;
 
     // ── 게임 화면에서의 대화창 크기 결정 ─────────────────────
-    // 너비: 기존 대화창과 동일한 W * 0.68
-    // 높이: 프레임 원본 비율(1785:739) 유지
-    // Y위치: 화면 하단 기준 + 캐릭터 일러스트 잘린 하단을 가리도록 배치
-    const BOX_W = Math.round(W * 0.68 * 0.65);   // 기존 68% → 35% 축소
+    const BOX_W = Math.round(W * 0.68 * 0.65 * 1.08); // 살짝 가로 확장 (+8%)
     const BOX_H = Math.round(BOX_W * (FH / FW));
     const BOX_X = Math.round((W - BOX_W) / 2);
-    // 대화창 상단이 y=450에 오도록 배치 (캐릭터 하단 가림)
-    const BOX_Y = 450;
+    const BOX_Y = 500;                                  // 하단으로 내림 (450→500)
 
     // ── 이미지 전체를 프레임 크기에 맞게 렌더링할 스케일 ─────
     // 이미지를 BOX_W x BOX_H 로 표시할 때의 배율
@@ -282,14 +278,15 @@ class DialogueScene extends Phaser.Scene {
     }
 
     // ── 이름 텍스트 (이름판 중앙) ────────────────────────────
-    // 이름판이 베이지/황갈색이므로 어두운 갈색 텍스트
+    // 이름판 높이(N_H)의 약 55%를 폰트 px로 사용 → 박스에 꽉 차는 느낌
+    const nameFontPx = Math.round(N_H * 0.52);
     this._nameTxt = this.add.text(
       N_X + N_W / 2,
       N_Y + N_H / 2,
       '', {
-      fontSize:        fs(20),
-      fill:            '#2a1505',
-      fontFamily:      FontManager.TITLE,
+      fontSize:   `${nameFontPx}px`,
+      fill:       '#2a1505',
+      fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setVisible(false);
     this._uiContainer.add(this._nameTxt);
 
@@ -454,9 +451,7 @@ class DialogueScene extends Phaser.Scene {
   // ── 캐릭터 슬롯 ───────────────────────────────────────────────
   // 발끝이 BOX_Y에 닿도록 배치 (대화창이 캐릭터 하단 잘린 부분을 가림)
   _buildCharacterSlot(W, H, BOX_X, BOX_Y, fs) {
-    // 이름판 높이만큼 내려서 메인박스 실제 상단에 발끝을 맞춤
-    // 원본 이미지: 이름판 y=273~403, 프레임 y=273~1012 → 이름판 높이 = 130/739 ≈ 17.6%
-    const BOX_H = Math.round(W * 0.68 * 0.65 * (739 / 1785));
+    const BOX_H    = Math.round(W * 0.68 * 0.65 * 1.08 * (739 / 1785));
     const namePanelH = Math.round(BOX_H * 0.176);
     const mainBoxTop = BOX_Y + namePanelH;  // 메인박스 실제 상단 y
 
@@ -607,13 +602,13 @@ class DialogueScene extends Phaser.Scene {
     if (!this._charSprite) {
       this._charSprite = this.add.image(this._charX, this._charY, texKey);
       const scale = this._charH / this._charSprite.height;
-      this._charSprite.setScale(scale).setAlpha(0);
+      this._charSprite.setScale(scale).setAlpha(0).setDepth(-1);
       this.tweens.add({ targets: this._charSprite, alpha: 1, duration: 250 });
     } else {
       if (this._charSprite.texture.key !== texKey) {
         this._charSprite.setTexture(texKey);
         const scale = this._charH / this._charSprite.height;
-        this._charSprite.setScale(scale).setVisible(true);
+        this._charSprite.setScale(scale).setVisible(true).setDepth(-1);
       }
     }
   }
