@@ -205,8 +205,8 @@ class DialogueScene extends Phaser.Scene {
 
     // ── 메인 대화창(001) 크기 결정 ───────────────────────────
     // Textbox_001.png 원본 비율: 약 1516 x 430 (가로로 납작한 형태)
-    // 화면 너비의 90% 사용, 높이는 원본 비율 유지
-    const BOX_W = Math.round(W * 0.90);
+    // 화면 너비의 63% 사용 (기존 90%에서 30% 축소), 높이는 원본 비율 유지
+    const BOX_W = Math.round(W * 0.63);
     const BOX_H = Math.round(BOX_W * (430 / 1516));
     const BOX_X = Math.round((W - BOX_W) / 2);
     // 대화창 상단 Y — 화면 하단에서 BOX_H + 여백
@@ -222,12 +222,13 @@ class DialogueScene extends Phaser.Scene {
     const TEXT_BOTTOM = BOX_Y + BOX_H - PAD_B;
 
     // ── 이름창(002) 크기 결정 ────────────────────────────────
-    // Textbox_002.png 원본 비율: 약 447 x 210 (작은 가로 박스)
-    const NAME_W = Math.round(BOX_W * 0.22);
+    // Textbox_002.png 원본 비율: 약 447 x 210
+    // 대화창이 줄었으므로 비율을 0.28로 약간 보정해 이름창 크기 유지
+    const NAME_W = Math.round(BOX_W * 0.28);
     const NAME_H = Math.round(NAME_W * (210 / 447));
-    // 대화창 상단에 절반 걸치도록 배치 (좌상단)
+    // 대화창 좌상단, 약간 위로 튀어나오게 + 미세한 삐걱 오프셋
     const NAME_X = BOX_X + Math.round(BOX_W * 0.01);
-    const NAME_Y = BOX_Y - Math.round(NAME_H * 0.55);
+    const NAME_Y = BOX_Y - Math.round(NAME_H * 0.60);
 
     this._layout = { BOX_W, BOX_H, BOX_X, BOX_Y, TEXT_X, TEXT_Y, TEXT_W, TEXT_BOTTOM, NAME_W, NAME_H, NAME_X, NAME_Y, fs: fsPx };
 
@@ -298,28 +299,31 @@ class DialogueScene extends Phaser.Scene {
   }
 
   // ── 이름창 (Textbox_002.png) ──────────────────────────────────
+  //  -3도 기울여 대화창에 삐걱 박힌 느낌 연출
   _buildNameBox(NAME_X, NAME_Y, NAME_W, NAME_H) {
-    // 이름창 이미지
+    const NAME_TILT = -3;   // 도(degree) — 반시계 방향으로 살짝 기울임
+    const cx = NAME_X + NAME_W / 2;
+    const cy = NAME_Y + NAME_H / 2;
+
+    // 이름창 이미지 — 중심점 기준 회전
     this._nameBox = this.textures.exists('textbox_002')
-      ? this.add.image(NAME_X, NAME_Y, 'textbox_002')
-          .setOrigin(0, 0)
+      ? this.add.image(cx, cy, 'textbox_002')
+          .setOrigin(0.5, 0.5)
           .setDisplaySize(NAME_W, NAME_H)
+          .setAngle(NAME_TILT)
           .setDepth(11)
           .setVisible(false)
       : null;
 
-    // 이름 텍스트 (이름창 중앙)
+    // 이름 텍스트 — 이미지와 동일한 각도로 함께 기울임
     const nameFontPx = Math.round(NAME_H * 0.42);
-    this._nameTxt = this.add.text(
-      NAME_X + NAME_W / 2,
-      NAME_Y + NAME_H / 2,
-      '', {
-      fontSize:   `${nameFontPx}px`,
-      fill:       '#c8a85a',
-      fontFamily: FontManager.TITLE,
+    this._nameTxt = this.add.text(cx, cy, '', {
+      fontSize:        `${nameFontPx}px`,
+      fill:            '#c8a85a',
+      fontFamily:      FontManager.TITLE,
       stroke:          '#1a0e04',
       strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(12).setVisible(false);
+    }).setOrigin(0.5).setAngle(NAME_TILT).setDepth(12).setVisible(false);
   }
 
   // ── 배경 초기 빌드 ────────────────────────────────────────────
