@@ -20,6 +20,12 @@ class AtelierScene extends Phaser.Scene {
     this._preManageTab = null;
   }
 
+  preload() {
+    if (!this.textures.exists('bg_atelier')) {
+      this.load.image('bg_atelier', 'Games/Assets/Sprites/Background_009.png');
+    }
+  }
+
   create() {
     // 현재 씬 기록 — 로비 이어하기 복귀용
     SaveManager.saveCurrentScene('AtelierScene');
@@ -84,22 +90,15 @@ class AtelierScene extends Phaser.Scene {
   }
 
   _buildBackground(W, H) {
+    // 폴백 단색 (이미지 로드 실패 시)
     this.add.rectangle(0, 0, W, H, 0x060408).setOrigin(0);
-    const scan = this.add.graphics();
-    for (let y = 0; y < H; y += 4) {
-      scan.lineStyle(1, 0x1a0e06, 0.18);
-      scan.lineBetween(0, y, W, y);
+
+    // Background_009.png — 화면 전체에 꽉 채워 표시
+    if (this.textures.exists('bg_atelier')) {
+      this.add.image(W / 2, H / 2, 'bg_atelier')
+        .setDisplaySize(W, H)
+        .setDepth(0);
     }
-    const grid = this.add.graphics();
-    const step = Math.round(W / 56);
-    grid.lineStyle(1, 0x120d06, 0.7);
-    for (let x = 0; x <= W; x += step) grid.lineBetween(x, 0, x, H);
-    for (let y = 0; y <= H; y += step) grid.lineBetween(0, y, W, y);
-    this.add.text(W / 2, H * 0.50, 'ATELIER', {
-      fontSize: FontManager.adjustedSize(80, this.scale),
-      fill: '#0e0a06',
-      fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5).setAlpha(0.18);
   }
 
   _buildHUD(W, H) {
