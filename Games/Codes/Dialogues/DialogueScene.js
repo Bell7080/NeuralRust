@@ -127,22 +127,13 @@ class DialogueScene extends Phaser.Scene {
     // 대화창(uiContainer) + 이름창(nameBox/nameTxt) 동시 페이드인
     this.cameras.main.fadeIn(700, 0, 0, 0);
 
-    // 대화창 + 이름창 alpha 0 초기화
+    // uiContainer에 대화창 이미지·이름창 이미지·텍스트 전부 포함
+    // → setAlpha(0) 하나로 전체 동시 제어
     this._uiContainer.setAlpha(0);
-    if (this._nameBox) this._nameBox.setAlpha(0).setVisible(false);
-    if (this._nameTxt) this._nameTxt.setAlpha(0).setVisible(false);
 
-    // 800ms 후 대화창 + 이름창 동시 등장
+    // 800ms 후 전체 UI 동시 페이드인
     this.time.delayedCall(800, () => {
       this.tweens.add({ targets: this._uiContainer, alpha: 1, duration: 500, ease: 'Sine.easeOut' });
-      if (this._nameBox) {
-        this._nameBox.setVisible(true);
-        this.tweens.add({ targets: this._nameBox, alpha: 1, duration: 500, ease: 'Sine.easeOut' });
-      }
-      if (this._nameTxt) {
-        this._nameTxt.setVisible(true);
-        this.tweens.add({ targets: this._nameTxt, alpha: 1, duration: 500, ease: 'Sine.easeOut' });
-      }
     });
 
     // 캐릭터 등장 + 첫 대사 타이핑 동시 시작 (대화창 페이드인 완료 직후)
@@ -206,7 +197,7 @@ class DialogueScene extends Phaser.Scene {
     const BOX_H = Math.round(BOX_W * (430 / 1516));
     const BOX_X = Math.round((W - BOX_W) / 2);
     // 대화창 상단 Y — 화면 하단에서 BOX_H + 여백
-    const BOX_Y = Math.round(H - BOX_H - H * 0.04);
+    const BOX_Y = Math.round(H - BOX_H - H * 0.04 - 20);  // 20px 상향
 
     // ── 텍스트 내부 영역 (대화창 내부 여백 기반) ─────────────
     const PAD_X  = Math.round(BOX_W * 0.05);
@@ -247,10 +238,12 @@ class DialogueScene extends Phaser.Scene {
   // ── 메인 대화창 (Textbox_001.png) ────────────────────────────
   _buildMainBox(BOX_X, BOX_Y, BOX_W, BOX_H, TEXT_X, TEXT_Y, TEXT_W, TEXT_BOTTOM, fs, fsPx) {
     if (this.textures.exists('textbox_001')) {
-      this.add.image(BOX_X, BOX_Y, 'textbox_001')
+      const boxImg = this.add.image(BOX_X, BOX_Y, 'textbox_001')
         .setOrigin(0, 0)
         .setDisplaySize(BOX_W, BOX_H)
         .setDepth(10);
+      // uiContainer에 포함 → 대화창 이미지도 동일 alpha 제어
+      this._uiContainer.add(boxImg);
     }
 
     // ── 본문 텍스트 ───────────────────────────────────────────
@@ -301,17 +294,18 @@ class DialogueScene extends Phaser.Scene {
     const cx = NAME_X + NAME_W / 2;
     const cy = NAME_Y + NAME_H / 2;
 
-    // 이름창 이미지 — 중심점 기준 회전
-    this._nameBox = this.textures.exists('textbox_002')
-      ? this.add.image(cx, cy, 'textbox_002')
-          .setOrigin(0.5, 0.5)
-          .setDisplaySize(NAME_W, NAME_H)
-          .setAngle(NAME_TILT)
-          .setDepth(11)
-          .setVisible(false)
-      : null;
+    // 이름창 이미지 — 중심점 기준 회전, uiContainer에 포함
+    this._nameBox = null;
+    if (this.textures.exists('textbox_002')) {
+      this._nameBox = this.add.image(cx, cy, 'textbox_002')
+        .setOrigin(0.5, 0.5)
+        .setDisplaySize(NAME_W, NAME_H)
+        .setAngle(NAME_TILT)
+        .setDepth(11);
+      this._uiContainer.add(this._nameBox);
+    }
 
-    // 이름 텍스트 — 이미지와 동일한 각도로 함께 기울임
+    // 이름 텍스트 — 이미지와 동일한 각도, uiContainer에 포함
     const nameFontPx = Math.round(NAME_H * 0.42);
     this._nameTxt = this.add.text(cx, cy, '', {
       fontSize:        `${nameFontPx}px`,
@@ -319,7 +313,8 @@ class DialogueScene extends Phaser.Scene {
       fontFamily:      FontManager.TITLE,
       stroke:          '#1a0e04',
       strokeThickness: 3,
-    }).setOrigin(0.5).setAngle(NAME_TILT).setDepth(12).setVisible(false);
+    }).setOrigin(0.5).setAngle(NAME_TILT).setDepth(12);
+    this._uiContainer.add(this._nameTxt);
   }
 
   // ── 배경 초기 빌드 ────────────────────────────────────────────
@@ -437,7 +432,7 @@ class DialogueScene extends Phaser.Scene {
   //  발끝(charFootY) = BOX_Y + 30px → 대화창 안으로 30px 박힘
   //  (이전 +10에서 +30으로 20 추가 하향)
   _buildCharacterSlot(W, H, BOX_Y) {
-    const FOOT_OFFSET = 30;          // +10 기존 + 20 추가
+    const FOOT_OFFSET = 40;          // BOX_Y -20 + 캐릭터 10 추가 하향
     const charFootY   = BOX_Y + FOOT_OFFSET;
 
     // 캐릭터 높이 = 발끝까지의 공간을 최대한 활용 (92%)
@@ -524,29 +519,27 @@ class DialogueScene extends Phaser.Scene {
 
     const fsPx = this._fs;
     const fs   = n => FontManager.adjustedSize(n, this.scale);
-    const { BOX_X, BOX_W, BOX_Y, TEXT_X, TEXT_W } = this._layout;
+    const { BOX_X, BOX_W, BOX_Y, BOX_H, TEXT_X, TEXT_W } = this._layout;
 
-    // ── Textbox_003.png 비율 (가로로 매우 납작) ─────────────
-    // 원본 약 1516 x 170 → 대화창 너비와 동일하게, 높이는 비율 유지
-    const CHOICE_IMG_W = BOX_W;
-    const CHOICE_IMG_H = Math.round(CHOICE_IMG_W * (170 / 1516));
+    // ── Textbox_003.png — 20% 축소, 가로 추가 10% 축소 ────────
+    const CHOICE_IMG_W = Math.round(BOX_W * 0.72);
+    const CHOICE_IMG_H = Math.round(CHOICE_IMG_W * (170 / 1516) / 0.80);
+    const imgX         = BOX_X + Math.round((BOX_W - CHOICE_IMG_W) / 2); // 가로 중앙
 
-    const BTN_H  = Math.round(CHOICE_IMG_H * 0.72);   // 이미지 높이의 내부 영역
-    const BTN_W  = Math.round(TEXT_W * 0.92);
-    const GAP    = fsPx(8);
+    const BTN_H  = Math.round(CHOICE_IMG_H * 0.72);
+    const GAP    = fsPx(6);
     const totalH = choices.length * CHOICE_IMG_H + (choices.length - 1) * GAP;
 
-    // 대화창 바로 위에 선택지 쌓기
-    const STACK_BOTTOM = BOX_Y - fsPx(10);
-    const startY       = STACK_BOTTOM - totalH;
-    const imgX         = BOX_X;
+    // 대화창 세로 중앙에 선택지 묶음 배치
+    const boxMidY = BOX_Y + BOX_H / 2;
+    const startY  = Math.round(boxMidY - totalH / 2);
 
     this._choiceCont.removeAll(true);
 
     choices.forEach((choice, i) => {
-      const imgY = startY + i * (CHOICE_IMG_H + GAP);
-      const bx   = TEXT_X + (TEXT_W - BTN_W) / 2;
-      const by   = imgY + (CHOICE_IMG_H - BTN_H) / 2;
+      const imgY  = startY + i * (CHOICE_IMG_H + GAP);
+      const cxImg = imgX + CHOICE_IMG_W / 2;   // 이미지 가로 중심
+      const cyBtn = imgY + CHOICE_IMG_H / 2;   // 이미지 세로 중심
 
       // 선택창 배경 이미지
       const bgImg = this.textures.exists('textbox_003')
@@ -556,49 +549,55 @@ class DialogueScene extends Phaser.Scene {
             .setAlpha(0)
         : null;
 
-      // 호버 오버레이 (이미지 위에 얇게)
+      // 호버 오버레이
       const overlay = this.add.rectangle(
-        imgX + CHOICE_IMG_W / 2, imgY + CHOICE_IMG_H / 2,
-        CHOICE_IMG_W, CHOICE_IMG_H,
-        0xf0c040, 0
+        cxImg, cyBtn, CHOICE_IMG_W, CHOICE_IMG_H, 0xf0c040, 0
       );
 
-      // ◆ 마커
-      const marker = this.add.text(
-        bx + fsPx(16), by + BTN_H / 2, '◆', {
+      // ◆ 좌측 마커
+      const markerL = this.add.text(
+        imgX + fsPx(18), cyBtn, '◆', {
         fontSize:   fs(11),
         fill:       '#8a6020',
         fontFamily: FontManager.MONO,
       }).setOrigin(0.5, 0.5).setAlpha(0);
 
-      // 선택지 레이블
+      // ◆ 우측 마커
+      const markerR = this.add.text(
+        imgX + CHOICE_IMG_W - fsPx(18), cyBtn, '◆', {
+        fontSize:   fs(11),
+        fill:       '#8a6020',
+        fontFamily: FontManager.MONO,
+      }).setOrigin(0.5, 0.5).setAlpha(0);
+
+      // 선택지 레이블 — 중앙 정렬
       const lbl = this.add.text(
-        bx + fsPx(32), by + BTN_H / 2, choice.label, {
-        fontSize:   fs(18),
-        fill:       '#c8a858',
-        fontFamily: FontManager.BODY,
-        wordWrap:   { width: BTN_W - fsPx(48) },
+        cxImg, cyBtn, choice.label, {
+        fontSize:        fs(18),
+        fill:            '#c8a858',
+        fontFamily:      FontManager.BODY,
+        wordWrap:        { width: CHOICE_IMG_W - fsPx(80) },
         stroke:          '#080600',
         strokeThickness: 2,
-      }).setOrigin(0, 0.5).setAlpha(0);
+        align:           'center',
+      }).setOrigin(0.5, 0.5).setAlpha(0);
 
       // 히트 영역
       const hit = this.add.rectangle(
-        imgX + CHOICE_IMG_W / 2, imgY + CHOICE_IMG_H / 2,
-        CHOICE_IMG_W, CHOICE_IMG_H, 0, 0
+        cxImg, cyBtn, CHOICE_IMG_W, CHOICE_IMG_H, 0, 0
       ).setInteractive({ useHandCursor: true });
+
+      const markers = [markerL, markerR];
 
       hit.on('pointerover', () => {
         overlay.setFillStyle(0xf0c040, 0.08);
         lbl.setStyle({ fill: '#f8e080', stroke: '#080600', strokeThickness: 2 });
-        marker.setStyle({ fill: '#f0c040' });
-        this.tweens.add({ targets: lbl, x: bx + fsPx(36), duration: 80, ease: 'Sine.easeOut' });
+        markers.forEach(m => m.setStyle({ fill: '#f0c040' }));
       });
       hit.on('pointerout', () => {
         overlay.setFillStyle(0xf0c040, 0);
         lbl.setStyle({ fill: '#c8a858', stroke: '#080600', strokeThickness: 2 });
-        marker.setStyle({ fill: '#8a6020' });
-        this.tweens.add({ targets: lbl, x: bx + fsPx(32), duration: 80, ease: 'Sine.easeOut' });
+        markers.forEach(m => m.setStyle({ fill: '#8a6020' }));
       });
       hit.on('pointerdown', () => {
         this._choiceCont.removeAll(true);
@@ -612,10 +611,9 @@ class DialogueScene extends Phaser.Scene {
         this._showLine();
       });
 
-      // 페이드인 애니메이션
-      const fadeTargets = [marker, lbl];
+      // 페이드인
+      const fadeTargets = [...markers, lbl];
       if (bgImg) fadeTargets.unshift(bgImg);
-      fadeTargets.forEach(obj => obj.setAlpha(0));
       this.tweens.add({
         targets:  fadeTargets,
         alpha:    1,
@@ -625,8 +623,8 @@ class DialogueScene extends Phaser.Scene {
       });
 
       const items = bgImg
-        ? [bgImg, overlay, marker, lbl, hit]
-        : [overlay, marker, lbl, hit];
+        ? [bgImg, overlay, markerL, markerR, lbl, hit]
+        : [overlay, markerL, markerR, lbl, hit];
       this._choiceCont.add(items);
     });
   }
@@ -720,14 +718,14 @@ class DialogueScene extends Phaser.Scene {
 
     const line = this._lines[this._cursor];
 
-    // 이름판 표시/숨김
+    // 이름판 표시/숨김 (uiContainer 내부 alpha로 제어)
     const isPlayer = (line.char === 'P');
     if (isPlayer) {
-      if (this._nameBox) this._nameBox.setVisible(false);
-      this._nameTxt.setVisible(false);
+      if (this._nameBox) this._nameBox.setAlpha(0);
+      this._nameTxt.setAlpha(0);
     } else {
-      if (this._nameBox) this._nameBox.setVisible(true);
-      this._nameTxt.setText(this._getDisplayName(line.char)).setVisible(true);
+      if (this._nameBox) this._nameBox.setAlpha(1);
+      this._nameTxt.setText(this._getDisplayName(line.char)).setAlpha(1);
     }
 
     // 캐릭터 이미지
