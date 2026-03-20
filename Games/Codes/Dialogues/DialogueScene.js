@@ -211,7 +211,7 @@ class DialogueScene extends Phaser.Scene {
     // ── 이름창(002) 크기 결정 ────────────────────────────────
     // Textbox_002.png 원본 비율: 약 447 x 210
     // 대화창이 줄었으므로 비율을 0.28로 약간 보정해 이름창 크기 유지
-    const NAME_W = Math.round(BOX_W * 0.28);
+    const NAME_W = Math.round(BOX_W * 0.224);  // 0.28 × 0.8 = 20% 축소
     const NAME_H = Math.round(NAME_W * (210 / 447));
     // 대화창 좌상단, 약간 위로 튀어나오게 + 미세한 삐걱 오프셋
     const NAME_X = BOX_X + Math.round(BOX_W * 0.01);
@@ -244,6 +244,11 @@ class DialogueScene extends Phaser.Scene {
         .setDepth(10);
       // uiContainer에 포함 → 대화창 이미지도 동일 alpha 제어
       this._uiContainer.add(boxImg);
+      // 대화창 위 명암 오버레이 10%
+      const boxShade = this.add.rectangle(
+        BOX_X + BOX_W / 2, BOX_Y + BOX_H / 2, BOX_W, BOX_H, 0x000000, 0.10
+      ).setDepth(10);
+      this._uiContainer.add(boxShade);
     }
 
     // ── 본문 텍스트 ───────────────────────────────────────────
@@ -305,14 +310,25 @@ class DialogueScene extends Phaser.Scene {
       this._uiContainer.add(this._nameBox);
     }
 
-    // 이름 텍스트 — 이미지와 동일한 각도, uiContainer에 포함
-    const nameFontPx = Math.round(NAME_H * 0.42);
+    // 이름창 위 명암 오버레이 10%
+    const nameShade = this.add.rectangle(cx, cy, NAME_W, NAME_H, 0x000000, 0.10)
+      .setAngle(NAME_TILT).setDepth(11);
+    this._uiContainer.add(nameShade);
+
+    // 이름 텍스트 — 스팀펑크 분위기: 황동색 + 엠보싱 느낌 stroke
+    const nameFontPx = Math.round(NAME_H * 0.48);
     this._nameTxt = this.add.text(cx, cy, '', {
       fontSize:        `${nameFontPx}px`,
-      fill:            '#c8a85a',
+      fill:            '#e8c96a',           // 더 밝은 황동
       fontFamily:      FontManager.TITLE,
-      stroke:          '#1a0e04',
-      strokeThickness: 3,
+      stroke:          '#3a1e02',           // 진한 갈색 테두리
+      strokeThickness: 4,
+      shadow: {
+        offsetX: 0, offsetY: 1,
+        color:   '#000000',
+        blur:    2,
+        fill:    true,
+      },
     }).setOrigin(0.5).setAngle(NAME_TILT).setDepth(12);
     this._uiContainer.add(this._nameTxt);
   }
@@ -541,6 +557,19 @@ class DialogueScene extends Phaser.Scene {
       const cxImg = imgX + CHOICE_IMG_W / 2;   // 이미지 가로 중심
       const cyBtn = imgY + CHOICE_IMG_H / 2;   // 이미지 세로 중심
 
+      // 선택지 360도 glow shadow — bgImg 아래 Graphics 레이어
+      // 여러 겹 반투명 타원으로 퍼지는 느낌
+      const shadow = this.add.graphics().setAlpha(0);
+      const sw = CHOICE_IMG_W + 30, sh = CHOICE_IMG_H + 22;
+      const steps = 6;
+      for (let s = steps; s >= 1; s--) {
+        const ex = sw * 0.5 + s * 6;
+        const ey = sh * 0.5 + s * 4;
+        const a  = 0.055 - s * 0.007;   // 바깥일수록 투명
+        shadow.fillStyle(0x000000, Math.max(a, 0.008));
+        shadow.fillEllipse(cxImg, cyBtn, ex * 2, ey * 2);
+      }
+
       // 선택창 배경 이미지
       const bgImg = this.textures.exists('textbox_003')
         ? this.add.image(imgX, imgY, 'textbox_003')
@@ -611,7 +640,7 @@ class DialogueScene extends Phaser.Scene {
         this._showLine();
       });
 
-      // 페이드인
+      // 페이드인 (shadow는 목표 alpha 0.9로 — 완전 불투명 X)
       const fadeTargets = [...markers, lbl];
       if (bgImg) fadeTargets.unshift(bgImg);
       this.tweens.add({
@@ -621,10 +650,17 @@ class DialogueScene extends Phaser.Scene {
         delay:    i * 80,
         ease:     'Linear',
       });
+      this.tweens.add({
+        targets:  shadow,
+        alpha:    0.9,
+        duration: 300,
+        delay:    i * 80,
+        ease:     'Linear',
+      });
 
       const items = bgImg
-        ? [bgImg, overlay, markerL, markerR, lbl, hit]
-        : [overlay, markerL, markerR, lbl, hit];
+        ? [shadow, bgImg, overlay, markerL, markerR, lbl, hit]
+        : [shadow, overlay, markerL, markerR, lbl, hit];
       this._choiceCont.add(items);
     });
   }
