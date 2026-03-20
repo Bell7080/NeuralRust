@@ -13,7 +13,7 @@ const GAME_MIN_SCALE = 0.67;         // 최소 스케일 비율 (1280×720 기�
 const GAME_VERSION   = {
 
   // ── 버전 번호 ─────────────────────────────────────────────────
-  number: 'v0.0.08845',
+  number: 'v0.0.1',
 
   // ── 빌드 태그 (prototype / alpha / beta / release) ────────────
   tag: 'prototype',
