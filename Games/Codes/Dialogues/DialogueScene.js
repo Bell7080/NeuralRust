@@ -124,34 +124,30 @@ class DialogueScene extends Phaser.Scene {
     this._buildScene(W, H);
 
     // ── 오프닝 연출 ────────────────────────────────────────────
+    // 대화창(uiContainer) + 이름창(nameBox/nameTxt) 동시 페이드인
     this.cameras.main.fadeIn(700, 0, 0, 0);
 
+    // 대화창 + 이름창 alpha 0 초기화
     this._uiContainer.setAlpha(0);
+    if (this._nameBox) this._nameBox.setAlpha(0).setVisible(false);
+    if (this._nameTxt) this._nameTxt.setAlpha(0).setVisible(false);
+
+    // 800ms 후 대화창 + 이름창 동시 등장
     this.time.delayedCall(800, () => {
-      this.tweens.add({
-        targets:  this._uiContainer,
-        alpha:    1,
-        duration: 500,
-        ease:     'Sine.easeOut',
-      });
-    });
-
-    this.time.delayedCall(1400, () => {
-      this._revealPortrait();
-    });
-
-    this.time.delayedCall(1900, () => {
+      this.tweens.add({ targets: this._uiContainer, alpha: 1, duration: 500, ease: 'Sine.easeOut' });
       if (this._nameBox) {
-        this._nameBox.setAlpha(0).setVisible(true);
-        this.tweens.add({ targets: this._nameBox, alpha: 1, duration: 350, ease: 'Sine.easeOut' });
+        this._nameBox.setVisible(true);
+        this.tweens.add({ targets: this._nameBox, alpha: 1, duration: 500, ease: 'Sine.easeOut' });
       }
       if (this._nameTxt) {
-        this._nameTxt.setAlpha(0).setVisible(true);
-        this.tweens.add({ targets: this._nameTxt, alpha: 1, duration: 350, ease: 'Sine.easeOut' });
+        this._nameTxt.setVisible(true);
+        this.tweens.add({ targets: this._nameTxt, alpha: 1, duration: 500, ease: 'Sine.easeOut' });
       }
     });
 
-    this.time.delayedCall(2200, () => {
+    // 캐릭터 등장 + 첫 대사 타이핑 동시 시작 (대화창 페이드인 완료 직후)
+    this.time.delayedCall(1400, () => {
+      this._revealPortrait();
       this._buildInput();
       this._showLine();
     });
@@ -438,10 +434,10 @@ class DialogueScene extends Phaser.Scene {
   }
 
   // ── 캐릭터 슬롯 ───────────────────────────────────────────────
-  //  발끝(charFootY) = BOX_Y (메인 대화창 상단) 와 정확히 일치
-  //  +10px 하향 오프셋 적용
+  //  발끝(charFootY) = BOX_Y + 30px → 대화창 안으로 30px 박힘
+  //  (이전 +10에서 +30으로 20 추가 하향)
   _buildCharacterSlot(W, H, BOX_Y) {
-    const FOOT_OFFSET = 10;
+    const FOOT_OFFSET = 30;          // +10 기존 + 20 추가
     const charFootY   = BOX_Y + FOOT_OFFSET;
 
     // 캐릭터 높이 = 발끝까지의 공간을 최대한 활용 (92%)
