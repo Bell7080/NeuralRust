@@ -4,23 +4,33 @@
 //
 //  [로드 순서 — HTML]
 //    1. Games/Codes/Data/CharacterNames.js
-//    2. Games/Codes/Data/JobData.js
-//    3. Games/Codes/Data/PositionData.js
-//    4. Games/Codes/Data/PassiveData.js
-//    5. Games/Codes/Data/SkillData.js
-//    6. Games/Codes/Managers/CharacterManager.js
+//    2. Games/Codes/Data/Data_Jobs.js
+//    3. Games/Codes/Data/Data_Overclock.js
+//    4. Games/Codes/Data/Passives/Common.js ~ Helmsman.js
+//    5. Games/Codes/Data/Actions/Common.js  ~ Helmsman.js
+//    6. Games/Codes/Data/Enhanced/Common.js ~ Helmsman.js
+//    7. Games/Codes/Data/Finales/Common.js  ~ Named.js
+//    8. Games/Codes/Data/AbilityIndex.js
+//    9. Games/Codes/Managers/CharacterManager.js
+//
+//  ── 능력 슬롯 4종 ────────────────────────────────────────────
+//    char.passive   : 상시 패시브 (조건 없음)
+//    char.action    : 일반 행동  (매 사이클 자동)
+//    char.enhanced  : 강화 행동  (조건부 자동)
+//    char.finale    : 피날레     (게이지 MAX + 수동 클릭)
+//
+//  ── 직업 3종 ─────────────────────────────────────────────────
+//    fisher    낚시꾼  — 공격 특화
+//    diver     잠수부  — 방어/생존 특화
+//    helmsman  조타수  — 유틸/지원 특화
 //
 //  ── 숙련도(Mastery) 시스템 ───────────────────────────────────
-//    · char.mastery       : 누적 숙련도 레벨 (무제한, 기본 0)
-//    · char.pendingStats  : 미배분 잔여 스탯 포인트 (기본 0)
-//    · 탐험 귀환 시 CharacterManager.gainMastery(char, cogLevel) 호출
-//      → mastery += cogLevel, pendingStats += cogLevel
-//    · 플레이어가 Tab_CharProfile의 + 버튼으로 스탯에 직접 배분
+//    char.mastery       : 누적 숙련도 레벨 (무제한, 기본 0)
+//    char.pendingStats  : 미배분 잔여 스탯 포인트 (기본 0)
 //
 //  ── 오버클럭(Overclock) 적용 순서 ────────────────────────────
-//    · char.stats[key] = 순수 기본값 (보정 없음, 절대 변경 금지)
-//    · getEffectiveStat(char, key) = 기본 + 오버클럭 + 아이템 + 기록칩
-//    · 표시 예: 공격 10 + 오버클럭 5 + 아이템 3 = 18
+//    char.stats[key] = 순수 기본값 (보정 없음, 절대 변경 금지)
+//    getEffectiveStat(char, key) = 기본 + 오버클럭 + 아이템 + 기록칩
 // ================================================================
 
 const CharacterManager = (() => {
@@ -50,10 +60,10 @@ const CharacterManager = (() => {
   function _getJobLabel(jobId) {
     if (typeof JOB_DATA !== 'undefined' && JOB_DATA[jobId])
       return JOB_DATA[jobId].label;
-    return ({ fisher: '낚시꾼', diver: '잠수부', ai: 'A.I' })[jobId] || jobId;
+    return ({ fisher: '낚시꾼', diver: '잠수부', helmsman: '조타수' })[jobId] || jobId;
   }
 
-  const JOB_LABEL = { fisher: '낚시꾼', diver: '잠수부', ai: 'A.I' };
+  const JOB_LABEL = { fisher: '낚시꾼', diver: '잠수부', helmsman: '조타수' };
 
   // ── Cog 계산 ─────────────────────────────────────────────────────
   function calcCog(s) {
@@ -74,75 +84,29 @@ const CharacterManager = (() => {
     6:  { css: '#ff7700', phaser: 0xff7700, glow: 0xcc4400, label: '#cc4400', special: false },
     7:  { css: '#ff4400', phaser: 0xff4400, glow: 0xcc2200, label: '#cc2200', special: false },
     8:  { css: '#dd0000', phaser: 0xdd0000, glow: 0xaa0000, label: '#aa0000', special: false },
-    9:  { css: '#ff2255', phaser: 0xff2255, glow: 0x000000, label: '#ff2255',
-          border: 0x000000, special: true },
-    10: { css: '#cc44ff', phaser: 0xcc44ff, glow: 0x000000, label: '#cc44ff',
-          gradStart: 0x330066, gradEnd: 0x000000, special: true },
+    9:  { css: '#ff2255', phaser: 0xff2255, glow: 0x000000, label: '#ff2255', border: 0x000000, special: true },
+    10: { css: '#cc44ff', phaser: 0xcc44ff, glow: 0x000000, label: '#cc44ff', gradStart: 0x330066, gradEnd: 0x000000, special: true },
   };
 
   function getCogColor(cog) { return COG_COLORS[cog] || COG_COLORS[1]; }
 
-  // ── 어빌리티 풀 ──────────────────────────────────────────────────
-  const _POSITION_POOL_FALLBACK = {
-    1:['윗칸 타격','앞칸 타격'],          2:['앞칸 타격','현재 칸 타격'],
-    3:['현재 칸 타격','대각 타격'],        4:['대각 타격','윗칸 타격'],
-    5:['전열 전체 타격','후열 타격'],      6:['전열 전체 타격','현재 칸 타격'],
-    7:['전/후열 동시 타격','후열 타격'],   8:['전/후열 동시 타격','전열 전체 타격'],
-    9:['전체 칸 타격','전/후열 동시 타격'],10:['전체 칸 타격'],
-  };
+  // ── 능력 풀 헬퍼 ─────────────────────────────────────────────────
+  //  AbilityIndex 로드 여부에 따라 분기
+  //  미로드 시 최소 폴백으로 작동
 
-  const _PASSIVE_POOL_FALLBACK = {
-    1:['강인한 체질','예리한 감각'],  2:['예리한 감각','행운아'],
-    3:['투지','빠른 회복'],          4:['집중력','도발'],
-    5:['강철 피부','수중 적응'],     6:['야간 작전','저격 자세'],
-    7:['전술 눈빛','심해의 숨결'],   8:['불굴','반격 본능'],
-    9:['절대 의지','반격 본능'],    10:['절대 의지','코어 공명'],
-  };
+  const _FALLBACK_PASSIVE  = { 1:['tough_body','sharp_sense'], 2:['lucky','fast_regen'], 3:['fighting_spirit','focus'], 4:['poison_resist','focus'], 5:['aqua_adapt','fighting_spirit'], 6:['aqua_adapt','fast_regen'], 7:['unyielding','aqua_adapt'], 8:['unyielding','fighting_spirit'], 9:['absolute_will','unyielding'], 10:['absolute_will'] };
+  const _FALLBACK_ACTION   = { 1:['strike'], 2:['strike'], 3:['rapid_strike','strike'], 4:['rapid_strike'], 5:['heavy_strike','rapid_strike'], 6:['heavy_strike'], 7:['wide_strike','heavy_strike'], 8:['wide_strike'], 9:['wide_strike'], 10:['wide_strike'] };
+  const _FALLBACK_ENHANCED = { 1:['combo_hit'], 2:['combo_hit'], 3:['combo_hit','evasion'], 4:['burst_speed','combo_hit'], 5:['burst_speed'], 6:['iron_wall','burst_speed'], 7:['abyss_roar','iron_wall'], 8:['abyss_roar'], 9:['abyss_roar'], 10:['abyss_roar'] };
+  const _FALLBACK_FINALE   = { 1:['quick_stab'], 2:['guard_stance','quick_stab'], 3:['heavy_blow','guard_stance'], 4:['aoe_strike','heavy_blow'], 5:['explosion_hit','aoe_strike'], 6:['explosion_hit'], 7:['core_overload','explosion_hit'], 8:['core_overload'], 9:['core_overload'], 10:['core_overload'] };
 
-  const SKILL_POOL = (() => {
-    if (typeof SKILL_DATA !== 'undefined' && Array.isArray(SKILL_DATA)) {
-      const pool = {};
-      for (let cog = 1; cog <= 10; cog++) pool[cog] = [];
-      SKILL_DATA.forEach(s => {
-        for (let cog = s.cogMin; cog <= 10; cog++) pool[cog].push(s.id);
-      });
-      return pool;
+  function _getAbilityPool(type, job, cog) {
+    if (typeof AbilityIndex !== 'undefined') {
+      const pool = AbilityIndex.getPool(type, job, cog);
+      if (pool && pool.length > 0) return pool;
     }
-    return {
-      1:['기본 일격','빠른 찌르기'],    2:['연속 타격','방어 자세'],
-      3:['강타','회피 기동'],          4:['독 도포','광역 타격'],
-      5:['강화 독','순간 가속'],       6:['폭발 타격','전방 스캔'],
-      7:['철갑 관통','심해 압박'],     8:['전기 충격','철벽 방어'],
-      9:['코어 오버로드','심연의 포효'],10:['코어 오버로드','심연의 포효'],
-    };
-  })();
-
-  function _getPositionPool(cog) {
-    const p = (typeof POSITION_POOL !== 'undefined')
-      ? POSITION_POOL : _POSITION_POOL_FALLBACK;
-    return p[cog] || p[1];
-  }
-
-  function _getPassivePool(cog) {
-    if (typeof PASSIVE_POOL !== 'undefined') return PASSIVE_POOL[cog] || PASSIVE_POOL[1];
-    return _PASSIVE_POOL_FALLBACK[cog] || _PASSIVE_POOL_FALLBACK[1];
-  }
-
-  function _validatePools() {
-    if (typeof POSITION_DATA !== 'undefined')
-      Object.values(_POSITION_POOL_FALLBACK).flat().forEach(n => {
-        if (!POSITION_DATA[n]) console.warn(`[CM] PositionData 누락: "${n}"`);
-      });
-    if (typeof PASSIVE_DATA !== 'undefined')
-      Object.values(_PASSIVE_POOL_FALLBACK).flat().forEach(n => {
-        if (!PASSIVE_DATA[n]) console.warn(`[CM] PassiveData 누락: "${n}"`);
-      });
-    if (typeof SKILL_DATA !== 'undefined' && Array.isArray(SKILL_DATA)) {
-      const skillIds = new Set(SKILL_DATA.map(s => s.id));
-      Object.values(SKILL_POOL).flat().forEach(n => {
-        if (!skillIds.has(n)) console.warn(`[CM] SkillData 누락: "${n}"`);
-      });
-    }
+    // 폴백
+    const fb = ({ passive: _FALLBACK_PASSIVE, action: _FALLBACK_ACTION, enhanced: _FALLBACK_ENHANCED, finale: _FALLBACK_FINALE })[type];
+    return fb?.[cog] || fb?.[1] || [];
   }
 
   // ── 유틸 ─────────────────────────────────────────────────────────
@@ -150,53 +114,40 @@ const CharacterManager = (() => {
 
   const SPRITE_COUNT = 72;
 
-  // ── gone 블랙리스트 (이번 판에서 완전 소멸한 초상화 — 재사용 금지) ──
+  // ── gone 블랙리스트 ───────────────────────────────────────────────
   const GONE_KEY = 'nr_gone_sprites';
 
   function loadGoneSprites() {
     try { return new Set(JSON.parse(localStorage.getItem(GONE_KEY) || '[]')); }
     catch { return new Set(); }
   }
-
   function addGoneSprite(spriteKey) {
-    const s = loadGoneSprites();
-    s.add(spriteKey);
+    const s = loadGoneSprites(); s.add(spriteKey);
     localStorage.setItem(GONE_KEY, JSON.stringify([...s]));
   }
+  function clearGoneSprites() { localStorage.removeItem(GONE_KEY); }
 
-  function clearGoneSprites() {
-    localStorage.removeItem(GONE_KEY);
-  }
-
-  // ── 중복 없는 spriteKey 뽑기 ─────────────────────────────────────
-  // 우선순위: 현재 캐릭터 목록 + gone 블랙리스트 모두 제외
-  // 풀 고갈 시: gone 블랙리스트만 제외 (살아있는 캐릭터와는 겹칠 수 있음)
-  // 완전 고갈 시: 랜덤 fallback
+  // ── 중복 없는 spriteKey ──────────────────────────────────────────
   function _uniqueSpriteKey(extraExclude) {
     const used    = new Set((loadAll() || []).map(c => c.spriteKey).filter(Boolean));
     const gone    = loadGoneSprites();
     const exclude = new Set([...used, ...gone, ...(extraExclude || [])]);
-
     const available = [];
     for (let i = 0; i < SPRITE_COUNT; i++) {
       const k = `char_${String(i).padStart(3, '0')}`;
       if (!exclude.has(k)) available.push(k);
     }
     if (available.length) return available[Math.floor(Math.random() * available.length)];
-
-    // gone만 제외한 fallback
     const fallback = [];
     for (let i = 0; i < SPRITE_COUNT; i++) {
       const k = `char_${String(i).padStart(3, '0')}`;
       if (!gone.has(k)) fallback.push(k);
     }
     if (fallback.length) return fallback[Math.floor(Math.random() * fallback.length)];
-
-    // 완전 고갈 — 그냥 랜덤
     return `char_${String(Math.floor(Math.random() * SPRITE_COUNT)).padStart(3, '0')}`;
   }
 
-  // 모든 스탯은 정수. Math.floor로 소수점 방지.
+  // ── 스탯 생성 ────────────────────────────────────────────────────
   function _randStats() {
     const total  = 10 + Math.floor(Math.random() * 41);
     const mins   = [1, 0, 1, 5, 0];
@@ -232,24 +183,13 @@ const CharacterManager = (() => {
 
   // ════════════════════════════════════════════════════════════════
   //  스탯 최종값 계산
-  //
-  //  계산 순서:
-  //    1. base        = char.stats[key]           (순수 기본값)
-  //    2. ocBonus     = Math.floor(base × bonus)  (오버클럭 가산)
-  //    3. itemBonus   = char.itemBonuses?.[key]   (아이템 가산 — 추후)
-  //    4. recordBonus = char.recordBonuses?.[key] (기록칩 가산 — 추후)
-  //    5. 합계        = base + ocBonus + itemBonus + recordBonus
   // ════════════════════════════════════════════════════════════════
   function getEffectiveStat(char, key) {
-    const base = char.stats[key] ?? 0;
-
-    const ocBonus = (char.overclock && char.overclock.statKey === key)
-      ? Math.floor(base * char.overclock.bonus)
-      : 0;
-
+    const base        = char.stats[key] ?? 0;
+    const ocBonus     = (char.overclock && char.overclock.statKey === key)
+      ? Math.floor(base * char.overclock.bonus) : 0;
     const itemBonus   = char.itemBonuses?.[key]   ?? 0;
     const recordBonus = char.recordBonuses?.[key] ?? 0;
-
     return base + ocBonus + itemBonus + recordBonus;
   }
 
@@ -260,27 +200,18 @@ const CharacterManager = (() => {
     return r;
   }
 
-  // ── 보너스 항목별 개별 조회 (상세 표시용) ────────────────────────
-  // 반환: { base, overclock, item, record, total }
   function getStatBreakdown(char, key) {
     const base        = char.stats[key] ?? 0;
     const ocBonus     = (char.overclock && char.overclock.statKey === key)
       ? Math.floor(base * char.overclock.bonus) : 0;
     const itemBonus   = char.itemBonuses?.[key]   ?? 0;
     const recordBonus = char.recordBonuses?.[key] ?? 0;
-    return {
-      base,
-      overclock: ocBonus,
-      item:      itemBonus,
-      record:    recordBonus,
-      total:     base + ocBonus + itemBonus + recordBonus,
-    };
+    return { base, overclock: ocBonus, item: itemBonus, record: recordBonus, total: base + ocBonus + itemBonus + recordBonus };
   }
 
   // ════════════════════════════════════════════════════════════════
-  //  숙련도(Mastery) 시스템
+  //  숙련도(Mastery)
   // ════════════════════════════════════════════════════════════════
-
   function gainMastery(char, cogLevel) {
     char.mastery      = (char.mastery      || 0) + cogLevel;
     char.pendingStats = (char.pendingStats || 0) + cogLevel;
@@ -300,35 +231,40 @@ const CharacterManager = (() => {
     return true;
   }
 
-  // ── 오버클럭 롤 (초기 캐릭터용, 50%) ─────────────────────────────
-  // OVERCLOCK_POOL은 Data_Overclock.js 전역 상수
+  // ── 오버클럭 롤 ──────────────────────────────────────────────────
   function _rollInitialOverclock() {
     if (typeof OVERCLOCK_POOL === 'undefined' || !Array.isArray(OVERCLOCK_POOL)) return null;
     if (Math.random() >= 0.50) return null;
     return OVERCLOCK_POOL[Math.floor(Math.random() * OVERCLOCK_POOL.length)];
   }
 
-  // ── 캐릭터 생성 ──────────────────────────────────────────────────
-  // · stats는 순수 기본값 (정수). 오버클럭은 overclock 필드에만 기록.
-  // · 실제 보정 수치는 getEffectiveStat() 에서 계산.
+  // ════════════════════════════════════════════════════════════════
+  //  캐릭터 생성
+  //  · position 필드 없음 (4슬롯: passive / action / enhanced / finale)
+  //  · job: 'fisher' | 'diver' | 'helmsman'
+  // ════════════════════════════════════════════════════════════════
   function createCharacter(job) {
     const stats   = _randStats();
     const statSum = Object.values(stats).reduce((a, v) => a + v, 0);
     const cog     = calcCog(statSum);
     return {
-      id: `c_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
-      name: _pick(_getNamePool()), age: 16 + Math.floor(Math.random() * 10),
-      job, jobLabel: _getJobLabel(job),
+      id:           `c_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+      name:         _pick(_getNamePool()),
+      age:          16 + Math.floor(Math.random() * 10),
+      job,
+      jobLabel:     _getJobLabel(job),
       stats, statSum, cog,
-      position:     _pick(_getPositionPool(cog)),
-      passive:      _pick(_getPassivePool(cog)),
-      skill:        _pick(SKILL_POOL[cog] || SKILL_POOL[1]),
+      passive:      _pick(_getAbilityPool('passive',  job, cog)),
+      action:       _pick(_getAbilityPool('action',   job, cog)),
+      enhanced:     _pick(_getAbilityPool('enhanced', job, cog)),
+      finale:       _pick(_getAbilityPool('finale',   job, cog)),
       overclock:    _rollInitialOverclock(),
       mastery:      0,
       pendingStats: 0,
-      currentHp: stats.hp * 5, maxHp: stats.hp * 5,
-      status:    'alive',
-      spriteKey: _uniqueSpriteKey(),
+      currentHp:    stats.hp * 5,
+      maxHp:        stats.hp * 5,
+      status:       'alive',
+      spriteKey:    _uniqueSpriteKey(),
     };
   }
 
@@ -337,19 +273,23 @@ const CharacterManager = (() => {
     const statSum = range.min + Math.floor(Math.random() * (range.max - range.min + 1));
     const stats   = _randStatsBySum(statSum);
     return {
-      id: `c_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
-      name: _pick(_getNamePool()), age: 16 + Math.floor(Math.random() * 10),
-      job, jobLabel: _getJobLabel(job),
+      id:           `c_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+      name:         _pick(_getNamePool()),
+      age:          16 + Math.floor(Math.random() * 10),
+      job,
+      jobLabel:     _getJobLabel(job),
       stats, statSum, cog,
-      position:     _pick(_getPositionPool(cog)),
-      passive:      _pick(_getPassivePool(cog)),
-      skill:        _pick(SKILL_POOL[cog] || SKILL_POOL[1]),
+      passive:      _pick(_getAbilityPool('passive',  job, cog)),
+      action:       _pick(_getAbilityPool('action',   job, cog)),
+      enhanced:     _pick(_getAbilityPool('enhanced', job, cog)),
+      finale:       _pick(_getAbilityPool('finale',   job, cog)),
       overclock:    _rollInitialOverclock(),
       mastery:      0,
       pendingStats: 0,
-      currentHp: stats.hp * 5, maxHp: stats.hp * 5,
-      status:    'alive',
-      spriteKey: _uniqueSpriteKey(),
+      currentHp:    stats.hp * 5,
+      maxHp:        stats.hp * 5,
+      status:       'alive',
+      spriteKey:    _uniqueSpriteKey(),
     };
   }
 
@@ -362,10 +302,7 @@ const CharacterManager = (() => {
     try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; }
     catch { return null; }
   }
-
-  function addCharacter(char) {
-    const chars = loadAll() || []; chars.push(char); saveAll(chars);
-  }
+  function addCharacter(char) { const chars = loadAll() || []; chars.push(char); saveAll(chars); }
   function removeCharacter(id) {
     saveAll((loadAll() || []).filter(c => c.id !== id));
     saveSquad(loadSquad().map(s => s.filter(x => x !== id)));
@@ -377,93 +314,89 @@ const CharacterManager = (() => {
   }
 
   // ── 전투 사망 처리 ───────────────────────────────────────────────
-  // · status가 'ai'면 → 완전 소멸(gone): nr_characters에서 삭제 + gone 블랙리스트 등록
-  // · status가 'alive'면 → dead_chip: nr_characters에 상태 업데이트 (기록칩 아이템 유지)
-  // · 기록칩 사망 연대기는 두 경우 모두 기록
   function killCharacter(char, { day, cog, round, killedBy }) {
     recordDeath(char.spriteKey, { day, cog, round, killedBy });
-
-    if (char.status === 'ai') {
-      // AI 상태 사망 → 완전 소멸, 이번 판 초상화 재사용 불가
-      addGoneSprite(char.spriteKey);
-      saveAll((loadAll() || []).filter(c => c.id !== char.id));
-    } else {
-      // 일반 사망 → dead_chip 상태로 전환 (기록칩 아이템화)
-      char.status    = 'dead_chip';
-      char.currentHp = 0;
-      updateCharacter(char);
-    }
+    // helmsman도 alive 취급 → dead_chip으로 전환
+    char.status    = 'dead_chip';
+    char.currentHp = 0;
+    updateCharacter(char);
   }
 
-  // ── 초기화 ───────────────────────────────────────────────────────
+  // ════════════════════════════════════════════════════════════════
+  //  초기화 + 마이그레이션
+  // ════════════════════════════════════════════════════════════════
   function initIfEmpty() {
-    _validatePools();
     const ex = loadAll();
 
     if (ex && ex.length > 0) {
       let dirty = false;
-      const oldPosNames = [
-        '윗칸 타격','앞칸 타격','현재 칸 타격','대각 타격',
-        '전열 전체 타격','후열 타격','전/후열 동시 타격','전체 칸 타격',
-      ];
 
       ex.forEach(c => {
+        // ── spriteKey 검증 ────────────────────────────────────
         const idx = parseInt((c.spriteKey||'').replace('char_',''), 10);
         if (!c.spriteKey || isNaN(idx) || idx >= SPRITE_COUNT)
           { c.spriteKey = _uniqueSpriteKey(); dirty = true; }
 
+        // ── status ────────────────────────────────────────────
         if (!c.status) { c.status = 'alive'; dirty = true; }
 
-        const fl = _getJobLabel(c.job);
-        if (c.jobLabel !== fl) { c.jobLabel = fl; dirty = true; }
+        // ── 직업 마이그레이션: ai → helmsman ─────────────────
+        if (c.job === 'ai') {
+          c.job      = 'helmsman';
+          c.jobLabel = _getJobLabel('helmsman');
+          dirty = true;
+        } else {
+          const fl = _getJobLabel(c.job);
+          if (c.jobLabel !== fl) { c.jobLabel = fl; dirty = true; }
+        }
 
+        // ── Cog 재계산 ────────────────────────────────────────
         const fc = calcCog(c.statSum || 0);
         if (c.cog !== fc) { c.cog = fc; dirty = true; }
 
-        if (!c.position)
-          { c.position = _pick(_getPositionPool(c.cog)); dirty = true; }
+        // ── position 필드 제거 ────────────────────────────────
+        if ('position' in c) { delete c.position; dirty = true; }
 
-        // 오버클럭 — undefined거나 null이면 50% 확률로 부여
+        // ── 4슬롯 마이그레이션 ────────────────────────────────
+        // action / enhanced / finale 없으면 부여
+        // skill 필드가 있으면 finale로 이전 후 제거
+        if (c.skill && !c.finale) {
+          c.finale = c.skill;
+          dirty = true;
+        }
+        if ('skill' in c) { delete c.skill; dirty = true; }
+
+        if (!c.action)   { c.action   = _pick(_getAbilityPool('action',   c.job, c.cog)); dirty = true; }
+        if (!c.enhanced) { c.enhanced = _pick(_getAbilityPool('enhanced', c.job, c.cog)); dirty = true; }
+        if (!c.finale)   { c.finale   = _pick(_getAbilityPool('finale',   c.job, c.cog)); dirty = true; }
+        if (!c.passive)  { c.passive  = _pick(_getAbilityPool('passive',  c.job, c.cog)); dirty = true; }
+
+        // ── 오버클럭 ──────────────────────────────────────────
         if (c.overclock === undefined || c.overclock === null) {
           c.overclock = _rollInitialOverclock();
           dirty = true;
         }
 
-        if (oldPosNames.includes(c.passive)) {
-          if (!c.position) c.position = c.passive;
-          c.passive = _pick(_getPassivePool(c.cog));
-          dirty = true;
-        }
-
-        // 숙련도 마이그레이션 — 미설정이거나 0이면 절반 캐릭터에 1~40 랜덤 부여
-        // mastery >= 1이면 이미 설정된 것으로 보고 건드리지 않음
+        // ── 숙련도 마이그레이션 ───────────────────────────────
         if ((c.mastery === undefined || c.mastery === 0) && !c._masteryMigrated) {
           c.mastery = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * 40) : 0;
           c._masteryMigrated = true;
-          // mastery만큼 pendingStats 부여 (아직 배분 안 한 것으로 간주)
           c.pendingStats = c.mastery;
           dirty = true;
         }
         if (c.pendingStats === undefined) { c.pendingStats = 0; dirty = true; }
 
-        // ✏️ HP 스케일 마이그레이션 — 체력 1스탯 = HP 10 → HP 5 패치
-        //    maxHp 가 stats.hp * 10 기준으로 저장된 경우 → * 5 기준으로 교정
-        //    판별: maxHp > stats.hp * 5 이고 _hpMigrated 플래그 없을 때
+        // ── HP 스케일 마이그레이션 (×10 → ×5) ────────────────
         if (!c._hpMigrated && c.stats && c.stats.hp != null) {
           const expected5  = c.stats.hp * 5;
           const expected10 = c.stats.hp * 10;
           if (c.maxHp >= expected10 * 0.9) {
-            // * 10 기준으로 저장된 것 → * 5 로 재계산
-            const hpRatio  = c.maxHp > 0 ? (c.currentHp / c.maxHp) : 1;
-            c.maxHp        = expected5;
-            c.currentHp    = Math.round(expected5 * hpRatio);
-            c._hpMigrated  = true;
-            dirty = true;
-          } else {
-            // 이미 * 5 기준이거나 아이템·오버클럭 보정된 경우 — 플래그만 세움
-            c._hpMigrated = true;
-            dirty = true;
+            const hpRatio = c.maxHp > 0 ? (c.currentHp / c.maxHp) : 1;
+            c.maxHp       = expected5;
+            c.currentHp   = Math.round(expected5 * hpRatio);
           }
+          c._hpMigrated = true;
+          dirty = true;
         }
       });
 
@@ -471,17 +404,21 @@ const CharacterManager = (() => {
       return ex;
     }
 
+    // ── 첫 실행: 초기 캐릭터 생성 ────────────────────────────
     const chars = [];
-    const sj = ['fisher','diver','ai'];
+    const jobs  = ['fisher', 'diver', 'helmsman'];
+    // Cog 1~10 각 1명
     for (let cog = 1; cog <= 10; cog++)
-      chars.push(createCharacterOfCog(sj[Math.floor(Math.random()*3)], cog));
+      chars.push(createCharacterOfCog(jobs[Math.floor(Math.random() * 3)], cog));
+    // 직업별 10명씩
     for (let i = 0; i < 10; i++) chars.push(createCharacter('fisher'));
     for (let i = 0; i < 10; i++) chars.push(createCharacter('diver'));
+    for (let i = 0; i < 10; i++) chars.push(createCharacter('helmsman'));
     saveAll(chars);
     return chars;
   }
 
-  // ── 스쿼드 (폐기 — 하위호환용) ───────────────────────────────────
+  // ── 스쿼드 (폐기 — 하위호환) ─────────────────────────────────────
   function loadSquad() {
     try {
       const r = localStorage.getItem(SQUAD_KEY);
@@ -493,81 +430,54 @@ const CharacterManager = (() => {
       });
     } catch { return Array(10).fill(null).map(() => []); }
   }
-
   function saveSquad(s) {
     localStorage.setItem(SQUAD_KEY, JSON.stringify(
       Array(10).fill(null).map((_,i) => {
-        const v = s[i];
-        return !v ? [] : Array.isArray(v) ? v : [v];
+        const v = s[i]; return !v ? [] : Array.isArray(v) ? v : [v];
       })
     ));
   }
 
   // ── 파티 ─────────────────────────────────────────────────────────
   const PARTY_KEY = 'nr_party';
-
-  function saveParty(charIds) {
-    localStorage.setItem(PARTY_KEY, JSON.stringify(charIds || []));
-  }
-
+  function saveParty(charIds) { localStorage.setItem(PARTY_KEY, JSON.stringify(charIds || [])); }
   function loadParty() {
-    try {
-      const r = localStorage.getItem(PARTY_KEY);
-      return r ? JSON.parse(r) : [];
-    } catch { return []; }
+    try { const r = localStorage.getItem(PARTY_KEY); return r ? JSON.parse(r) : []; }
+    catch { return []; }
   }
 
   // ── 기록칩 ───────────────────────────────────────────────────────
   const RECORD_KEY = 'nr_record_chips';
 
   function loadRecordChips() {
-    try {
-      const r = localStorage.getItem(RECORD_KEY);
-      return r ? JSON.parse(r) : {};
-    } catch { return {}; }
+    try { const r = localStorage.getItem(RECORD_KEY); return r ? JSON.parse(r) : {}; }
+    catch { return {}; }
   }
-
-  function getRecordChip(spriteKey) {
-    return loadRecordChips()[spriteKey] || null;
-  }
-
+  function getRecordChip(spriteKey) { return loadRecordChips()[spriteKey] || null; }
   function updateRecordChip(spriteKey, delta) {
     const chips = loadRecordChips();
-    if (!chips[spriteKey]) chips[spriteKey] = {
-      expeditions:0, kills:0, deaths:0,
-      highestRegion:'', highestCog:0, veteran:false, firstDay:0, deathLog:[],
-    };
+    if (!chips[spriteKey]) chips[spriteKey] = { expeditions:0, kills:0, deaths:0, highestRegion:'', highestCog:0, veteran:false, firstDay:0, deathLog:[] };
     const c = chips[spriteKey];
     if (delta.expeditions) c.expeditions += delta.expeditions;
     if (delta.kills)       c.kills       += delta.kills;
-    if (delta.highestRegion && delta.highestRegion > c.highestRegion)
-      c.highestRegion = delta.highestRegion;
-    if (delta.highestCog && delta.highestCog > c.highestCog)
-      c.highestCog = delta.highestCog;
+    if (delta.highestRegion && delta.highestRegion > c.highestRegion) c.highestRegion = delta.highestRegion;
+    if (delta.highestCog   && delta.highestCog   > c.highestCog)     c.highestCog   = delta.highestCog;
     if (c.expeditions >= 10 && !c.veteran) c.veteran = true;
     localStorage.setItem(RECORD_KEY, JSON.stringify(chips));
     return c;
   }
-
   function recordDeath(spriteKey, { day, cog, round, killedBy }) {
     const chips = loadRecordChips();
-    if (!chips[spriteKey]) chips[spriteKey] = {
-      expeditions:0, kills:0, deaths:0,
-      highestRegion:'', highestCog:0, veteran:false, firstDay:0, deathLog:[],
-    };
+    if (!chips[spriteKey]) chips[spriteKey] = { expeditions:0, kills:0, deaths:0, highestRegion:'', highestCog:0, veteran:false, firstDay:0, deathLog:[] };
     const c = chips[spriteKey];
     c.deaths += 1;
     c.deathLog.unshift({ death: c.deaths, day, cog, round, killedBy });
     localStorage.setItem(RECORD_KEY, JSON.stringify(chips));
     return c;
   }
-
   function recordFirstDay(spriteKey, day) {
     const chips = loadRecordChips();
-    if (!chips[spriteKey]) chips[spriteKey] = {
-      expeditions:0, kills:0, deaths:0,
-      highestRegion:'', highestCog:0, veteran:false, firstDay:0, deathLog:[],
-    };
+    if (!chips[spriteKey]) chips[spriteKey] = { expeditions:0, kills:0, deaths:0, highestRegion:'', highestCog:0, veteran:false, firstDay:0, deathLog:[] };
     if (!chips[spriteKey].firstDay) chips[spriteKey].firstDay = day;
     localStorage.setItem(RECORD_KEY, JSON.stringify(chips));
   }
@@ -584,10 +494,9 @@ const CharacterManager = (() => {
     getRecordChip, updateRecordChip, recordDeath, recordFirstDay,
     loadGoneSprites, addGoneSprite, clearGoneSprites,
     calcCog, getCogColor, COG_COLORS,
-    SKILL_POOL, JOB_LABEL,
+    JOB_LABEL,
     STAT_COLORS, STAT_LABEL_MAP,
-    getPositionPool:  _getPositionPool,
-    getPassivePool:   _getPassivePool,
+    getAbilityPool:   _getAbilityPool,
     getEffectiveStat,
     getEffectiveStats,
     getStatBreakdown,

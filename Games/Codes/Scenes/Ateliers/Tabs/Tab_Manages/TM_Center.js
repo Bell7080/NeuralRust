@@ -2,8 +2,7 @@
 //  TM_Center.js
 //  경로: Games/Codes/Scenes/Atelier/tabs/Tab_Manages/TM_Center.js
 //
-//  역할: 중앙 패널 — 캐릭터 일러스트 + 하단 이름 배너
-//        초상화만 표시 (별도 배경 없음 — BG_002가 뒷배경)
+//  역할: 중앙 패널 — 캐릭터 일러스트 표시
 // ================================================================
 
 const TM_Center = {
@@ -33,10 +32,7 @@ const TM_Center = {
     tab._centerDetailObjs = [];
 
     const { scene } = tab;
-    const fs = n => FontManager.adjustedSize(n, scene.scale);
-    const pm = tab._panelMargin || 0;
-
-    // 중앙 패널 영역 (여백 포함해서 정확히 중앙)
+    const fs  = n => FontManager.adjustedSize(n, scene.scale);
     const cx  = tab._listW;
     const cy  = tab._bodyY;
     const cw  = tab._centerW;
@@ -44,19 +40,16 @@ const TM_Center = {
 
     const addC = (obj) => { tab._centerPanel.add(obj); tab._centerDetailObjs.push(obj); return obj; };
 
-    // 이미지 정가운데 배치 — 배경/오버레이/배너 없이 이미지만
     const centerX = cx + cw / 2;
     const centerY = cy + ch / 2;
 
     if (char.spriteKey && scene.textures.exists(char.spriteKey)) {
       const img = scene.add.image(centerX, centerY, char.spriteKey).setOrigin(0.5);
-      // 패널 크기에 맞게 (패딩 약간 줘서 여유 있게)
-      const maxW = cw * 0.90;
-      const maxH = ch * 0.94;
-      img.setScale(Math.min(maxW / img.width, maxH / img.height));
+      img.setScale(Math.min(cw * 0.90 / img.width, ch * 0.94 / img.height));
       addC(img);
     } else {
-      const JOB_SHORT = { fisher:'FISH', diver:'DIVE', ai:'A·I' };
+      // 직업별 폴백 텍스트 — helmsman 포함
+      const JOB_SHORT = { fisher: 'FISH', diver: 'DIVE', helmsman: 'HELM' };
       addC(scene.add.text(centerX, centerY, JOB_SHORT[char.job] || '?', {
         fontSize: fs(48), fill: '#1a2028', fontFamily: FontManager.MONO,
       }).setOrigin(0.5));

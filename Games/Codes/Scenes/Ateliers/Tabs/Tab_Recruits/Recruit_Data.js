@@ -3,23 +3,11 @@
 //  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Recruits/Recruit_Data.js
 //
 //  역할: 영입 탭 전용 상수 + 가챠 유틸 함수
-//  의존: Data_CharacterNames.js (CHARACTER_NAMES)
-//        Data_Overclock.js      (OVERCLOCK_CHANCE, OVERCLOCK_POOL)
-//        PositionData.js        (POSITION_POOL)
-//        PassiveData.js         (PASSIVE_POOL)
-//
-//  ── 스탯 저장 방식 ────────────────────────────────────────────
-//    · result.stats  = 순수 기본값 (오버클럭 보정 없음)
-//    · 오버클럭 보정은 CharacterManager.getEffectiveStat() 에서만 계산
-//    · 표시 예: 공격 10 → 오버클럭 +5 → 아이템 +3 → 합계 18
 //
 //  ── 변경 이력 ────────────────────────────────────────────────
-//    v2: 어빌리티 3분리 / 오버클럭 / 스탯 편향 / 직업 다양성 / 가격 연동 가중치
-//    v3: OVERCLOCK_CHANCE / OVERCLOCK_POOL → Data_Overclock.js 로 분리
-//    v4: stats = 순수 기본값으로 변경 (_applyOverclock 제거)
-//        오버클럭 보정은 getEffectiveStat 에서만 적용
+//    v5: ai → helmsman (조타수), skill → action/enhanced/finale 3슬롯 분리
+//        position 필드 완전 제거
 // ================================================================
-
 
 // ── Cog 10등급 체계 ───────────────────────────────────────────────
 const RECRUIT_GACHA_BASE = [
@@ -57,38 +45,19 @@ const RECRUIT_COG_COLORS = {
   6:'#ff7700', 7:'#ff4400', 8:'#dd0000', 9:'#ff2255', 10:'#cc44ff',
 };
 
-// ── 스킬 풀 — Data_Skills.js 로드 시 id 기반 자동 빌드, 실패 시 id 폴백 ─
-const RECRUIT_SKILL_POOL = (() => {
-  if (typeof SKILL_DATA !== 'undefined' && Array.isArray(SKILL_DATA)) {
-    const pool = {};
-    for (let cog = 1; cog <= 10; cog++) pool[cog] = [];
-    SKILL_DATA.forEach(s => {
-      for (let cog = s.cogMin; cog <= 10; cog++) pool[cog].push(s.id);
-    });
-    return pool;
-  }
-  // Data_Skills.js 미로드 시 id 폴백
-  return {
-    1:  ['basic_strike', 'quick_stab'],
-    2:  ['basic_strike', 'quick_stab', 'combo_hit', 'guard_stance'],
-    3:  ['combo_hit', 'guard_stance', 'heavy_blow', 'evasion', 'poison_coat'],
-    4:  ['heavy_blow', 'evasion', 'poison_coat', 'aoe_strike', 'strong_poison', 'burst_speed'],
-    5:  ['aoe_strike', 'strong_poison', 'burst_speed', 'explosion_hit', 'front_scan', 'armor_pierce'],
-    6:  ['explosion_hit', 'front_scan', 'armor_pierce', 'deep_pressure', 'electric_shock', 'iron_wall'],
-    7:  ['deep_pressure', 'electric_shock', 'iron_wall', 'core_overload', 'abyss_roar'],
-    8:  ['core_overload', 'abyss_roar'],
-    9:  ['core_overload', 'abyss_roar'],
-    10: ['core_overload', 'abyss_roar'],
-  };
-})();
+// ── 직업 목록 ─────────────────────────────────────────────────────
+const RECRUIT_JOBS = ['fisher', 'diver', 'helmsman'];
+const RECRUIT_JOB_LABEL = { fisher: '낚시꾼', diver: '잠수부', helmsman: '조타수' };
 
 const _RECRUIT_NAME_POOL = (typeof CHARACTER_NAMES !== 'undefined' && CHARACTER_NAMES.length > 0)
   ? CHARACTER_NAMES
   : ['볼트','기어','러스트','뎁스','아크','스팀','드릴','앵커','크롬','스크랩'];
 
-const RECRUIT_NAMES     = { fisher: _RECRUIT_NAME_POOL, diver: _RECRUIT_NAME_POOL };
-const RECRUIT_JOB_LABEL = { fisher: '낚시꾼', diver: '잠수부' };
-const RECRUIT_JOBS      = ['fisher', 'diver'];
+const RECRUIT_NAMES = {
+  fisher:   _RECRUIT_NAME_POOL,
+  diver:    _RECRUIT_NAME_POOL,
+  helmsman: _RECRUIT_NAME_POOL,
+};
 
 const RECRUIT_BASE_PRICE   = 5;
 const RECRUIT_PRICE_STEP   = 5;
@@ -97,15 +66,12 @@ const RECRUIT_SLOT_TICK    = 55;
 const RECRUIT_SLOT_COUNT   = 30;
 const RECRUIT_SPRITE_COUNT = 72;
 
-
 // ════════════════════════════════════════════════════════════════
 //  가챠 유틸 함수
 // ════════════════════════════════════════════════════════════════
 
 function _buildGachaTable(currentPrice) {
-  const lv = Math.max(0, Math.floor(
-    (currentPrice - RECRUIT_BASE_PRICE) / RECRUIT_PRICE_STEP
-  ));
+  const lv = Math.max(0, Math.floor((currentPrice - RECRUIT_BASE_PRICE) / RECRUIT_PRICE_STEP));
   return RECRUIT_GACHA_BASE.map(entry => {
     const sc = RECRUIT_COG_SCALE[entry.cog];
     let w = entry.baseW;
@@ -140,46 +106,67 @@ function _rSpriteKey() { return `char_${String(Math.floor(Math.random() * RECRUI
 
 // ── 오버클럭 롤 ─────────────────────────────────────────────────
 function _rOverclock() {
-  if (Math.random() >= OVERCLOCK_CHANCE) return null;
+  if (typeof OVERCLOCK_CHANCE === 'undefined' || Math.random() >= OVERCLOCK_CHANCE) return null;
   return OVERCLOCK_POOL[Math.floor(Math.random() * OVERCLOCK_POOL.length)];
 }
 
+// ── 능력 풀 헬퍼 ─────────────────────────────────────────────────
+function _rAbility(type, job, cog) {
+  if (typeof CharacterManager !== 'undefined' && CharacterManager.getAbilityPool) {
+    const pool = CharacterManager.getAbilityPool(type, job, cog);
+    if (pool && pool.length) return _rFrom(pool);
+  }
+  // 최소 폴백
+  const fb = {
+    passive:  { 1:'tough_body',  3:'fighting_spirit', 5:'aqua_adapt', 7:'unyielding'   },
+    action:   { 1:'strike',      3:'rapid_strike',    5:'heavy_strike',7:'wide_strike'  },
+    enhanced: { 1:'combo_hit',   3:'evasion',         5:'burst_speed', 7:'iron_wall'    },
+    finale:   { 1:'quick_stab',  3:'heavy_blow',      5:'explosion_hit',7:'core_overload'},
+  };
+  const tbl = fb[type] || {};
+  const key = [7,5,3,1].find(k => cog >= k) || 1;
+  return tbl[key] || 'strike';
+}
+
 // ── 직업 다양성 강제 ─────────────────────────────────────────────
+//  3장 중 모두 같은 직업이면 3번째를 다른 직업으로 교체
 function _ensureJobDiversity(rolls) {
   const jobs = rolls.map(r => r.job);
   if (jobs.every(j => j === jobs[0])) {
     const altJobs = RECRUIT_JOBS.filter(j => j !== jobs[0]);
-    rolls[2].job  = _rFrom(altJobs);
-    rolls[2].name = _rFrom(RECRUIT_NAMES[rolls[2].job]);
+    rolls[2].job      = _rFrom(altJobs);
+    rolls[2].jobLabel = RECRUIT_JOB_LABEL[rolls[2].job];
+    // 직업 바뀌면 능력도 재롤
+    const j = rolls[2].job, cog = rolls[2].cog;
+    rolls[2].passive  = _rAbility('passive',  j, cog);
+    rolls[2].action   = _rAbility('action',   j, cog);
+    rolls[2].enhanced = _rAbility('enhanced', j, cog);
+    rolls[2].finale   = _rAbility('finale',   j, cog);
   }
   return rolls;
 }
 
 // ── 가챠 1회 결과 생성 ───────────────────────────────────────────
-// · result.stats  = 순수 기본값 (오버클럭 미적용)
-// · 오버클럭 보정 수치는 CharacterManager.getEffectiveStat() 에서 계산
 function _rRoll(currentPrice) {
   const price     = currentPrice ?? RECRUIT_BASE_PRICE;
   const entry     = _rWPick(_buildGachaTable(price));
   const statSum   = _rBiasedInRange(entry.min, entry.max);
   const cog       = entry.cog;
   const job       = _rFrom(RECRUIT_JOBS);
-  const baseStats = _rDist(statSum);          // 순수 기본값 배열
-  const overclock = _rOverclock();            // null 또는 OVERCLOCK_POOL 항목
-
-  const posPool = (typeof POSITION_POOL !== 'undefined') ? (POSITION_POOL[cog] || POSITION_POOL[1]) : ['앞칸 타격'];
-  const pasPool = (typeof PASSIVE_POOL  !== 'undefined') ? (PASSIVE_POOL[cog]  || PASSIVE_POOL[1])  : ['강인한 체질'];
-  const sklPool = RECRUIT_SKILL_POOL[cog] || RECRUIT_SKILL_POOL[1];
+  const baseStats = _rDist(statSum);
+  const overclock = _rOverclock();
 
   return {
     name:      _rFrom(_RECRUIT_NAME_POOL),
     job,
-    stats:     baseStats,   // ← 순수 기본값, 오버클럭 보정 없음
-    statSum,                 // 기본값 기준 합계
+    jobLabel:  RECRUIT_JOB_LABEL[job],
+    stats:     baseStats,
+    statSum,
     cog,
-    position:  _rFrom(posPool),
-    passive:   _rFrom(pasPool),
-    skill:     _rFrom(sklPool),
+    passive:   _rAbility('passive',  job, cog),
+    action:    _rAbility('action',   job, cog),
+    enhanced:  _rAbility('enhanced', job, cog),
+    finale:    _rAbility('finale',   job, cog),
     overclock,
     spriteKey: _rSpriteKey(),
   };

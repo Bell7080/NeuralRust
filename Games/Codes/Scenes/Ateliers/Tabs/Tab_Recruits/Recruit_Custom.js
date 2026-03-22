@@ -2,51 +2,47 @@
 //  Recruit_Custom.js
 //  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Recruits/Recruit_Custom.js
 //
-//  역할: Phase 4 — 커스터마이징 (스탯/외형/패시브/스킬 재설정 + 확정)
-//  의존: Recruit_Data.js, Recruit_Popup.js, Recruit_Name.js, Tab_Recruit.js(this)
+//  역할: Phase 4 — 커스터마이징 (스탯/외형/패시브/능력 재설정 + 확정)
+//  의존: Recruit_Data.js, Recruit_Popup.js, Recruit_Name.js,
+//        Tab_Recruit.js(this), AbilityIndex.js
 //
-//  ✏️ v3 수정사항
-//    · _confirmHire statObj 생성 시 Math.floor 적용 (소수점 방지)
-//  ✏️ v4 수정사항
-//    · _confirmHire: baseStats 기준 저장 구조로 교체 (현재 최신 버전과 동기화)
-//    · _showHireCompletePopup: scaledFontSize → this._fs() 교체
-//    · _showHireCompletePopup: _popupObjs 추적 추가 (탭 전환 시 안전 정리)
-//  ✏️ v5 수정사항
-//    · _buildCustom SKILL 박스: result.skill(id) → 이름으로 변환 후 표시
-//    · _rerollSkill: 팝업 라벨을 이름으로, 저장값은 id 유지, setText도 이름으로
-//    · _confirmHire: spriteKey 폴백 'char_0' → 'char_000' (3자리 padStart 정합성)
+//  ✏️ v6 수정사항 (스킬 시스템 개편)
+//    · _skillIdToName → _abilityIdToName / _abilityIdToDesc 헬퍼로 교체
+//    · position 슬롯 완전 제거 (_rerollPosition 삭제)
+//    · SKILL 박스 1개 → ACTION / ENHANCED / FINALE 박스 3개로 분리
+//    · _rerollSkill → _rerollAction / _rerollEnhanced / _rerollFinale 3개로 분리
+//    · _confirmHire — position 제거, action/enhanced/finale 저장, helmsman 추가
+//    · jobLbl 매핑에 helmsman:'조타수' 추가
+//    · _buildCustomBox fixedBelowImg 재계산 (박스 4개 기준)
 // ================================================================
 
-// ════════════════════════════════════════════════════════════════
-//  _skillIdToName — 스킬 id를 표시용 이름으로 변환하는 내부 헬퍼
-//
-//  Data_Skills.js의 getSkillById() 또는 SkillRegistry.getName()이
-//  로드되어 있으면 이름을 반환하고, 없으면 id를 그대로 반환.
-//  호출 위치: _buildCustom(SKILL 박스), _rerollSkill(팝업 라벨, setText)
-// ════════════════════════════════════════════════════════════════
-Tab_Recruit.prototype._skillIdToName = function (id) {
+// ── 능력 id → 표시 이름 변환 헬퍼 ───────────────────────────────
+// AbilityIndex 우선, 없으면 구버전 Data_Skills fallback
+Tab_Recruit.prototype._abilityIdToName = function (type, id) {
   if (!id) return id;
-  // Data_Skills.js의 getSkillById 우선
+  if (typeof AbilityIndex !== 'undefined') {
+    const name = AbilityIndex.getName(type, id);
+    if (name && name !== id) return name;
+  }
   if (typeof getSkillById === 'function') {
     const s = getSkillById(id);
     if (s && s.name) return s.name;
   }
-  // _SkillRegistry.js의 SkillRegistry.getName 차선
-  if (typeof SkillRegistry !== 'undefined' && typeof SkillRegistry.getName === 'function') {
-    const name = SkillRegistry.getName(id);
-    if (name && name !== id) return name;
-  }
   return id;
+};
+
+// ── 능력 id → 설명 변환 헬퍼 ────────────────────────────────────
+Tab_Recruit.prototype._abilityIdToDesc = function (type, id) {
+  if (!id) return '';
+  if (typeof AbilityIndex !== 'undefined') {
+    return AbilityIndex.getDesc(type, id) || '';
+  }
+  if (typeof getSkillDescription === 'function') return getSkillDescription(id);
+  return '';
 };
 
 // ════════════════════════════════════════════════════════════════
 //  _resolveStats — 스탯 표시 데이터의 유일한 생성 함수
-//
-//  input : result 객체 (baseStats, overclock 포함)
-//  output: [{ key, label, base, eff, col, isOc, ocColor, dispStr }] × 5
-//
-//  커스텀 패널·재설정 팝업·setText 갱신 모두 이 배열을 소비한다.
-//  effective 계산 로직은 오직 여기에만 존재한다.
 // ════════════════════════════════════════════════════════════════
 Tab_Recruit.prototype._resolveStats = function (result) {
   const SC = (typeof CharacterManager !== 'undefined' && CharacterManager.STAT_COLORS)
@@ -113,13 +109,12 @@ Tab_Recruit.prototype._buildStatPanel = function (cx, cy, bw, bh) {
   bg.fillRect(cx-bw/2, cy-bh/2, bw, bh); bg.strokeRect(cx-bw/2, cy-bh/2, bw, bh);
   this._container.add(bg);
 
-  const pad     = bw * 0.06;
-  const innerL  = cx - bw/2 + pad;
-  const innerW  = bw - pad * 2;
+  const pad    = bw * 0.06;
+  const innerL = cx - bw/2 + pad;
+  const innerW = bw - pad * 2;
 
-  // ── 캐릭터 기본 정보 ─────────────────────────────────────────
-  const topY    = cy - bh/2 + pad;
-  const cogCol  = RECRUIT_COG_COLORS[result.cog] || '#7dff4f';
+  const topY   = cy - bh/2 + pad;
+  const cogCol = RECRUIT_COG_COLORS[result.cog] || '#7dff4f';
 
   const cogTxt = scene.add.text(innerL, topY, `Cog  ${result.cog}`, {
     fontSize: this._fs(18), fill: cogCol,
@@ -128,7 +123,8 @@ Tab_Recruit.prototype._buildStatPanel = function (cx, cy, bw, bh) {
   }).setOrigin(0, 0);
   this._container.add(cogTxt);
 
-  const jobLbl = { fisher:'낚시꾼', diver:'잠수부', ai:'A.I' }[result.job] || result.job;
+  // ✏️ v6: helmsman 추가
+  const jobLbl = { fisher:'낚시꾼', diver:'잠수부', helmsman:'조타수' }[result.job] || result.job;
   const jobTxt = scene.add.text(innerL + innerW, topY, jobLbl, {
     fontSize: this._fs(14), fill: '#a07040', fontFamily: FontManager.TITLE,
   }).setOrigin(1, 0);
@@ -136,12 +132,12 @@ Tab_Recruit.prototype._buildStatPanel = function (cx, cy, bw, bh) {
 
   const infoTopY = topY + parseInt(this._fs(24));
 
-  // ── 이름 필드 (Recruit_Name.js) ──────────────────────────────
+  // ── 이름 필드 ──────────────────────────────────────────────
   const nameFieldH = parseInt(this._fs(30));
   const nameTextCY = infoTopY + nameFieldH / 2;
-
   const nameFontSz = this._fs(18);
-  const _nameTxt2  = scene.add.text(innerL, nameTextCY, result.name || '이름 없음', {
+
+  const _nameTxt2 = scene.add.text(innerL, nameTextCY, result.name || '이름 없음', {
     fontSize: nameFontSz, fill: '#e8c070', fontFamily: FontManager.TITLE,
   }).setOrigin(0, 0.5);
   this._container.add(_nameTxt2);
@@ -166,7 +162,7 @@ Tab_Recruit.prototype._buildStatPanel = function (cx, cy, bw, bh) {
   ).setInteractive({ useHandCursor: true }).setDepth(20);
   this._sceneHits.push(nameHit);
 
-  let _isEditing = false;
+  let _isEditing   = false;
   let _cursorTween = null;
   const _cursorBar = scene.add.graphics();
   _cursorBar.fillStyle(0xe8c070, 1);
@@ -185,10 +181,7 @@ Tab_Recruit.prototype._buildStatPanel = function (cx, cy, bw, bh) {
     inp.type  = 'text';
     inp.value = this.result.name;
     inp.maxLength = 10;
-    inp.style.cssText = [
-      'position:fixed','opacity:0','pointer-events:none',
-      'width:1px','height:1px','top:0','left:0',
-    ].join(';');
+    inp.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px;top:0;left:0;';
     document.body.appendChild(inp);
     inp.focus();
 
@@ -199,9 +192,8 @@ Tab_Recruit.prototype._buildStatPanel = function (cx, cy, bw, bh) {
     _nameTxt2.setVisible(false);
 
     const _updateCursor = () => {
-      const tw = _previewTxt.width;
       if (_cursorBar.active) {
-        _cursorBar.setX(innerL + tw + 2);
+        _cursorBar.setX(innerL + _previewTxt.width + 2);
         _cursorBar.setVisible(true);
       }
     };
@@ -237,14 +229,11 @@ Tab_Recruit.prototype._buildStatPanel = function (cx, cy, bw, bh) {
 
   let infoY = infoTopY + nameFieldH + parseInt(this._fs(8));
 
-  // 직업
-  this._container.add(scene.add.text(innerL, infoY,
-    `직업  :  ${jobLbl}`, {
+  this._container.add(scene.add.text(innerL, infoY, `직업  :  ${jobLbl}`, {
     fontSize: this._fs(11), fill: '#7a5028', fontFamily: FontManager.MONO,
   }).setOrigin(0, 0));
   infoY += parseInt(this._fs(16));
 
-  // 스탯합
   const isF = result.overclock != null;
   this._container.add(scene.add.text(innerL, infoY,
     `스탯합  :  ${result.statSum ?? result.baseSum ?? 0}`, {
@@ -253,12 +242,11 @@ Tab_Recruit.prototype._buildStatPanel = function (cx, cy, bw, bh) {
   }).setOrigin(0, 0));
   infoY += parseInt(this._fs(20));
 
-  // 오버클럭 표시
   if (result.overclock) {
-    const oc = result.overclock;
+    const oc    = result.overclock;
     const ocHex = parseInt(oc.color.replace('#', '0x'));
-    const ocBg = scene.add.graphics();
-    const ocH  = parseInt(this._fs(18));
+    const ocH   = parseInt(this._fs(18));
+    const ocBg  = scene.add.graphics();
     ocBg.fillStyle(ocHex, 0.12);
     ocBg.lineStyle(1, ocHex, 0.5);
     ocBg.fillRect(innerL, infoY, innerW, ocH);
@@ -266,8 +254,7 @@ Tab_Recruit.prototype._buildStatPanel = function (cx, cy, bw, bh) {
     this._container.add(ocBg);
     this._container.add(scene.add.text(innerL + innerW/2, infoY + ocH/2,
       oc.label || oc.statKey, {
-      fontSize: this._fs(9), fill: oc.color,
-      fontFamily: FontManager.MONO,
+      fontSize: this._fs(9), fill: oc.color, fontFamily: FontManager.MONO,
     }).setOrigin(0.5));
     infoY += ocH + parseInt(this._fs(6));
 
@@ -331,12 +318,10 @@ Tab_Recruit.prototype._buildStatPanel = function (cx, cy, bw, bh) {
       const ocHex3 = parseInt(stat.ocColor.replace('#', '0x'));
       const glowG2 = scene.add.graphics();
       const slices = 24;
-      const barX   = statBlockX + 1, barY = rowY + 1;
-      const barW   = statBlockW - 2, barH = rowH2 - 2;
-      const sliceW = barW / slices;
+      const sliceW = (statBlockW - 2) / slices;
       for (let s = 0; s < slices; s++) {
         glowG2.fillStyle(ocHex3, 0.28 - (0.26 * s / (slices - 1)));
-        glowG2.fillRect(barX + s * sliceW, barY, Math.ceil(sliceW), barH);
+        glowG2.fillRect(statBlockX + 1 + s * sliceW, rowY + 1, Math.ceil(sliceW), rowH2 - 2);
       }
       glowG2.fillStyle(ocHex3, 0.85);
       glowG2.fillRect(statBlockX + 1, rowY + 1, 2, rowH2 - 2);
@@ -377,10 +362,9 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   const botY = cy + bh/2 - pad;
   let   curY = topY;
 
-  // ── 고정 높이 요소들을 먼저 확정 ──────────────────────────────
-  const cfH2     = parseInt(this._fs(34));   // 영입 확정 버튼 높이
-  const cfGap    = pad * 0.6;               // 확정 버튼 위 여백
-  const cfY      = botY - cfH2;             // 확정 버튼 상단 Y (절대좌표)
+  const cfH2  = parseInt(this._fs(34));
+  const cfGap = pad * 0.6;
+  const cfY   = botY - cfH2;
 
   const btnH       = 24;
   const abilDescH  = parseInt(this._fs(10));
@@ -388,61 +372,56 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   const abilNameH  = parseInt(this._fs(13));
   const abilInner  = 5;
   const abilBoxH   = abilInner + abilTitleH + 3 + abilNameH + abilDescH + 2 + 4 + btnH + abilInner;
+  const gapSm      = pad * 0.45;
 
-  const gapSm  = pad * 0.45;
+  // ✏️ v6: POSITION 제거 → 4박스 (PASSIVE + ACTION + ENHANCED + FINALE)
+  const fixedBelowImg = gapSm
+    + btnH + gapSm
+    + (btnH + 6) + gapSm
+    + abilBoxH + gapSm   // PASSIVE
+    + abilBoxH + gapSm   // ACTION
+    + abilBoxH + gapSm   // ENHANCED
+    + abilBoxH + cfGap;  // FINALE
 
-  // ── iH 역산: 확정 버튼 위에서 콘텐츠 높이를 거꾸로 빼서 초상화 영역 결정 ──
-  // 순서: [iH] gap [외형btn] gap [스탯btn] gap [POS박스] gap [PAS박스] gap [SKL박스] cfGap [cfBtn]
-  const fixedBelowImg = gapSm                          // 초상화 아래 갭
-    + btnH + gapSm                                     // 외형 재설정 버튼
-    + (btnH + 6) + gapSm                               // 스탯 재설정 버튼 (statBtnH = btnH+6)
-    + abilBoxH + gapSm                                 // POSITION 박스
-    + abilBoxH + gapSm                                 // PASSIVE 박스
-    + abilBoxH + cfGap;                                // SKILL 박스 + 확정 버튼 위 여백
-
-  // 초상화 박스가 차지할 수 있는 실제 공간
   const availForImg = (cfY - topY) - fixedBelowImg;
-  // 최솟값 보정: 너무 작으면 bw*0.22 확보, 너무 크면 bw*0.45 상한
-  const iH = Math.min(Math.max(availForImg, bw * 0.22), bw * 0.45);
+  const iH = Math.min(Math.max(availForImg, bw * 0.20), bw * 0.38);
 
-  // 초상화 박스
-  const iY = curY + iH/2;
+  const iY  = curY + iH/2;
   const iBg = scene.add.graphics();
   iBg.fillStyle(0x1e1008, 1); iBg.lineStyle(1, 0x3d2010, 1);
   iBg.fillRect(boxL, curY, boxW, iH); iBg.strokeRect(boxL, curY, boxW, iH);
   this._container.add(iBg);
-  this._spriteBoxX  = boxL + boxW/2;
-  this._spriteBoxY  = iY;
-  this._spriteBoxSz = Math.min(boxW, iH);
-  this._spriteImg     = null;
-  this._spriteKeyTxt  = null;
+  this._spriteBoxX   = boxL + boxW/2;
+  this._spriteBoxY   = iY;
+  this._spriteBoxSz  = Math.min(boxW, iH);
+  this._spriteImg    = null;
+  this._spriteKeyTxt = null;
   this._renderSpriteBox(result.spriteKey);
   curY += iH + gapSm;
 
-  // 외형 재설정 버튼
   this._spriteBtn = this._makeRerollBtn(
     boxL + boxW/2, curY + btnH/2, boxW,
     `외형 재설정  🎲  ${this.rerolls.sprite}`, () => this._rerollSprite(), btnH);
   curY += btnH + gapSm;
 
-  // 스탯 재설정 버튼
   const statBtnH = btnH + 6;
   this._statBtn = this._makeRerollBtn(
     boxL + boxW/2, curY + statBtnH/2, boxW,
     `스탯 재설정  🎲  ${this.rerolls.stat}`, () => this._rerollStats(), statBtnH);
   curY += statBtnH + gapSm;
 
-  // 어빌리티 박스 헬퍼
-  const makeAbilBox = (titleStr, nameTxtRef, nameVal, descVal, rerollCount, rerollCb, btnRef) => {
+  // ── 어빌리티 박스 헬퍼 (accentCol 인자 추가) ─────────────────
+  const makeAbilBox = (titleStr, accentCol, nameTxtRef, nameVal, descVal, rerollCount, rerollCb, btnRef) => {
+    const accentHex = parseInt(accentCol.replace('#', '0x'));
     const boxG = scene.add.graphics();
     boxG.fillStyle(0x0e0b07, 1);
-    boxG.lineStyle(1, 0x3a2010, 0.7);
+    boxG.lineStyle(1, accentHex, 0.35);
     boxG.strokeRect(boxL, curY, boxW, abilBoxH);
     boxG.fillRect(boxL, curY, boxW, abilBoxH);
     this._container.add(boxG);
 
     this._container.add(scene.add.text(boxL + abilInner, curY + abilInner, titleStr, {
-      fontSize: this._fs(8), fill: '#5a3818', fontFamily: FontManager.MONO,
+      fontSize: this._fs(8), fill: accentCol, fontFamily: FontManager.MONO,
     }).setOrigin(0, 0));
 
     const nameTxt = scene.add.text(
@@ -452,7 +431,6 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
     this._container.add(nameTxt);
     nameTxtRef.ref = nameTxt;
 
-    // ✅ descVal이 없어도 텍스트 오브젝트 생성 — 재설정 후 setText로 갱신 가능하게
     const descTxt = scene.add.text(
       boxL + abilInner, curY + abilInner + abilTitleH + 3 + abilNameH + 2, descVal || '', {
       fontSize: this._fs(8), fill: '#7a5830',
@@ -471,37 +449,46 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
     curY += abilBoxH + gapSm;
   };
 
-  // POSITION 박스
-  const posRef = {}; const posBtn = {};
-  const posDesc = (typeof getPositionDescription === 'function')
-    ? getPositionDescription(result.position) : '';
-  makeAbilBox('POSITION', posRef, result.position, posDesc, this.rerolls.position,
-    () => this._rerollPosition(), posBtn);
-  this._positionTxtRef = posRef;
-  this._positionBtn    = posBtn.ref;
-
-  // PASSIVE 박스
+  // PASSIVE
   const pRef = {}; const pBtn = {};
-  const pasDesc = (typeof getPassiveDescription === 'function')
-    ? getPassiveDescription(result.passive) : '';
-  makeAbilBox('PASSIVE', pRef, result.passive, pasDesc, this.rerolls.passive,
-    () => this._rerollPassive(), pBtn);
+  const pasDesc = this._abilityIdToDesc('passive', result.passive);
+  makeAbilBox('PASSIVE', '#a0d080', pRef, result.passive, pasDesc,
+    this.rerolls.passive, () => this._rerollPassive(), pBtn);
   this._passiveTxtRef = pRef;
   this._passiveBtn    = pBtn.ref;
 
-  // ✅ SKILL 박스 — result.skill은 id이므로 이름으로 변환 후 표시
-  const sRef = {}; const sBtn = {};
-  const sklName = this._skillIdToName(result.skill);
-  const sklDesc = (typeof getSkillDescription === 'function')
-    ? getSkillDescription(result.skill) : '';
-  makeAbilBox('SKILL', sRef, sklName, sklDesc, this.rerolls.skill,
-    () => this._rerollSkill(), sBtn);
-  this._skillTxtRef = sRef;
-  this._skillBtn    = sBtn.ref;
+  // ACTION
+  const aRef = {}; const aBtn = {};
+  const actName = this._abilityIdToName('action', result.action);
+  const actDesc = this._abilityIdToDesc('action', result.action);
+  makeAbilBox('ACTION', '#c8a060', aRef, actName, actDesc,
+    this.rerolls.action, () => this._rerollAction(), aBtn);
+  this._actionTxtRef = aRef;
+  this._actionBtn    = aBtn.ref;
 
-  // 영입 확정 버튼 — cfH2, cfY는 _buildCustomBox 상단에서 이미 선언됨
-  const cfBg    = scene.add.graphics();
-  const cfGlow  = scene.add.graphics();
+  // ENHANCED
+  const eRef = {}; const eBtn = {};
+  const enhName = this._abilityIdToName('enhanced', result.enhanced);
+  const enhDesc = this._abilityIdToDesc('enhanced', result.enhanced);
+  makeAbilBox('ENHANCED', '#80b8e0', eRef, enhName, enhDesc,
+    this.rerolls.enhanced, () => this._rerollEnhanced(), eBtn);
+  this._enhancedTxtRef = eRef;
+  this._enhancedBtn    = eBtn.ref;
+
+  // FINALE — 게이지 수치를 이름 옆에 표시
+  const fRef = {}; const fBtn = {};
+  const finName  = this._abilityIdToName('finale', result.finale);
+  const finDesc  = this._abilityIdToDesc('finale', result.finale);
+  const finGauge = (typeof AbilityIndex !== 'undefined') ? AbilityIndex.getGauge(result.finale) : null;
+  const finDisplay = finName + (finGauge ? `  (${finGauge})` : '');
+  makeAbilBox('FINALE', '#ff88aa', fRef, finDisplay, finDesc,
+    this.rerolls.finale, () => this._rerollFinale(), fBtn);
+  this._finaleTxtRef = fRef;
+  this._finaleBtn    = fBtn.ref;
+
+  // ── 영입 확정 버튼 ────────────────────────────────────────────
+  const cfBg   = scene.add.graphics();
+  const cfGlow = scene.add.graphics();
 
   const drawCf = (state) => {
     cfBg.clear();
@@ -575,8 +562,6 @@ Tab_Recruit.prototype._renderSpriteBox = function (spriteKey) {
   if (this._spriteImg)    { this._spriteImg.destroy();    this._spriteImg    = null; }
   if (this._spriteKeyTxt) { this._spriteKeyTxt.destroy(); this._spriteKeyTxt = null; }
 
-  // ✅ CharacterSpriteManager.getKey()로 키 형식 정규화
-  //    spriteKey가 'char_7' 처럼 패딩 없는 형식이어도 'char_007'로 변환
   let normalizedKey = spriteKey;
   if (typeof CharacterSpriteManager !== 'undefined' && CharacterSpriteManager.getKey) {
     const idNum = parseInt((spriteKey || '').replace('char_', ''), 10);
@@ -584,28 +569,18 @@ Tab_Recruit.prototype._renderSpriteBox = function (spriteKey) {
   }
 
   if (normalizedKey && scene.textures.exists(normalizedKey)) {
-    const img = scene.add.image(cx, iY, normalizedKey).setOrigin(0.5);
-
-    // ✅ CELL_W × CELL_H(152×280) 비율 기반 스케일 계산
-    //    박스는 정사각형(iSz×iSz)이므로 세로(CELL_H) 기준으로 맞추되
-    //    가로도 초과하지 않도록 min 적용
+    const img   = scene.add.image(cx, iY, normalizedKey).setOrigin(0.5);
     const cellW = (typeof CharacterSpriteManager !== 'undefined' && CharacterSpriteManager.CELL_W)
       ? CharacterSpriteManager.CELL_W : (img.width  || 152);
     const cellH = (typeof CharacterSpriteManager !== 'undefined' && CharacterSpriteManager.CELL_H)
       ? CharacterSpriteManager.CELL_H : (img.height || 280);
-
-    const scaleX = iSz / cellW;
-    const scaleY = iSz / cellH;
-    const sc     = Math.min(scaleX, scaleY) * 0.92;
+    const sc = Math.min(iSz / cellW, iSz / cellH) * 0.92;
     img.setScale(sc);
-
     this._spriteImg = img;
     this._container.add(img);
-    // ✅ 재설정 시 이미 쌓인 다른 오브젝트 위로 끌어올림
     this._container.bringToTop(img);
   } else {
-    // 텍스처 미로드 시 번호 텍스트 표시
-    const idNum = parseInt((spriteKey || '').replace('char_', ''), 10);
+    const idNum      = parseInt((spriteKey || '').replace('char_', ''), 10);
     const displayNum = isNaN(idNum) ? '?' : idNum + 1;
     this._spriteKeyTxt = scene.add.text(cx, iY, `#${displayNum}`, {
       fontSize: this._fs(11), fill: '#3d2010', fontFamily: FontManager.MONO,
@@ -651,37 +626,27 @@ Tab_Recruit.prototype._disableBtn = function (btn, newLabel) {
 // ── 재설정 로직 ──────────────────────────────────────────────────
 
 Tab_Recruit.prototype._rDistRandom = function (total) {
-  const MIN = [1, 0, 1, 5, 0];
-  const minSum = MIN.reduce((a,b)=>a+b, 0);
-  let pool = Math.max(0, total - minSum);
-  const cuts = [];
+  const MIN    = [1, 0, 1, 5, 0];
+  const minSum = MIN.reduce((a, b) => a + b, 0);
+  let   pool   = Math.max(0, total - minSum);
+  const cuts   = [];
   for (let k = 0; k < 4; k++) cuts.push(Math.floor(Math.random() * (pool + 1)));
-  cuts.sort((a,b)=>a-b);
-  const parts = [
-    cuts[0],
-    cuts[1]-cuts[0],
-    cuts[2]-cuts[1],
-    cuts[3]-cuts[2],
-    pool-cuts[3],
-  ];
-  return MIN.map((m,i) => m + parts[i]);
+  cuts.sort((a, b) => a - b);
+  const parts = [cuts[0], cuts[1]-cuts[0], cuts[2]-cuts[1], cuts[3]-cuts[2], pool-cuts[3]];
+  return MIN.map((m, i) => m + parts[i]);
 };
 
 Tab_Recruit.prototype._rerollStats = function () {
   if (this.rerolls.stat <= 0) { this._toast('재설정 횟수 소진'); return; }
 
-  const baseSum = this.result.baseSum ?? this.result.statSum;
-  const MIN_SUM = 7;
+  const baseSum  = this.result.baseSum ?? this.result.statSum;
+  const prevBase = this.result.baseStats ? [...this.result.baseStats] : [...this.result.stats];
+  let   newBase;
 
-  const prevBase = this.result.baseStats
-    ? [...this.result.baseStats]
-    : [...this.result.stats];
-
-  let newBase;
   for (let t = 0; t < 20; t++) {
     newBase = this._rDistRandom(baseSum);
-    const totalDiff = newBase.reduce((acc, v, i) => acc + Math.abs(v - prevBase[i]), 0);
-    if (totalDiff > 0 || baseSum <= MIN_SUM) break;
+    const diff = newBase.reduce((acc, v, i) => acc + Math.abs(v - prevBase[i]), 0);
+    if (diff > 0 || baseSum <= 7) break;
   }
 
   const prevSnap = { ...this.result, baseStats: prevBase };
@@ -704,144 +669,170 @@ Tab_Recruit.prototype._rerollStats = function () {
 
 Tab_Recruit.prototype._rerollSprite = function () {
   if (this.rerolls.sprite <= 0) { this._toast('재설정 횟수 소진'); return; }
-  const prev = this.result.spriteKey;
-  const next = _rSpriteKey();
-
+  const prev      = this.result.spriteKey;
+  const next      = _rSpriteKey();
   const prevLabel = `외형  #${parseInt(prev.replace('char_', ''), 10) + 1}`;
   const nextLabel = `외형  #${parseInt(next.replace('char_', ''), 10) + 1}`;
 
-  this._showChoicePopup('외형  재설정', prevLabel, nextLabel,
-    (chosen) => {
-      // ✅ chosen은 라벨 문자열('외형 #N') — 라벨 비교로 spriteKey 역추적
-      const chosenKey = (chosen === nextLabel) ? next : prev;
-      this.result.spriteKey = chosenKey;
-      this.rerolls.sprite--;
-      this._renderSpriteBox(chosenKey);
-      if (this.rerolls.sprite <= 0) this._disableBtn(this._spriteBtn, '외형  ✕');
-      else this._spriteBtn.txt.setText(`외형  🎲  ${this.rerolls.sprite}`);
-    }, [prev, next]);
+  this._showChoicePopup('외형  재설정', prevLabel, nextLabel, (chosen) => {
+    const chosenKey = (chosen === nextLabel) ? next : prev;
+    this.result.spriteKey = chosenKey;
+    this.rerolls.sprite--;
+    this._renderSpriteBox(chosenKey);
+    if (this.rerolls.sprite <= 0) this._disableBtn(this._spriteBtn, '외형  ✕');
+    else this._spriteBtn.txt.setText(`외형  🎲  ${this.rerolls.sprite}`);
+  }, [prev, next]);
 };
 
-Tab_Recruit.prototype._rerollPosition = function () {
-  if (this.rerolls.position <= 0) { this._toast('재설정 횟수 소진'); return; }
-  const prev    = this.result.position;
-  const posPool = (typeof POSITION_POOL !== 'undefined')
-    ? (POSITION_POOL[this.result.cog] || POSITION_POOL[1])
-    : ['앞칸 타격'];
-  let next = prev;
-  for (let t = 0; t < 10; t++) {
-    next = _rFrom(posPool);
-    if (next !== prev || posPool.length <= 1) break;
+// ── 능력 풀 조회 헬퍼 (AbilityIndex 우선, fallback 지원) ──────────
+Tab_Recruit.prototype._getAbilityPool = function (type, job, cog) {
+  if (typeof AbilityIndex !== 'undefined') {
+    return AbilityIndex.getPool(type, job, cog);
   }
-  this._showChoicePopup('포지션  재설정', prev, next, (chosen) => {
-    this.result.position = chosen; this.rerolls.position--;
-    this._positionTxtRef.ref.setText(chosen);
-    // ✅ 설명 텍스트 갱신
-    if (this._positionTxtRef.desc) {
-      const newDesc = (typeof getPositionDescription === 'function')
-        ? getPositionDescription(chosen) : '';
-      this._positionTxtRef.desc.setText(newDesc);
-    }
-    if (this.rerolls.position <= 0) this._disableBtn(this._positionBtn, '✕');
-    else this._positionBtn.txt.setText(`🎲  ${this.rerolls.position}`);
-  }, [prev, next]);
+  // fallback: 기존 PASSIVE_POOL
+  if (type === 'passive' && typeof PASSIVE_POOL !== 'undefined') {
+    return PASSIVE_POOL[cog] || PASSIVE_POOL[1];
+  }
+  return [];
 };
 
 Tab_Recruit.prototype._rerollPassive = function () {
   if (this.rerolls.passive <= 0) { this._toast('재설정 횟수 소진'); return; }
   const prev    = this.result.passive;
-  const pasPool = (typeof PASSIVE_POOL !== 'undefined')
-    ? (PASSIVE_POOL[this.result.cog] || PASSIVE_POOL[1])
-    : ['강인한 체질'];
-  let next = prev;
+  const pool    = this._getAbilityPool('passive', this.result.job, this.result.cog);
+  let   next    = prev;
   for (let t = 0; t < 10; t++) {
-    next = _rFrom(pasPool);
-    if (next !== prev || pasPool.length <= 1) break;
+    next = _rFrom(pool);
+    if (next !== prev || pool.length <= 1) break;
   }
-  this._showChoicePopup('패시브  재설정', prev, next, (chosen) => {
-    this.result.passive = chosen; this.rerolls.passive--;
+
+  const prevName = this._abilityIdToName('passive', prev);
+  const nextName = this._abilityIdToName('passive', next);
+
+  this._showChoicePopup('패시브  재설정', prevName, nextName, (chosen) => {
+    const chosenId = (chosen === nextName) ? next : prev;
+    this.result.passive = chosenId;
+    this.rerolls.passive--;
     this._passiveTxtRef.ref.setText(chosen);
-    // ✅ 설명 텍스트 갱신
     if (this._passiveTxtRef.desc) {
-      const newDesc = (typeof getPassiveDescription === 'function')
-        ? getPassiveDescription(chosen) : '';
-      this._passiveTxtRef.desc.setText(newDesc);
+      this._passiveTxtRef.desc.setText(this._abilityIdToDesc('passive', chosenId));
     }
     if (this.rerolls.passive <= 0) this._disableBtn(this._passiveBtn, '✕');
     else this._passiveBtn.txt.setText(`🎲  ${this.rerolls.passive}`);
   }, [prev, next]);
 };
 
-// ✅ _rerollSkill
-//  · RECRUIT_SKILL_POOL은 id 배열 → prev/next는 id
-//  · 팝업 표시 라벨은 _skillIdToName()으로 이름 변환
-//  · rawValues에 [prevId, nextId]를 전달 → 팝업 내부에서 id로 설명 조회 가능
-//  · chosen은 이름 문자열로 반환, id는 이름 비교로 역추적
-Tab_Recruit.prototype._rerollSkill = function () {
-  if (this.rerolls.skill <= 0) { this._toast('재설정 횟수 소진'); return; }
-
-  const prevId = this.result.skill;
-  const sklPool = RECRUIT_SKILL_POOL[this.result.cog] || RECRUIT_SKILL_POOL[1];
-  let nextId = prevId;
+Tab_Recruit.prototype._rerollAction = function () {
+  if (this.rerolls.action <= 0) { this._toast('재설정 횟수 소진'); return; }
+  const prev = this.result.action;
+  const pool = this._getAbilityPool('action', this.result.job, this.result.cog);
+  let   next = prev;
   for (let t = 0; t < 10; t++) {
-    nextId = _rFrom(sklPool);
-    if (nextId !== prevId || sklPool.length <= 1) break;
+    next = _rFrom(pool);
+    if (next !== prev || pool.length <= 1) break;
   }
 
-  const prevName = this._skillIdToName(prevId);
-  const nextName = this._skillIdToName(nextId);
+  const prevName = this._abilityIdToName('action', prev);
+  const nextName = this._abilityIdToName('action', next);
 
-  // ✅ rawValues에 id 배열 전달 — 팝업 내 lookupKey로 getSkillDescription(id) 호출됨
-  //    isSprite 판별은 'char_' 여부이므로 스킬 id는 isSprite=false로 올바르게 분기됨
-  this._showChoicePopup('스킬  재설정', prevName, nextName, (chosen) => {
-    const chosenId   = (chosen === nextName) ? nextId : prevId;
-    const chosenName = (chosen === nextName) ? nextName : prevName;
-
-    this.result.skill = chosenId;
-    this.rerolls.skill--;
-    this._skillTxtRef.ref.setText(chosenName);
-    if (this._skillTxtRef.desc) {
-      const newDesc = (typeof getSkillDescription === 'function')
-        ? getSkillDescription(chosenId) : '';
-      this._skillTxtRef.desc.setText(newDesc);
+  this._showChoicePopup('일반 행동  재설정', prevName, nextName, (chosen) => {
+    const chosenId = (chosen === nextName) ? next : prev;
+    this.result.action = chosenId;
+    this.rerolls.action--;
+    this._actionTxtRef.ref.setText(chosen);
+    if (this._actionTxtRef.desc) {
+      this._actionTxtRef.desc.setText(this._abilityIdToDesc('action', chosenId));
     }
+    if (this.rerolls.action <= 0) this._disableBtn(this._actionBtn, '✕');
+    else this._actionBtn.txt.setText(`🎲  ${this.rerolls.action}`);
+  }, [prev, next]);
+};
 
-    if (this.rerolls.skill <= 0) this._disableBtn(this._skillBtn, '✕');
-    else this._skillBtn.txt.setText(`🎲  ${this.rerolls.skill}`);
-  }, [prevId, nextId]);   // ✅ rawValues = id 배열
+Tab_Recruit.prototype._rerollEnhanced = function () {
+  if (this.rerolls.enhanced <= 0) { this._toast('재설정 횟수 소진'); return; }
+  const prev = this.result.enhanced;
+  const pool = this._getAbilityPool('enhanced', this.result.job, this.result.cog);
+  let   next = prev;
+  for (let t = 0; t < 10; t++) {
+    next = _rFrom(pool);
+    if (next !== prev || pool.length <= 1) break;
+  }
+
+  const prevName = this._abilityIdToName('enhanced', prev);
+  const nextName = this._abilityIdToName('enhanced', next);
+
+  this._showChoicePopup('강화 행동  재설정', prevName, nextName, (chosen) => {
+    const chosenId = (chosen === nextName) ? next : prev;
+    this.result.enhanced = chosenId;
+    this.rerolls.enhanced--;
+    this._enhancedTxtRef.ref.setText(chosen);
+    if (this._enhancedTxtRef.desc) {
+      this._enhancedTxtRef.desc.setText(this._abilityIdToDesc('enhanced', chosenId));
+    }
+    if (this.rerolls.enhanced <= 0) this._disableBtn(this._enhancedBtn, '✕');
+    else this._enhancedBtn.txt.setText(`🎲  ${this.rerolls.enhanced}`);
+  }, [prev, next]);
+};
+
+Tab_Recruit.prototype._rerollFinale = function () {
+  if (this.rerolls.finale <= 0) { this._toast('재설정 횟수 소진'); return; }
+  const prev = this.result.finale;
+  const pool = this._getAbilityPool('finale', this.result.job, this.result.cog);
+  let   next = prev;
+  for (let t = 0; t < 10; t++) {
+    next = _rFrom(pool);
+    if (next !== prev || pool.length <= 1) break;
+  }
+
+  const prevName = this._abilityIdToName('finale', prev);
+  const nextName = this._abilityIdToName('finale', next);
+
+  this._showChoicePopup('피날레  재설정', prevName, nextName, (chosen) => {
+    const chosenId   = (chosen === nextName) ? next : prev;
+    const chosenName = (chosen === nextName) ? nextName : prevName;
+    this.result.finale = chosenId;
+    this.rerolls.finale--;
+    const gauge = (typeof AbilityIndex !== 'undefined') ? AbilityIndex.getGauge(chosenId) : null;
+    this._finaleTxtRef.ref.setText(chosenName + (gauge ? `  (${gauge})` : ''));
+    if (this._finaleTxtRef.desc) {
+      this._finaleTxtRef.desc.setText(this._abilityIdToDesc('finale', chosenId));
+    }
+    if (this.rerolls.finale <= 0) this._disableBtn(this._finaleBtn, '✕');
+    else this._finaleBtn.txt.setText(`🎲  ${this.rerolls.finale}`);
+  }, [prev, next]);
 };
 
 // ── 영입 확정 ────────────────────────────────────────────────────
 
 Tab_Recruit.prototype._confirmHire = function () {
-  const { result, scene, W, H } = this;
+  const { result } = this;
 
   const chars   = (typeof CharacterManager !== 'undefined') ? CharacterManager.loadAll() : [];
   const statObj = {};
-  // baseStats 기준 저장 (순수값 — effective 미적용)
   RECRUIT_STAT_KEYS.forEach((k, i) => {
     statObj[k] = Math.floor((result.baseStats || result.stats)[i] ?? 0);
   });
   const statSum = Object.values(statObj).reduce((a, v) => a + v, 0);
-  const cog = (typeof CharacterManager !== 'undefined' && CharacterManager.calcCog)
+  const cog     = (typeof CharacterManager !== 'undefined' && CharacterManager.calcCog)
     ? CharacterManager.calcCog(statSum) : result.cog;
 
-  const jobLabel = { fisher:'낚시꾼', diver:'잠수부', ai:'A.I' }[result.job] || result.job;
+  // ✏️ v6: helmsman 추가, position 필드 제거
+  const jobLabel = { fisher:'낚시꾼', diver:'잠수부', helmsman:'조타수' }[result.job] || result.job;
 
   const newChar = {
-    id:           `char_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    name:         result.name || '이름 없음',
-    job:          result.job,
+    id:          `char_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    name:        result.name || '이름 없음',
+    job:         result.job,
     jobLabel,
-    stats:        statObj,
+    stats:       statObj,
     statSum,
     cog,
-    position:     result.position || '—',
-    passive:      result.passive  || '—',
-    skill:        result.skill    || '—',
-    overclock:    result.overclock || null,
-    // ✅ 폴백 키를 CharacterSpriteManager.getKey(0) = 'char_000'으로 통일
-    spriteKey:    result.spriteKey || (typeof CharacterSpriteManager !== 'undefined'
+    passive:     result.passive   || '—',
+    action:      result.action    || '—',
+    enhanced:    result.enhanced  || '—',
+    finale:      result.finale    || '—',
+    overclock:   result.overclock || null,
+    spriteKey:   result.spriteKey || (typeof CharacterSpriteManager !== 'undefined'
       ? CharacterSpriteManager.getKey(0) : 'char_000'),
     maxHp:        statObj.hp * 5,
     currentHp:    statObj.hp * 5,
