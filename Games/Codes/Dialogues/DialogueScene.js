@@ -215,7 +215,7 @@ class DialogueScene extends Phaser.Scene {
     const NAME_H = Math.round(NAME_W * (210 / 447));
     // 대화창 좌상단, 약간 위로 튀어나오게 + 미세한 삐걱 오프셋
     const NAME_X = BOX_X + Math.round(BOX_W * 0.01);
-    const NAME_Y = BOX_Y - Math.round(NAME_H * 0.60);
+    const NAME_Y = BOX_Y - Math.round(NAME_H * 0.60) + 10;  // 10px 아래
 
     this._layout = { BOX_W, BOX_H, BOX_X, BOX_Y, TEXT_X, TEXT_Y, TEXT_W, TEXT_BOTTOM, NAME_W, NAME_H, NAME_X, NAME_Y, fs: fsPx };
 
@@ -244,10 +244,10 @@ class DialogueScene extends Phaser.Scene {
         .setDepth(10);
       // uiContainer에 포함 → 대화창 이미지도 동일 alpha 제어
       this._uiContainer.add(boxImg);
-      // 대화창 위 명암 오버레이 10%
+      // 대화창 위 명암 오버레이 10% — depth 10.5 역할로 이미지(10) 바로 위, 텍스트(12) 아래
       const boxShade = this.add.rectangle(
         BOX_X + BOX_W / 2, BOX_Y + BOX_H / 2, BOX_W, BOX_H, 0x000000, 0.10
-      ).setDepth(10);
+      ).setDepth(11);
       this._uiContainer.add(boxShade);
     }
 
@@ -299,7 +299,7 @@ class DialogueScene extends Phaser.Scene {
     const cx = NAME_X + NAME_W / 2;
     const cy = NAME_Y + NAME_H / 2;
 
-    // 이름창 이미지 — 중심점 기준 회전, uiContainer에 포함
+    // 이름창 이미지 (depth 11) — uiContainer 포함
     this._nameBox = null;
     if (this.textures.exists('textbox_002')) {
       this._nameBox = this.add.image(cx, cy, 'textbox_002')
@@ -310,26 +310,26 @@ class DialogueScene extends Phaser.Scene {
       this._uiContainer.add(this._nameBox);
     }
 
-    // 이름창 위 명암 오버레이 10%
+    // 이름창 위 명암 오버레이 10% (depth 12) — 이미지 위, 텍스트 아래
     const nameShade = this.add.rectangle(cx, cy, NAME_W, NAME_H, 0x000000, 0.10)
-      .setAngle(NAME_TILT).setDepth(11);
+      .setAngle(NAME_TILT).setDepth(12);
     this._uiContainer.add(nameShade);
 
-    // 이름 텍스트 — 스팀펑크 분위기: 황동색 + 엠보싱 느낌 stroke
-    const nameFontPx = Math.round(NAME_H * 0.48);
+    // 이름 텍스트 — 명암 위(depth 13), 폰트 크기 축소, stroke 얇게
+    const nameFontPx = Math.round(NAME_H * 0.34);
     this._nameTxt = this.add.text(cx, cy, '', {
       fontSize:        `${nameFontPx}px`,
-      fill:            '#e8c96a',           // 더 밝은 황동
+      fill:            '#e8c96a',
       fontFamily:      FontManager.TITLE,
-      stroke:          '#3a1e02',           // 진한 갈색 테두리
-      strokeThickness: 4,
+      stroke:          '#3a1e02',
+      strokeThickness: 2,
       shadow: {
         offsetX: 0, offsetY: 1,
         color:   '#000000',
         blur:    2,
         fill:    true,
       },
-    }).setOrigin(0.5).setAngle(NAME_TILT).setDepth(12);
+    }).setOrigin(0.5).setAngle(NAME_TILT).setDepth(13);
     this._uiContainer.add(this._nameTxt);
   }
 
@@ -619,12 +619,10 @@ class DialogueScene extends Phaser.Scene {
       const markers = [markerL, markerR];
 
       hit.on('pointerover', () => {
-        overlay.setFillStyle(0xf0c040, 0.08);
         lbl.setStyle({ fill: '#f8e080', stroke: '#080600', strokeThickness: 2 });
         markers.forEach(m => m.setStyle({ fill: '#f0c040' }));
       });
       hit.on('pointerout', () => {
-        overlay.setFillStyle(0xf0c040, 0);
         lbl.setStyle({ fill: '#c8a858', stroke: '#080600', strokeThickness: 2 });
         markers.forEach(m => m.setStyle({ fill: '#8a6020' }));
       });
