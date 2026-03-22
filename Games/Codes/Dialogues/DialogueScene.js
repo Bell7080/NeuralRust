@@ -211,11 +211,11 @@ class DialogueScene extends Phaser.Scene {
     // ── 이름창(002) 크기 결정 ────────────────────────────────
     // Textbox_002.png 원본 비율: 약 447 x 210
     // 대화창이 줄었으므로 비율을 0.28로 약간 보정해 이름창 크기 유지
-    const NAME_W = Math.round(BOX_W * 0.224);  // 0.28 × 0.8 = 20% 축소
+    const NAME_W = Math.round(BOX_W * 0.179);  // 0.224 × 0.8 = 추가 20% 축소
     const NAME_H = Math.round(NAME_W * (210 / 447));
     // 대화창 좌상단, 약간 위로 튀어나오게 + 미세한 삐걱 오프셋
     const NAME_X = BOX_X + Math.round(BOX_W * 0.01);
-    const NAME_Y = BOX_Y - Math.round(NAME_H * 0.60) + 10;  // 10px 아래
+    const NAME_Y = BOX_Y - Math.round(NAME_H * 0.60) + 15;  // 15px 아래
 
     this._layout = { BOX_W, BOX_H, BOX_X, BOX_Y, TEXT_X, TEXT_Y, TEXT_W, TEXT_BOTTOM, NAME_W, NAME_H, NAME_X, NAME_Y, fs: fsPx };
 
@@ -570,7 +570,7 @@ class DialogueScene extends Phaser.Scene {
         shadow.fillEllipse(cxImg, cyBtn, ex * 2, ey * 2);
       }
 
-      // 선택창 배경 이미지
+      // ── 선택창 배경 이미지 (레이어 1) ───────────────────────
       const bgImg = this.textures.exists('textbox_003')
         ? this.add.image(imgX, imgY, 'textbox_003')
             .setOrigin(0, 0)
@@ -578,40 +578,45 @@ class DialogueScene extends Phaser.Scene {
             .setAlpha(0)
         : null;
 
-      // 호버 오버레이
-      const overlay = this.add.rectangle(
-        cxImg, cyBtn, CHOICE_IMG_W, CHOICE_IMG_H, 0xf0c040, 0
-      );
+      // ── hover 발광 이미지 (레이어 2) — 동일 이미지 한 장 더, 평소 alpha 0
+      // 마우스 올리면 alpha 0.45 → 이미지 모양 그대로 밝아지는 느낌
+      const hoverImg = this.textures.exists('textbox_003')
+        ? this.add.image(imgX, imgY, 'textbox_003')
+            .setOrigin(0, 0)
+            .setDisplaySize(CHOICE_IMG_W, CHOICE_IMG_H)
+            .setAlpha(0)
+            .setTint(0xffe8a0)   // 따뜻한 황금빛 틴트
+        : null;
 
-      // ◆ 좌측 마커
+      // ── 마커(◆) — 비율 기반으로 안쪽에 배치 ─────────────────
+      const MARKER_PAD = Math.round(CHOICE_IMG_W * 0.07);
       const markerL = this.add.text(
-        imgX + fsPx(18), cyBtn, '◆', {
+        imgX + MARKER_PAD, cyBtn, '◆', {
         fontSize:   fs(11),
         fill:       '#8a6020',
         fontFamily: FontManager.MONO,
       }).setOrigin(0.5, 0.5).setAlpha(0);
 
-      // ◆ 우측 마커
       const markerR = this.add.text(
-        imgX + CHOICE_IMG_W - fsPx(18), cyBtn, '◆', {
+        imgX + CHOICE_IMG_W - MARKER_PAD, cyBtn, '◆', {
         fontSize:   fs(11),
         fill:       '#8a6020',
         fontFamily: FontManager.MONO,
       }).setOrigin(0.5, 0.5).setAlpha(0);
 
-      // 선택지 레이블 — 중앙 정렬
+      // ── 선택지 레이블 ─────────────────────────────────────────
       const lbl = this.add.text(
         cxImg, cyBtn, choice.label, {
         fontSize:        fs(18),
         fill:            '#c8a858',
         fontFamily:      FontManager.BODY,
-        wordWrap:        { width: CHOICE_IMG_W - fsPx(80) },
+        wordWrap:        { width: CHOICE_IMG_W - MARKER_PAD * 2 - fsPx(30) },
         stroke:          '#080600',
         strokeThickness: 2,
         align:           'center',
       }).setOrigin(0.5, 0.5).setAlpha(0);
 
-      // 히트 영역
+      // ── 히트 영역 ─────────────────────────────────────────────
       const hit = this.add.rectangle(
         cxImg, cyBtn, CHOICE_IMG_W, CHOICE_IMG_H, 0, 0
       ).setInteractive({ useHandCursor: true });
@@ -619,10 +624,13 @@ class DialogueScene extends Phaser.Scene {
       const markers = [markerL, markerR];
 
       hit.on('pointerover', () => {
+        // hover 이미지 alpha 올려 이미지 모양 그대로 발광
+        if (hoverImg) this.tweens.add({ targets: hoverImg, alpha: 0.45, duration: 120, ease: 'Sine.easeOut' });
         lbl.setStyle({ fill: '#f8e080', stroke: '#080600', strokeThickness: 2 });
         markers.forEach(m => m.setStyle({ fill: '#f0c040' }));
       });
       hit.on('pointerout', () => {
+        if (hoverImg) this.tweens.add({ targets: hoverImg, alpha: 0, duration: 150, ease: 'Sine.easeIn' });
         lbl.setStyle({ fill: '#c8a858', stroke: '#080600', strokeThickness: 2 });
         markers.forEach(m => m.setStyle({ fill: '#8a6020' }));
       });
@@ -638,9 +646,10 @@ class DialogueScene extends Phaser.Scene {
         this._showLine();
       });
 
-      // 페이드인 (shadow는 목표 alpha 0.9로 — 완전 불투명 X)
+      // ── 페이드인 ──────────────────────────────────────────────
       const fadeTargets = [...markers, lbl];
       if (bgImg) fadeTargets.unshift(bgImg);
+      // hoverImg는 페이드인 대상 제외 — 평소엔 alpha 0 유지
       this.tweens.add({
         targets:  fadeTargets,
         alpha:    1,
@@ -656,9 +665,12 @@ class DialogueScene extends Phaser.Scene {
         ease:     'Linear',
       });
 
-      const items = bgImg
-        ? [shadow, bgImg, overlay, markerL, markerR, lbl, hit]
-        : [shadow, overlay, markerL, markerR, lbl, hit];
+      // hoverImg는 bgImg 바로 위 레이어로 삽입
+      const items = bgImg && hoverImg
+        ? [shadow, bgImg, hoverImg, markerL, markerR, lbl, hit]
+        : bgImg
+          ? [shadow, bgImg, markerL, markerR, lbl, hit]
+          : [shadow, markerL, markerR, lbl, hit];
       this._choiceCont.add(items);
     });
   }
