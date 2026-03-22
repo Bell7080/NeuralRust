@@ -618,89 +618,182 @@ const TM_RightPanel = {
     return curY;
   },
 
-  // ── 어빌리티 — 스탯 아래에 가로 일렬 배치 ──────────────────
-  // ✏️ rfs 추가, 패널 잔여 높이에 꽉 차도록 배치
+  // ── 어빌리티 — 세로 목록 (패시브 / 일반행동 / 강화행동 / 피날레)
+  // ✏️ 전면 교체: 가로 3칸 → 세로 4행
+  //   각 행: [라벨]  [이름]  ← 마우스오버 시 상세 툴팁
+  //   POSITION 필드 완전 제거 (v6 기준)
   _buildAbilRow(tab, char, addR, addHit, _showTip, _moveTip, _hideTip, fs, rfs, colX, colW, startY, ry, rh, rpad) {
     const { scene, W, H } = tab;
 
-    // 남은 패널 높이 (회복 버튼 공간 제외)
+    // 회복 버튼 공간 제외한 잔여 높이
     const healReserve = parseInt(rfs(34)) + rpad * 2;
     const availH = (ry + rh) - startY - healReserve;
-    const abilH  = Math.max(parseInt(rfs(50)), Math.floor(availH * 0.95));
 
-    const abilItems = [
+    // ── 능력 이름 조회 헬퍼 (AbilityIndex 우선) ─────────────────
+    const _resolveAbilName = (type, id) => {
+      if (!id || id === '—') return '—';
+      if (typeof AbilityIndex !== 'undefined') {
+        const n = AbilityIndex.getName(type, id);
+        if (n && n !== id) return n;
+      }
+      return id;
+    };
+
+    // ── 능력 상세 툴팁 문자열 생성 ───────────────────────────────
+    // 첫 줄: [유형 · 직업/공통] 이름
+    // 이후:  설명 + 발동조건(enhanced)
+    const _resolveAbilTip = (type, id) => {
+      if (!id || id === '—') return '—\n정보 없음';
+      let name = id, desc = '', extra = '';
+
+      if (typeof AbilityIndex !== 'undefined') {
+        const data = AbilityIndex.getData(type, id);
+        if (data) {
+          name  = data.name || id;
+          desc  = data.description || '';
+          const jobTag = data.job === 'common' ? '공통' : (data.job || '');
+          const typeLabel = { passive:'패시브', action:'일반행동', enhanced:'강화행동', finale:'피날레' }[type] || type;
+          const cogTag  = data.cogMin ? `Cog ${data.cogMin}+` : '';
+          extra = [typeLabel, jobTag, cogTag].filter(Boolean).join('  ·  ');
+          // enhanced는 발동조건 추가
+          if (type === 'enhanced' && data.triggerType) {
+            const trigMap = {
+              attack_count: `공격 ${data.triggerValue}회마다`,
+              on_hit:       '피격 시',
+              hp_below:     `HP ${data.triggerValue}% 이하 시`,
+              kill:         '적 처치 시',
+            };
+            const cond = trigMap[data.triggerType] || data.triggerType;
+            extra += `\n발동: ${cond}`;
+          }
+          // finale는 게이지 수치 표시
+          if (type === 'finale' && data.gaugeRequired) {
+            extra += `\n필요 게이지: ${data.gaugeRequired}`;
+          }
+        }
+      }
+
+      const lines = [name];
+      if (extra) lines.push(extra);
+      if (desc)  lines.push(desc);
+      return lines.join('\n');
+    };
+
+    // ── 세로 목록 정의 (4행) ──────────────────────────────────────
+    const abilRows = [
       {
-        title: 'POSITION',
-        name: char.position || '—',
-        // ✏️ 툴팁: 제목\n설명 형식
-        tip: `${char.position || '포지션'}\n${
-          (typeof getPositionDescription === 'function') ? getPositionDescription(char.position) : (char.position || '')
-        }`,
-        col: '#c8a060',
+        label:  'PASSIVE',
+        labelColor: '#a0d080',
+        id:     char.passive,
+        type:   'passive',
+        name:   _resolveAbilName('passive', char.passive),
       },
       {
-        title: 'PASSIVE',
-        name: char.passive || '—',
-        tip: `${char.passive || '패시브'}\n${
-          (typeof getPassiveDescription === 'function') ? getPassiveDescription(char.passive) : (char.passive || '')
-        }`,
-        col: '#a0d080',
+        label:  'ACTION',
+        labelColor: '#c8a060',
+        id:     char.action,
+        type:   'action',
+        name:   _resolveAbilName('action', char.action),
       },
       {
-        title: 'SKILL',
-        name: char.skill || '—',
-        tip: `${char.skill || '스킬'}\n${
-          (typeof getSkillDescription === 'function') ? getSkillDescription(char.skill) : (char.skill || '')
-        }`,
-        col: '#80b8e0',
+        label:  'ENHANCED',
+        labelColor: '#80b8e0',
+        id:     char.enhanced,
+        type:   'enhanced',
+        name:   _resolveAbilName('enhanced', char.enhanced),
+      },
+      {
+        label:  'FINALE',
+        labelColor: '#ff88aa',
+        id:     char.finale,
+        type:   'finale',
+        name:   (() => {
+          const n = _resolveAbilName('finale', char.finale);
+          const g = (typeof AbilityIndex !== 'undefined' && char.finale)
+            ? AbilityIndex.getGauge(char.finale) : null;
+          return n + (g ? `  (${g})` : '');
+        })(),
       },
     ];
 
-    const abilW = Math.floor(colW / abilItems.length);
+    const rowCount  = abilRows.length;
+    const rowH      = Math.max(parseInt(rfs(20)), Math.floor(availH / rowCount));
+    const labelW    = Math.round(colW * 0.32);   // 라벨 열 너비
+    const nameW     = colW - labelW;             // 이름 열 너비
+    const innerPadX = parseInt(rfs(5));
+    const innerPadY = Math.round(rowH * 0.5);
 
-    abilItems.forEach((item, ai) => {
-      const ax = colX + ai * abilW;
-      const aw = (ai === abilItems.length - 1) ? colW - ai * abilW : abilW;
+    abilRows.forEach((row, idx) => {
+      const rowY = startY + idx * rowH;
+      const midY = rowY + rowH / 2;
 
-      // 배경
-      const abg = scene.add.graphics();
-      abg.fillStyle(0x060c1a, 0.9);
-      abg.lineStyle(1, 0x2a1a08, 0.6);
-      abg.strokeRect(ax, startY, aw - 1, abilH);
-      abg.fillRect(ax, startY, aw - 1, abilH);
-      addR(abg);
+      // 행 배경
+      const rowBg = scene.add.graphics();
+      rowBg.fillStyle(0x060810, idx % 2 === 0 ? 0.85 : 0.70);
+      rowBg.lineStyle(1, 0x1e1a08, 0.5);
+      if (idx === 0) {
+        rowBg.strokeRect(colX, rowY, colW, rowH);
+        rowBg.fillRect(colX, rowY, colW, rowH);
+      } else {
+        // 위쪽 선만 생략(이전 행 하단선과 겹치므로)
+        rowBg.fillRect(colX, rowY, colW, rowH);
+        rowBg.lineBetween(colX, rowY + rowH, colX + colW, rowY + rowH);
+        rowBg.lineBetween(colX, rowY, colX, rowY + rowH);
+        rowBg.lineBetween(colX + colW, rowY, colX + colW, rowY + rowH);
+      }
+      addR(rowBg);
 
-      // 타이틀 라벨 (작게, 위쪽)
-      addR(scene.add.text(ax + 5, startY + parseInt(rfs(5)), item.title, {
-        fontSize: rfs(9), fill: '#3a2808', fontFamily: FontManager.MONO,
-      }).setOrigin(0, 0));
-
-      // 구분선
-      const sg = scene.add.graphics();
-      sg.lineStyle(1, 0x1e1206, 0.5);
-      sg.lineBetween(ax + 3, startY + parseInt(rfs(17)), ax + aw - 4, startY + parseInt(rfs(17)));
-      addR(sg);
-
-      // ✏️ 이름 텍스트 — 패널 크기 비례 폰트, 중앙 배치
-      const nameFontSize = rfs(12);
-      const nameY = startY + parseInt(rfs(17)) + (abilH - parseInt(rfs(17))) / 2;
-      const nameT = scene.add.text(ax + aw / 2, nameY, item.name, {
-        fontSize: nameFontSize,
-        fill: item.col,
+      // 라벨 (좌측 고정폭)
+      const labelTxt = scene.add.text(
+        colX + innerPadX, midY, row.label, {
+        fontSize:   rfs(9),
+        fill:       row.labelColor,
         fontFamily: FontManager.MONO,
-        align: 'center',
-        wordWrap: { width: aw - 10 },
-      }).setOrigin(0.5);
-      addR(nameT);
+        letterSpacing: 1,
+      }).setOrigin(0, 0.5);
+      addR(labelTxt);
 
-      // 툴팁 hit
-      const hitBox = scene.add.rectangle(
-        ax + aw / 2, startY + abilH / 2, aw, abilH, 0, 0
-      ).setInteractive({ useHandCursor: false });
-      hitBox.on('pointerover', (ptr) => _showTip(ptr.x, ptr.y, item.tip));
+      // 세로 구분선
+      const divLine = scene.add.graphics();
+      divLine.lineStyle(1, 0x2a1a08, 0.7);
+      divLine.lineBetween(colX + labelW, rowY + 3, colX + labelW, rowY + rowH - 3);
+      addR(divLine);
+
+      // 능력 이름 (우측)
+      const nameTxt = scene.add.text(
+        colX + labelW + innerPadX, midY, row.name, {
+        fontSize:   rfs(11),
+        fill:       '#c8bfb0',
+        fontFamily: FontManager.TITLE,
+        wordWrap:   { width: nameW - innerPadX * 2 },
+      }).setOrigin(0, 0.5);
+      addR(nameTxt);
+
+      // 툴팁 hit — 전체 행
+      const tipText = _resolveAbilTip(row.type, row.id);
+      const hitBox  = scene.add.rectangle(
+        colX + colW / 2, midY, colW, rowH, 0, 0
+      ).setInteractive({ useHandCursor: false }).setDepth(20);
+      hitBox.on('pointerover', (ptr) => {
+        rowBg.clear();
+        rowBg.fillStyle(0x0e1820, 1);
+        rowBg.lineStyle(1, parseInt(row.labelColor.replace('#','0x')), 0.5);
+        rowBg.strokeRect(colX, rowY, colW, rowH);
+        rowBg.fillRect(colX, rowY, colW, rowH);
+        nameTxt.setStyle({ fill: row.labelColor });
+        _showTip(ptr.x, ptr.y, tipText);
+      });
       hitBox.on('pointermove', (ptr) => _moveTip(ptr.x, ptr.y));
-      hitBox.on('pointerout',  () => _hideTip());
-      addHit(hitBox);
+      hitBox.on('pointerout',  () => {
+        rowBg.clear();
+        rowBg.fillStyle(0x060810, idx % 2 === 0 ? 0.85 : 0.70);
+        rowBg.lineStyle(1, 0x1e1a08, 0.5);
+        rowBg.strokeRect(colX, rowY, colW, rowH);
+        rowBg.fillRect(colX, rowY, colW, rowH);
+        nameTxt.setStyle({ fill: '#c8bfb0' });
+        _hideTip();
+      });
+      tab._rightDetailObjs.push(hitBox);
     });
   },
 };

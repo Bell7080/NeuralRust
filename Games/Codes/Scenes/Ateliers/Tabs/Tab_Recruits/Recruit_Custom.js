@@ -362,6 +362,100 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   const botY = cy + bh/2 - pad;
   let   curY = topY;
 
+  // ── 인라인 툴팁 (커스텀 탭 전용) ─────────────────────────────
+  // 씬에 직접 올린 뒤 _sceneHits에 추적해서 _clear()시 함께 소멸
+  let _customTip = null;
+  const _showCustomTip = (absX, absY, rawText) => {
+    _hideCustomTip();
+    const W = this.W, H = this.H;
+    const lines     = rawText.split('\n');
+    const titleLine = lines[0] || '';
+    const descLines = lines.slice(1).join('\n').trim();
+    const tpad = 12, tpadX = 14;
+    const maxW = Math.round(W * 0.24);
+
+    const titleObj = scene.add.text(0, 0, titleLine, {
+      fontSize: this._fs(13), fill: '#e8d080',
+      fontFamily: FontManager.MONO, fontStyle: 'bold',
+      wordWrap: { width: maxW - tpadX * 2 },
+    }).setDepth(302);
+
+    const descObj = descLines ? scene.add.text(0, 0, descLines, {
+      fontSize: this._fs(11), fill: '#b8a890',
+      fontFamily: FontManager.MONO,
+      wordWrap: { width: maxW - tpadX * 2 },
+    }).setDepth(302) : null;
+
+    const tH = titleObj.height, dH = descObj ? descObj.height : 0;
+    const sepH = descLines ? 6 : 0;
+    const bw2 = Math.min(maxW, Math.max(titleObj.width, descObj ? descObj.width : 0) + tpadX * 2);
+    const bh2 = tpad + tH + sepH + dH + tpad;
+
+    let tx = absX + 16, ty = absY + 16;
+    if (tx + bw2 > W - 8) tx = absX - bw2 - 8;
+    if (ty + bh2 > H - 8) ty = absY - bh2 - 8;
+
+    const bgObj = scene.add.graphics().setDepth(301);
+    bgObj.fillStyle(0x0a0807, 0.97);
+    bgObj.lineStyle(2, 0xb07828, 1);
+    bgObj.strokeRect(tx, ty, bw2, bh2);
+    bgObj.fillRect(tx, ty, bw2, bh2);
+    bgObj.lineStyle(1, 0x3a2010, 0.5);
+    bgObj.strokeRect(tx + 3, ty + 3, bw2 - 6, bh2 - 6);
+    if (descLines) {
+      bgObj.lineStyle(1, 0x5a3810, 0.5);
+      bgObj.lineBetween(tx + tpadX, ty + tpad + tH + 3, tx + bw2 - tpadX, ty + tpad + tH + 3);
+    }
+
+    titleObj.setPosition(tx + tpadX, ty + tpad);
+    if (descObj) descObj.setPosition(tx + tpadX, ty + tpad + tH + sepH);
+
+    _customTip = { bg: bgObj, t: titleObj, d: descObj };
+    // 파기 추적 (씬 히트와 함께 _clear()에서 제거됨)
+    this._sceneHits.push(bgObj, titleObj);
+    if (descObj) this._sceneHits.push(descObj);
+  };
+  const _hideCustomTip = () => {
+    if (!_customTip) return;
+    [_customTip.bg, _customTip.t, _customTip.d].forEach(o => {
+      if (!o) return;
+      try { o.destroy(); } catch(e) {}
+      const i = this._sceneHits.indexOf(o);
+      if (i !== -1) this._sceneHits.splice(i, 1);
+    });
+    _customTip = null;
+  };
+
+  // ── 능력 상세 툴팁 문자열 생성 ───────────────────────────────
+  const _abilTipText = (type, id) => {
+    if (!id || id === '—') return `${type}\n정보 없음`;
+    let name = id, desc = '', extra = '';
+    if (typeof AbilityIndex !== 'undefined') {
+      const data = AbilityIndex.getData(type, id);
+      if (data) {
+        name  = data.name || id;
+        desc  = data.description || '';
+        const jobTag   = data.job === 'common' ? '공통' : (data.job || '');
+        const typeLabel = { passive:'패시브', action:'일반행동', enhanced:'강화행동', finale:'피날레' }[type] || type;
+        const cogTag   = data.cogMin ? `Cog ${data.cogMin}+` : '';
+        extra = [typeLabel, jobTag, cogTag].filter(Boolean).join('  ·  ');
+        if (type === 'enhanced' && data.triggerType) {
+          const trigMap = {
+            attack_count: `공격 ${data.triggerValue}회마다`,
+            on_hit:       '피격 시',
+            hp_below:     `HP ${data.triggerValue}% 이하 시`,
+            kill:         '적 처치 시',
+          };
+          extra += '\n발동: ' + (trigMap[data.triggerType] || data.triggerType);
+        }
+        if (type === 'finale' && data.gaugeRequired) {
+          extra += `\n필요 게이지: ${data.gaugeRequired}`;
+        }
+      }
+    }
+    return [name, extra, desc].filter(Boolean).join('\n');
+  };
+
   const cfH2  = parseInt(this._fs(34));
   const cfGap = pad * 0.6;
   const cfY   = botY - cfH2;
@@ -410,8 +504,8 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
     `스탯 재설정  🎲  ${this.rerolls.stat}`, () => this._rerollStats(), statBtnH);
   curY += statBtnH + gapSm;
 
-  // ── 어빌리티 박스 헬퍼 (accentCol 인자 추가) ─────────────────
-  const makeAbilBox = (titleStr, accentCol, nameTxtRef, nameVal, descVal, rerollCount, rerollCb, btnRef) => {
+  // ── 어빌리티 박스 헬퍼 (accentCol 인자 추가, 툴팁 연동) ─────────────────
+  const makeAbilBox = (titleStr, accentCol, nameTxtRef, nameVal, descVal, rerollCount, rerollCb, btnRef, abilType, abilId) => {
     const accentHex = parseInt(accentCol.replace('#', '0x'));
     const boxG = scene.add.graphics();
     boxG.fillStyle(0x0e0b07, 1);
@@ -446,6 +540,40 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
       `🎲  ${rerollCount}`, rerollCb, btnH);
     btnRef.ref = btn;
 
+    // ── 마우스오버 툴팁 hit (재설정 버튼 위 절반 영역) ──────────
+    const tipAreaH = abilBoxH - btnH - abilInner * 2;
+    const tipHitY  = curY + tipAreaH / 2;
+    // abilType/abilId는 클로저로 유지 — 재설정 후 result.* 에서 최신 id 읽음
+    const getLatestId = () => {
+      if (abilType === 'passive')  return result.passive;
+      if (abilType === 'action')   return result.action;
+      if (abilType === 'enhanced') return result.enhanced;
+      if (abilType === 'finale')   return result.finale;
+      return abilId;
+    };
+    const tipHit   = scene.add.rectangle(
+      boxL + boxW / 2, tipHitY, boxW, tipAreaH, 0, 0
+    ).setInteractive({ useHandCursor: false }).setDepth(22);
+    tipHit.on('pointerover', (ptr) => {
+      boxG.clear();
+      boxG.fillStyle(0x141008, 1);
+      boxG.lineStyle(1, accentHex, 0.65);
+      boxG.strokeRect(boxL, curY, boxW, abilBoxH);
+      boxG.fillRect(boxL, curY, boxW, abilBoxH);
+      nameTxt.setStyle({ fill: accentCol });
+      _showCustomTip(ptr.x, ptr.y, _abilTipText(abilType, getLatestId()));
+    });
+    tipHit.on('pointerout', () => {
+      boxG.clear();
+      boxG.fillStyle(0x0e0b07, 1);
+      boxG.lineStyle(1, accentHex, 0.35);
+      boxG.strokeRect(boxL, curY, boxW, abilBoxH);
+      boxG.fillRect(boxL, curY, boxW, abilBoxH);
+      nameTxt.setStyle({ fill: '#e8c060' });
+      _hideCustomTip();
+    });
+    this._sceneHits.push(tipHit);
+
     curY += abilBoxH + gapSm;
   };
 
@@ -453,7 +581,7 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   const pRef = {}; const pBtn = {};
   const pasDesc = this._abilityIdToDesc('passive', result.passive);
   makeAbilBox('PASSIVE', '#a0d080', pRef, result.passive, pasDesc,
-    this.rerolls.passive, () => this._rerollPassive(), pBtn);
+    this.rerolls.passive, () => this._rerollPassive(), pBtn, 'passive', result.passive);
   this._passiveTxtRef = pRef;
   this._passiveBtn    = pBtn.ref;
 
@@ -462,7 +590,7 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   const actName = this._abilityIdToName('action', result.action);
   const actDesc = this._abilityIdToDesc('action', result.action);
   makeAbilBox('ACTION', '#c8a060', aRef, actName, actDesc,
-    this.rerolls.action, () => this._rerollAction(), aBtn);
+    this.rerolls.action, () => this._rerollAction(), aBtn, 'action', result.action);
   this._actionTxtRef = aRef;
   this._actionBtn    = aBtn.ref;
 
@@ -471,7 +599,7 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   const enhName = this._abilityIdToName('enhanced', result.enhanced);
   const enhDesc = this._abilityIdToDesc('enhanced', result.enhanced);
   makeAbilBox('ENHANCED', '#80b8e0', eRef, enhName, enhDesc,
-    this.rerolls.enhanced, () => this._rerollEnhanced(), eBtn);
+    this.rerolls.enhanced, () => this._rerollEnhanced(), eBtn, 'enhanced', result.enhanced);
   this._enhancedTxtRef = eRef;
   this._enhancedBtn    = eBtn.ref;
 
@@ -482,7 +610,7 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   const finGauge = (typeof AbilityIndex !== 'undefined') ? AbilityIndex.getGauge(result.finale) : null;
   const finDisplay = finName + (finGauge ? `  (${finGauge})` : '');
   makeAbilBox('FINALE', '#ff88aa', fRef, finDisplay, finDesc,
-    this.rerolls.finale, () => this._rerollFinale(), fBtn);
+    this.rerolls.finale, () => this._rerollFinale(), fBtn, 'finale', result.finale);
   this._finaleTxtRef = fRef;
   this._finaleBtn    = fBtn.ref;
 

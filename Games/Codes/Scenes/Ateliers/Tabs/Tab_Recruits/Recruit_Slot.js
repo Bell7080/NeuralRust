@@ -6,10 +6,10 @@
 //        슬롯 완료 후 카드 뒤집기 연출로 Phase 3(Pick)로 전환
 //  의존: Recruit_Data.js, Tab_Recruit.js(this)
 //
-//  ✏️ v2 수정
-//    · _rRoll() → _rRollTriple(price) 로 교체 (직업 다양성 보장)
+//  ✏️ v3 수정
+//    · rerolls 초기화: position/skill 키 제거 → action/enhanced/finale 키로 교체
 //    · 슬롯 중 직업 표시: 오버클럭 표시
-//    · 뒤집기 후 카드에 position 필드 표시
+//    · 뒤집기 후 카드에 position 필드 표시 제거
 // ================================================================
 
 Tab_Recruit.prototype._buildSlot = function () {
@@ -82,7 +82,7 @@ Tab_Recruit.prototype._buildSlot = function () {
 };
 
 Tab_Recruit.prototype._runSlots = function () {
-  const JOBS_DISPLAY = ['낚시꾼', '잠수부'];
+  const JOBS_DISPLAY = ['낚시꾼', '잠수부', '조타수'];
   let done = 0;
 
   this._rolls.forEach((roll, i) => {
@@ -104,7 +104,7 @@ Tab_Recruit.prototype._runSlots = function () {
             numTxt.setText(String(Math.max(0, Math.min(250, fake))));
           } else {
             jobTxt.setText(RECRUIT_JOB_LABEL[roll.job]);
-            jobTxt.setStyle({ fill: roll.job === 'fisher' ? '#c8a070' : '#7ab0c8' });
+            jobTxt.setStyle({ fill: roll.job === 'fisher' ? '#c8a070' : roll.job === 'diver' ? '#7ab0c8' : '#a080e0' });
             numTxt.setText(String(roll.statSum));
             done++;
             if (done === 3) {
@@ -135,7 +135,7 @@ Tab_Recruit.prototype._glowCards = function () {
     // 오버클럭이 있으면 해당 색상으로 글로우
     const glowColor = roll.overclock
       ? parseInt(roll.overclock.color.replace('#', '0x'))
-      : (isF ? 0xc8a070 : 0x7ab0c8);
+      : (isF ? 0xc8a070 : roll.job === 'diver' ? 0x7ab0c8 : 0xa080e0);
 
     const glow = scene.add.graphics();
     card.add(glow);
@@ -182,7 +182,7 @@ Tab_Recruit.prototype._flipToPick = function () {
   const cx        = W / 2;
   const cy        = H * 0.50;
   const cardW     = W * 0.155;
-  const pickCardH = cardW * 1.72;   // position 행 추가로 약간 높임
+  const pickCardH = cardW * 1.72;
   const FLIP_DUR  = 330;
   const STAGGER   = 160;
 
@@ -196,6 +196,7 @@ Tab_Recruit.prototype._flipToPick = function () {
   this._slotDisplays.forEach(({ card }, i) => {
     const roll = this._rolls[i];
     const isF  = roll.job === 'fisher';
+    const isDiver = roll.job === 'diver';
 
     this._tween({
       targets: card,
@@ -212,7 +213,7 @@ Tab_Recruit.prototype._flipToPick = function () {
           // 오버클럭 카드면 특수 테두리
           const borderColor = roll.overclock
             ? parseInt(roll.overclock.color.replace('#', '0x'))
-            : (isF ? 0xc8a070 : 0x7ab0c8);
+            : (isF ? 0xc8a070 : isDiver ? 0x7ab0c8 : 0xa080e0);
           bg.fillStyle(hover ? 0x1e1408 : 0x120d07, 1);
           bg.lineStyle(hover ? 2 : 1, borderColor, hover ? 1 : (roll.overclock ? 0.9 : 0.8));
           bg.fillRect(-cardW/2, -pickCardH/2, cardW, pickCardH);
@@ -222,9 +223,10 @@ Tab_Recruit.prototype._flipToPick = function () {
         card.add(bg);
 
         // 직업명
+        const jobColor = isF ? '#c8a070' : isDiver ? '#7ab0c8' : '#a080e0';
         card.add(scene.add.text(0, -pickCardH * 0.43, RECRUIT_JOB_LABEL[roll.job], {
           fontSize: this._fs(14), fontFamily: FontManager.TITLE,
-          fill: isF ? '#c8a070' : '#7ab0c8',
+          fill: jobColor,
         }).setOrigin(0.5));
 
         // 초상화 박스
@@ -268,17 +270,16 @@ Tab_Recruit.prototype._flipToPick = function () {
           fontSize: this._fs(11), fill: '#7a5028', fontFamily: FontManager.MONO,
         }).setOrigin(0.5));
 
-        // 오버클럭 뱃지 — Data_Overclock.js의 label 필드를 직접 사용
+        // 오버클럭 뱃지
         if (roll.overclock) {
           const ocColor = roll.overclock.color;
-          const ocLabel = roll.overclock.label || '';   // ex) '오버클럭 : 체력'
+          const ocLabel = roll.overclock.label || '';
           const ocTxt = scene.add.text(0, infoTop + lineH * 3.6, ocLabel, {
             fontSize:   this._fs(11),
             fill:       ocColor,
             fontFamily: FontManager.MONO,
           }).setOrigin(0.5);
           card.add(ocTxt);
-          // pulse glow — 기존 유지
           const _ocP = { v: 0 };
           this._tween({
             targets: _ocP, v: { from: 0, to: 1 },
@@ -299,12 +300,15 @@ Tab_Recruit.prototype._flipToPick = function () {
         hit.on('pointerout',  () => drawBg(false));
         hit.on('pointerdown', () => {
           this.result  = roll;
+          // ✅ 수정: v6 기준으로 올바른 rerolls 키 사용
+          //    position/skill 제거 → action/enhanced/finale 추가
           this.rerolls = {
             stat:     RECRUIT_MAX_REROLL,
             sprite:   RECRUIT_MAX_REROLL,
-            position: RECRUIT_MAX_REROLL,
             passive:  RECRUIT_MAX_REROLL,
-            skill:    RECRUIT_MAX_REROLL,
+            action:   RECRUIT_MAX_REROLL,
+            enhanced: RECRUIT_MAX_REROLL,
+            finale:   RECRUIT_MAX_REROLL,
           };
           this._buildCustom();
         });
