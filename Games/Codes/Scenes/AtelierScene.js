@@ -89,17 +89,20 @@ class AtelierScene extends Phaser.Scene {
     });
   }
 
-  _buildBackground(W, H) {
-    // 폴백 단색 (이미지 로드 실패 시)
-    this.add.rectangle(0, 0, W, H, 0x060408).setOrigin(0);
+_buildBackground(W, H) {
+  // 폴백 단색 (이미지 로드 실패 시)
+  this.add.rectangle(0, 0, W, H, 0x060408).setOrigin(0);
 
-    // Background_009.png — 화면 전체에 꽉 채워 표시
-    if (this.textures.exists('bg_atelier')) {
-      this.add.image(W / 2, H / 2, 'bg_atelier')
-        .setDisplaySize(W, H)
-        .setDepth(0);
-    }
+  // Background_009.png — 화면 전체에 꽉 채워 표시
+  if (this.textures.exists('bg_atelier')) {
+    this.add.image(W / 2, H / 2, 'bg_atelier')
+      .setDisplaySize(W, H)
+      .setDepth(0);
   }
+
+  // ★ 어두운 오버레이 — 폰트/UI 가독성 확보
+  this.add.rectangle(0, 0, W, H, 0x020103, 0.72).setOrigin(0).setDepth(1);
+}
 
   _buildHUD(W, H) {
     this._hud = new AtelierHUD(this, W, H);
