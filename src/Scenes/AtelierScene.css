@@ -2,103 +2,294 @@
    AtelierScene.css
    경로: src/Scenes/AtelierScene.css
 
-   역할: 아틀리에(로비) 씬 인게임 UI — HTML DOM 레이어
-         현재 Phaser canvas에서 그리던 아래 요소들의 DOM 버전:
-           - 상단 HUD (Arc, 날짜)
-           - 사이드 버튼 바 (탐사, 파티, 설정 등)
-           - 탭 시스템 (인원, 채용, 보관함 등)
-           - 캐릭터 카드 그리드
-           - 웰컴 팝업
+   역할: 아틀리에 씬 인게임 UI — HTML DOM 레이어
+         Phaser canvas: 배경 이미지, 전환 플래시
+         DOM 레이어:    HUD, 사이드 버튼, 탐색 버튼, 탭 콘텐츠, 웰컴 팝업
    ================================================================ */
 
-/* ── 아틀리에 HUD 루트 ────────────────────────────────────────── */
+/* ── 루트 ─────────────────────────────────────────────────────── */
 #atelier-hud {
-  position:   absolute;
-  inset:      0;
-  pointer-events: none;
-  opacity:    0;
-  transition: opacity 0.3s ease;
+  position:        absolute;
+  inset:           0;
+  pointer-events:  none;
+  opacity:         0;
+  transition:      opacity 0.3s ease;
 }
-
 #atelier-hud.visible {
-  opacity:    1;
-  pointer-events: auto;
+  opacity:         1;
+  pointer-events:  auto;
+}
+/* 관리 탭 진입 시 사이드 버튼 숨김 */
+#atelier-hud.manage-mode .atelier-sidenav,
+#atelier-hud.manage-mode .atelier-explore-area {
+  opacity:    0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
 }
 
-/* ── 상단 HUD 바 ─────────────────────────────────────────────── */
+/* ── 상단 바 ─────────────────────────────────────────────────── */
 .atelier-topbar {
   position:        absolute;
   top:             0; left: 0; right: 0;
-  height:          clamp(36px, 4vh, 56px);
+  height:          clamp(36px, 4.5vh, 54px);
   display:         flex;
   align-items:     center;
-  justify-content: space-between;
-  padding:         0 1.5%;
-  background:      rgba(4, 6, 10, 0.85);
-  border-bottom:   1px solid rgba(176, 80, 48, 0.25);
+  justify-content: center;
+  gap:             clamp(4px, 0.6vw, 10px);
+  background:      rgba(6, 4, 2, 0.92);
+  border-bottom:   1px solid rgba(100, 48, 16, 0.35);
+  z-index:         10;
 }
 
-.atelier-topbar__arc {
+/* HUD: DAY 패널 */
+.atelier-hud-day {
   font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:      clamp(12px, 1.4vw, 20px);
-  letter-spacing: 0.1em;
-  color:          #ddcc44;
+  font-size:      clamp(10px, 1.3vw, 18px);
+  letter-spacing: 0.15em;
+  color:          #a07040;
+  background:     rgba(14, 9, 5, 0.96);
+  border:         1px solid rgba(58, 32, 16, 0.9);
+  padding:        0.2em 1.2em;
+  min-width:      6em;
+  text-align:     center;
 }
 
-.atelier-topbar__day {
+/* HUD: ARC 패널 */
+.atelier-hud-arc {
   font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:      clamp(10px, 1.1vw, 16px);
-  letter-spacing: 0.1em;
-  color:          rgba(200, 200, 176, 0.6);
+  font-size:      clamp(10px, 1.3vw, 18px);
+  letter-spacing: 0.15em;
+  color:          #f0c050;
+  background:     rgba(12, 10, 4, 0.98);
+  border:         2px solid rgba(122, 80, 16, 0.95);
+  padding:        0.2em 1.2em;
+  min-width:      6em;
+  text-align:     center;
+}
+.atelier-hud-arc__label {
+  color:          #c8881a;
+  font-weight:    bold;
+  margin-right:   0.4em;
 }
 
-/* ── 사이드 버튼 바 (우측) ──────────────────────────────────── */
-.atelier-sidebar {
-  position:       absolute;
-  top:            clamp(36px, 4vh, 56px);
-  right:          0;
-  bottom:         0;
-  width:          clamp(48px, 5vw, 72px);
-  display:        flex;
-  flex-direction: column;
-  align-items:    center;
-  gap:            0.4em;
-  padding:        0.6em 0;
-  background:     rgba(4, 6, 10, 0.80);
-  border-left:    1px solid rgba(176, 80, 48, 0.2);
-}
-
-.atelier-sidebar .nr-btn--icon {
-  width:    70%;
-  height:   auto;
-  aspect-ratio: 1;
-  font-size: clamp(10px, 1vw, 15px);
-}
-
-/* ── 탭 바 ────────────────────────────────────────────────────── */
-.atelier-tabbar {
+/* 상단 버튼 (설정/로비) — 오른쪽 고정 */
+.atelier-topbar__actions {
   position:   absolute;
-  top:        clamp(36px, 4vh, 56px);
-  left:       0;
-  right:      clamp(48px, 5vw, 72px);
-  height:     clamp(30px, 3.5vh, 48px);
-  display:    flex;
-  align-items: flex-end;
-  gap:         0;
-  padding:    0 1%;
-  border-bottom: 1px solid rgba(176, 80, 48, 0.2);
-  background: rgba(4, 6, 10, 0.6);
+  right:       1%;
+  display:     flex;
+  gap:         clamp(3px, 0.4vw, 8px);
 }
+.atelier-top-btn {
+  font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:      clamp(9px, 0.95vw, 14px);
+  color:          #8a6030;
+  background:     rgba(16, 10, 4, 1);
+  border:         1px solid rgba(58, 34, 16, 0.9);
+  padding:        0.22em 0.9em;
+  cursor:         pointer;
+  letter-spacing: 0.05em;
+  transition:     color 0.1s, background 0.1s, border-color 0.1s;
+  line-height:    1.4;
+}
+.atelier-top-btn:hover {
+  color:          #e8c080;
+  background:     rgba(30, 18, 8, 1);
+  border-color:   rgba(106, 56, 16, 0.9);
+}
+
+/* ── 좌/우 사이드 네비 ───────────────────────────────────────── */
+.atelier-sidenav {
+  position:        absolute;
+  top:             clamp(36px, 4.5vh, 54px);
+  bottom:          0;
+  width:           9%;
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  gap:             clamp(6px, 1.2vh, 18px);
+  padding:         1em 0;
+  transition:      opacity 0.22s ease;
+}
+.atelier-sidenav--left  { left: 0; }
+.atelier-sidenav--right { right: 0; }
+
+/* 사이드 버튼 */
+.atelier-side-btn {
+  font-family:    var(--font-display, 'BMKiranghaerang', monospace);
+  font-size:      clamp(11px, 1.25vw, 18px);
+  color:          #7a5030;
+  cursor:         pointer;
+  padding:        0.15em 0.4em;
+  background:     transparent;
+  border:         none;
+  letter-spacing: 0.08em;
+  white-space:    nowrap;
+  transition:     color 0.1s, transform 0.12s;
+  line-height:    1.5;
+}
+.atelier-side-btn.active { color: #e8c080; }
+.atelier-side-btn:hover:not(.active) { color: #e8c080; }
+.atelier-sidenav--left  .atelier-side-btn:hover:not(.active) { transform: translateX(5px); }
+.atelier-sidenav--right .atelier-side-btn:hover:not(.active) { transform: translateX(-5px); }
+
+/* ── 탐색 버튼 (하단 중앙) ──────────────────────────────────── */
+.atelier-explore-area {
+  position:        absolute;
+  left:            9%;
+  right:           9%;
+  bottom:          6%;
+  display:         flex;
+  justify-content: center;
+  align-items:     center;
+  gap:             0.6em;
+  transition:      opacity 0.22s ease;
+}
+.atelier-explore-sep {
+  width:      18%;
+  height:     1px;
+  background: rgba(58, 42, 16, 0.7);
+}
+.atelier-explore-btn {
+  font-family:    var(--font-display, 'BMKiranghaerang', monospace);
+  font-size:      clamp(12px, 1.4vw, 20px);
+  color:          #7a5030;
+  cursor:         pointer;
+  padding:        0.25em 1.2em;
+  background:     transparent;
+  border:         none;
+  letter-spacing: 0.2em;
+  transition:     color 0.1s;
+}
+.atelier-explore-btn.active { color: #e8c080; }
+.atelier-explore-btn:hover:not(.active) { color: #e8c080; }
 
 /* ── 탭 콘텐츠 영역 ─────────────────────────────────────────── */
-.atelier-content {
+#atelier-content {
   position:   absolute;
-  top:        calc(clamp(36px, 4vh, 56px) + clamp(30px, 3.5vh, 48px));
-  left:       0;
-  right:      clamp(48px, 5vw, 72px);
-  bottom:     0;
-  overflow-y: auto;
-  padding:    1% 1.5%;
+  top:        clamp(36px, 4.5vh, 54px);
+  left:       9%;
+  right:      9%;
+  bottom:     16%;
+  overflow:   hidden;
+}
+
+/* ── 공통 탭 패널 ────────────────────────────────────────────── */
+.atelier-tab-panel {
+  position:   absolute;
+  inset:      0;
+  display:    flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding:    2% 3%;
+  box-sizing: border-box;
+  opacity:    0;
+  transition: opacity 0.18s ease;
+}
+.atelier-tab-panel.active {
+  opacity:    1;
+}
+
+/* 탭 패널 공통 박스 */
+.atelier-panel-box {
+  width:      60%;
+  max-width:  700px;
+  padding:    2.5% 4%;
+  box-sizing: border-box;
+  background: rgba(18, 13, 7, 1);
+  border:     2px solid rgba(122, 64, 24, 0.85);
+  position:   relative;
+}
+
+/* 코너 장식 */
+.atelier-panel-box::before,
+.atelier-panel-box::after {
+  content:    '';
+  position:   absolute;
+  width:      12px; height: 12px;
+  border-color: rgba(122, 64, 24, 0.7);
+  border-style: solid;
+}
+.atelier-panel-box::before {
+  top: 6px; left: 6px;
+  border-width: 1px 0 0 1px;
+}
+.atelier-panel-box::after {
+  bottom: 6px; right: 6px;
+  border-width: 0 1px 1px 0;
+}
+
+/* 탭 패널 라벨 */
+.atelier-panel-label {
+  font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:      clamp(9px, 0.95vw, 14px);
+  color:          #7a5028;
+  letter-spacing: 0.2em;
+  margin-bottom:  0.8em;
+  text-align:     center;
+}
+.atelier-panel-label::before { content: '[ '; }
+.atelier-panel-label::after  { content: ' ]'; }
+
+/* 탭 패널 구분선 */
+.atelier-panel-divider {
+  width:      100%;
+  height:     1px;
+  background: rgba(74, 42, 16, 0.9);
+  margin:     0.5em 0 1.2em;
+}
+
+/* ── 웰컴 탭 ─────────────────────────────────────────────────── */
+.atelier-welcome-main {
+  font-family:    var(--font-display, 'BMKiranghaerang', monospace);
+  font-size:      clamp(16px, 2.2vw, 32px);
+  color:          #e8c080;
+  text-align:     center;
+  min-height:     2em;
+  margin-top:     0.5em;
+}
+
+/* ── 탐색 탭 ─────────────────────────────────────────────────── */
+.atelier-explore-desc {
+  font-family:  var(--font-display, 'BMKiranghaerang', monospace);
+  font-size:    clamp(12px, 1.5vw, 22px);
+  color:        #c8a070;
+  text-align:   center;
+  margin-bottom: 0.5em;
+}
+.atelier-explore-warn {
+  font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:    clamp(8px, 0.85vw, 13px);
+  color:        #5a3a18;
+  text-align:   center;
+  margin-bottom: 1.6em;
+}
+.atelier-start-btn {
+  display:        block;
+  margin:         0 auto;
+  font-family:    var(--font-display, 'BMKiranghaerang', monospace);
+  font-size:      clamp(13px, 1.5vw, 22px);
+  color:          #c8a070;
+  background:     rgba(30, 16, 8, 1);
+  border:         2px solid rgba(160, 80, 24, 0.9);
+  padding:        0.45em 2.2em;
+  cursor:         pointer;
+  letter-spacing: 0.15em;
+  transition:     color 0.1s, background 0.1s, border-color 0.1s;
+}
+.atelier-start-btn:hover {
+  color:          #e8d090;
+  background:     rgba(42, 26, 8, 1);
+  border-color:   rgba(200, 160, 112, 1);
+}
+
+/* ── 스텁 탭 ─────────────────────────────────────────────────── */
+.atelier-stub-msg {
+  font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:    clamp(9px, 1vw, 15px);
+  color:        #4a3018;
+  text-align:   center;
 }
 
 /* ── 캐릭터 카드 그리드 ─────────────────────────────────────── */
@@ -107,44 +298,16 @@
   grid-template-columns: repeat(auto-fill, minmax(clamp(120px, 10vw, 180px), 1fr));
   gap:                   0.6em;
 }
-
-/* ── 캐릭터 카드 스프라이트 영역 ────────────────────────────── */
 .atelier-card__sprite {
-  width:      100%;
-  aspect-ratio: 152 / 280;       /* CELL_W / CELL_H — CharacterSpriteManager 기준 */
-  overflow:   hidden;
-  background: rgba(255, 255, 255, 0.03);
+  width:        100%;
+  aspect-ratio: 152 / 280;
+  overflow:     hidden;
+  background:   rgba(255, 255, 255, 0.03);
 }
-
 .atelier-card__sprite canvas,
 .atelier-card__sprite img {
-  width:  100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-
-/* ── 웰컴 팝업 ───────────────────────────────────────────────── */
-#atelier-welcome {
-  /* nr-popup 클래스와 함께 사용 */
-}
-
-#atelier-welcome .nr-popup__box {
-  max-width: 560px;
-}
-
-.atelier-welcome__title {
-  font-family:    var(--font-display, 'NeoDunggeunmoPro', monospace);
-  font-size:      clamp(16px, 2vw, 28px);
-  letter-spacing: 0.15em;
-  color:          var(--color-rust, #b05030);
-  margin-bottom:  0.6em;
-}
-
-.atelier-welcome__body {
-  font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:    clamp(10px, 1vw, 15px);
-  line-height:  1.8;
-  color:        var(--color-text, #c8c8b0);
-  opacity:      0.85;
+  width:            100%;
+  height:           100%;
+  object-fit:       contain;
+  image-rendering:  pixelated;
 }

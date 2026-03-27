@@ -1,0 +1,158 @@
+/* ================================================================
+   DialogueScene.css
+   경로: src/Dialogues/DialogueScene.css
+
+   역할: 대화 씬 UI 오버레이 — HTML DOM 레이어
+         Phaser canvas: 배경 이미지, 캐릭터 일러스트, 카메라 FX
+         DOM 레이어:    대화창, 이름창, 본문, 선택지
+   ================================================================ */
+
+/* ── 루트 오버레이 ───────────────────────────────────────────── */
+#dialogue-hud {
+  position:        absolute;
+  inset:           0;
+  pointer-events:  none;
+  opacity:         0;
+  transition:      opacity 0.5s ease;
+}
+#dialogue-hud.visible {
+  opacity:         1;
+  pointer-events:  auto;
+}
+
+/* ── 대화창 래퍼 (화면 하단 중앙) ───────────────────────────── */
+.dlg-box {
+  position:         absolute;
+  left:             50%;
+  transform:        translateX(-50%);
+  bottom:           4%;
+  width:            63%;
+  min-height:       12%;
+
+  background-image: url('/Games/Assets/Sprites/Textbox_001.png');
+  background-size:  100% 100%;
+  background-repeat: no-repeat;
+
+  /* PNG 없을 때 fallback */
+  background-color:    rgba(10, 8, 5, 0.92);
+  border:              1px solid rgba(120, 64, 20, 0.6);
+  box-shadow:          0 0 24px rgba(0,0,0,0.7), inset 0 0 12px rgba(0,0,0,0.5);
+
+  padding:          3.5% 5% 2.5%;
+  box-sizing:       border-box;
+}
+
+/* ── 이름창 ─────────────────────────────────────────────────── */
+.dlg-name-wrap {
+  position:         absolute;
+  top:              -2.8em;
+  left:             0.5%;
+
+  background-image: url('/Games/Assets/Sprites/Textbox_002.png');
+  background-size:  100% 100%;
+  background-repeat: no-repeat;
+  background-color: rgba(10, 8, 5, 0.90);
+  border:           1px solid rgba(100, 50, 15, 0.7);
+
+  padding:          0.25em 1.1em;
+  transform:        rotate(-3deg);
+  transform-origin: left center;
+  min-width:        6em;
+  text-align:       center;
+}
+.dlg-name {
+  font-family:    var(--font-display, 'BMKiranghaerang', monospace);
+  font-size:      clamp(11px, 1.3vw, 20px);
+  color:          #e8c96a;
+  letter-spacing: 0.05em;
+  text-shadow:    0 1px 2px #000, 0 0 8px rgba(200, 100, 10, 0.4);
+  white-space:    nowrap;
+}
+
+/* ── 본문 텍스트 ─────────────────────────────────────────────── */
+.dlg-body {
+  font-family:  var(--font-body, 'BMKiranghaerang', monospace);
+  font-size:    clamp(11px, 1.4vw, 22px);
+  color:        #d8cbb8;
+  line-height:  1.65;
+  min-height:   3em;
+  word-break:   keep-all;
+}
+
+/* ── ▶ 다음 아이콘 ───────────────────────────────────────────── */
+.dlg-next {
+  position:    absolute;
+  right:       4.5%;
+  bottom:      8%;
+  font-family: var(--font-mono, monospace);
+  font-size:   clamp(9px, 1vw, 14px);
+  color:       #c89040;
+  opacity:     0;
+  animation:   dlgNextPulse 0.55s ease-in-out infinite alternate;
+  transition:  opacity 0.2s;
+}
+.dlg-next.visible { opacity: 1; }
+
+@keyframes dlgNextPulse {
+  from { opacity: 0.3; transform: translateX(-3px); }
+  to   { opacity: 1.0; transform: translateX(0);    }
+}
+
+/* ── 하단 힌트 텍스트 ────────────────────────────────────────── */
+.dlg-hint {
+  position:       absolute;
+  right:          4.5%;
+  bottom:         -1.6em;
+  font-family:    var(--font-mono, monospace);
+  font-size:      clamp(7px, 0.7vw, 11px);
+  color:          #5a4a28;
+  letter-spacing: 0.15em;
+}
+
+/* ── 선택지 컨테이너 ─────────────────────────────────────────── */
+.dlg-choices {
+  position:        absolute;
+  left:            50%;
+  transform:       translateX(-50%);
+  bottom:          4%;
+  width:           63%;
+
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  gap:             0.4em;
+}
+
+/* ── 선택지 버튼 ─────────────────────────────────────────────── */
+.dlg-choice-btn {
+  width:            72%;
+
+  background-image: url('/Games/Assets/Sprites/Textbox_003.png');
+  background-size:  100% 100%;
+  background-repeat: no-repeat;
+  background-color: rgba(10, 8, 5, 0.88);
+  border:           1px solid rgba(100, 60, 15, 0.5);
+
+  padding:          0.55em 3em;
+  text-align:       center;
+
+  font-family:      var(--font-body, 'BMKiranghaerang', monospace);
+  font-size:        clamp(10px, 1.3vw, 20px);
+  color:            #c8a858;
+  letter-spacing:   0.05em;
+  cursor:           pointer;
+  opacity:          0;
+  transform:        translateY(6px);
+  transition:       opacity 0.25s ease, transform 0.25s ease,
+                    color 0.12s, background-color 0.12s;
+  box-sizing:       border-box;
+}
+.dlg-choice-btn.ready {
+  opacity:   1;
+  transform: translateY(0);
+}
+.dlg-choice-btn:hover {
+  background-color: rgba(26, 14, 5, 0.95);
+  border-color:     rgba(160, 80, 24, 0.85);
+  color:            #f8e080;
+}

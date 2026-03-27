@@ -18,12 +18,13 @@
 import './styles/global.css';
 import './styles/overlay.css';
 import './styles/shader.css';
-// ── Scene CSS (컴포넌트 이미 global.css에서 임포트됨) ────────────
+// ── Scene CSS ─────────────────────────────────────────────────
 import './Scenes/LobbyScene.css';
 import './Scenes/LoadingScene.css';
 import './Scenes/AtelierScene.css';
 import './Scenes/SettingsScene.css';
 import './Scenes/BattleScene.css';
+import './Dialogues/DialogueScene.css';
 
 // ── 상수 ─────────────────────────────────────────────────────────
 import { GAME_VERSION } from './constants';
@@ -34,17 +35,16 @@ import { AudioManager }           from './Managers/AudioManager';
 import { ShaderManager }          from './Managers/ShaderManager';
 import { InputManager }           from './Managers/InputManager';
 
-// ── Step 6~7 완료 씬 ─────────────────────────────────────────────
-import { LobbyScene }             from './Scenes/LobbyScene';
-import { LoadingScene }           from './Scenes/LoadingScene';
-import { SettingsScene }          from './Scenes/SettingsScene';
-// ── Step 8 완료 후 주석 해제 ─────────────────────────────────────
-// import { DialogueScene }          from './Dialogues/DialogueScene';
-// import { AtelierScene }           from './Scenes/AtelierScene';
-// import { ExploreScene }           from './Scenes/ExploreScene';
-// import { PartyScene }             from './Scenes/PartyScene';
-// import { BattleScene }            from './Scenes/BattleScene';
-// import { DiveScene }              from './Scenes/DiveScene';
+// ── 씬 임포트 ────────────────────────────────────────────────────
+import { LobbyScene }     from './Scenes/LobbyScene';
+import { LoadingScene }   from './Scenes/LoadingScene';
+import { SettingsScene }  from './Scenes/SettingsScene';
+import { DialogueScene }  from './Dialogues/DialogueScene';
+import { AtelierScene }   from './Scenes/AtelierScene';
+import { ExploreScene }   from './Scenes/ExploreScene';
+import { PartyScene }     from './Scenes/PartyScene';
+import { BattleScene }    from './Scenes/BattleScene';
+import { DiveScene }      from './Scenes/DiveScene';
 
 // ── 버전 정보 주입 ────────────────────────────────────────────────
 const elAtmosphere = document.getElementById('overlay-atmosphere');
@@ -91,8 +91,11 @@ function _initGame(): void {
       type:            Phaser.AUTO,
       backgroundColor: '#050407',
       parent:          'game-container',
-      scene:           [LobbyScene, LoadingScene, SettingsScene],
-      // Step 8 완료 후 추가: DialogueScene, AtelierScene, ExploreScene, PartyScene, BattleScene, DiveScene
+      scene: [
+        LobbyScene, LoadingScene, SettingsScene,
+        DialogueScene, AtelierScene,
+        ExploreScene, PartyScene, BattleScene, DiveScene,
+      ],
       scale: {
         mode:       Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
