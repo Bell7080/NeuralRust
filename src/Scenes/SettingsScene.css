@@ -1,0 +1,188 @@
+/* ================================================================
+   SettingsScene.css
+   경로: src/Scenes/SettingsScene.css
+
+   역할: 설정 씬 HTML DOM 레이어
+         현재 Phaser canvas에서 그리던 아래 요소들의 DOM 버전:
+           - 설정 타이틀
+           - 탭 바 (폰트 / 오디오 / 키바인딩 / 쉐이더)
+           - 각 탭 콘텐츠 (슬라이더, 버튼, 토글)
+           - 뒤로가기 버튼
+   ================================================================ */
+
+/* ── 설정 HUD 루트 ─────────────────────────────────────────────── */
+#settings-hud {
+  position:   absolute;
+  inset:      0;
+  display:    flex;
+  flex-direction: column;
+  background: rgba(4, 6, 10, 0.95);
+  pointer-events: none;
+  opacity:    0;
+  transition: opacity 0.25s ease;
+}
+
+#settings-hud.visible {
+  opacity:    1;
+  pointer-events: auto;
+}
+
+/* ── 헤더 ──────────────────────────────────────────────────────── */
+.settings-header {
+  display:     flex;
+  align-items: center;
+  gap:         1.5em;
+  padding:     2% 3% 1%;
+  border-bottom: 1px solid rgba(176, 80, 48, 0.2);
+}
+
+.settings-title {
+  font-family:    var(--font-display, 'NeoDunggeunmoPro', monospace);
+  font-size:      clamp(20px, 3vw, 48px);
+  letter-spacing: 0.3em;
+  color:          var(--color-text, #c8c8b0);
+}
+
+/* ── 탭 바 ─────────────────────────────────────────────────────── */
+.settings-tabbar {
+  display:    flex;
+  gap:        0;
+  padding:    0 3%;
+  border-bottom: 1px solid rgba(176, 80, 48, 0.15);
+}
+
+/* ── 콘텐츠 영역 ───────────────────────────────────────────────── */
+.settings-content {
+  flex:       1;
+  overflow-y: auto;
+  padding:    2% 3%;
+}
+
+.settings-section {
+  display:        none;
+}
+
+.settings-section.active {
+  display:        block;
+}
+
+/* ── 설정 행 ─────────────────────────────────────────────────── */
+.settings-row {
+  display:     grid;
+  grid-template-columns: clamp(120px, 18%, 240px) 1fr;
+  align-items: center;
+  gap:         1em;
+  padding:     0.7em 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.settings-row__label {
+  font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:    clamp(10px, 1.1vw, 16px);
+  letter-spacing: 0.08em;
+  color:        rgba(200, 200, 176, 0.75);
+}
+
+.settings-row__control {
+  display:     flex;
+  align-items: center;
+  gap:         0.8em;
+}
+
+/* ── 슬라이더 ────────────────────────────────────────────────── */
+.nr-slider {
+  -webkit-appearance: none;
+  appearance:   none;
+  width:        100%;
+  max-width:    320px;
+  height:       4px;
+  background:   rgba(176, 80, 48, 0.2);
+  outline:      none;
+  cursor:       pointer;
+  border-radius: 0;
+}
+
+.nr-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance:   none;
+  width:        14px;
+  height:       14px;
+  background:   var(--color-rust, #b05030);
+  cursor:       pointer;
+  border-radius: 0;
+  box-shadow:   0 0 4px rgba(176, 80, 48, 0.6);
+}
+
+.nr-slider::-moz-range-thumb {
+  width:        14px;
+  height:       14px;
+  background:   var(--color-rust, #b05030);
+  cursor:       pointer;
+  border:       none;
+  border-radius: 0;
+}
+
+.nr-slider:hover::-webkit-slider-thumb {
+  box-shadow:   0 0 8px rgba(176, 80, 48, 0.9);
+}
+
+/* 슬라이더 옆 수치 레이블 */
+.nr-slider-label {
+  font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:    clamp(10px, 1vw, 15px);
+  letter-spacing: 0.05em;
+  color:        var(--color-rust, #b05030);
+  min-width:    3em;
+  text-align:   right;
+}
+
+/* ── 키바인딩 그리드 ─────────────────────────────────────────── */
+.settings-keybind-grid {
+  display:               grid;
+  grid-template-columns: repeat(auto-fill, minmax(clamp(200px, 28%, 320px), 1fr));
+  gap:                   0.5em;
+}
+
+.settings-keybind-row {
+  display:     flex;
+  align-items: center;
+  justify-content: space-between;
+  padding:     0.4em 0.6em;
+  border:      1px solid rgba(176, 80, 48, 0.15);
+  gap:         0.5em;
+}
+
+.settings-keybind-row__action {
+  font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:    clamp(9px, 0.9vw, 14px);
+  opacity:      0.75;
+}
+
+.settings-keybind-row__key {
+  font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:    clamp(10px, 1vw, 15px);
+  color:        var(--color-rust, #b05030);
+  min-width:    4em;
+  text-align:   center;
+  border:       1px solid rgba(176, 80, 48, 0.35);
+  padding:      2px 6px;
+}
+
+/* 리바인딩 대기 중 깜빡임 */
+.settings-keybind-row__key.waiting {
+  animation: keyWait 0.6s ease-in-out infinite;
+  color:     #ddcc44;
+  border-color: #ddcc44;
+}
+
+@keyframes keyWait {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+/* ── 뒤로가기 버튼 ─────────────────────────────────────────────── */
+.settings-back {
+  position:   absolute;
+  top:        1.5%;
+  right:      2%;
+}

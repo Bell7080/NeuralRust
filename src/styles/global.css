@@ -10,6 +10,10 @@
 
 @import './variables.css';
 @import './fonts.css';
+@import './components/button.css';
+@import './components/panel.css';
+@import './components/bar.css';
+@import './components/tooltip.css';
 
 * {
   margin:     0;

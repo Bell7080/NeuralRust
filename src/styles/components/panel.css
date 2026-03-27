@@ -1,0 +1,145 @@
+/* ================================================================
+   panel.css
+   경로: src/styles/components/panel.css
+
+   역할: 패널 / 카드 / 팝업 공통 컴포넌트
+         Phaser Graphics 기반 패널 → HTML DOM 마이그레이션 대상
+
+   변수 의존:
+     --color-bg, --color-rust, --color-text
+     --font-display, --font-mono
+   ================================================================ */
+
+/* ── 기본 패널 ────────────────────────────────────────────────── */
+.nr-panel {
+  position:   relative;
+  background: rgba(12, 14, 18, 0.88);
+  border:     1px solid rgba(176, 80, 48, 0.35);
+  color:      var(--color-text, #c8c8b0);
+  padding:    1em 1.2em;
+}
+
+/* 4코너 장식 — CSS only (clip-path 없이 border-image 활용) */
+.nr-panel::before,
+.nr-panel::after {
+  content:    '';
+  position:   absolute;
+  width:      14px;
+  height:     14px;
+  border-color: rgba(176, 80, 48, 0.6);
+  border-style: solid;
+}
+
+.nr-panel::before {
+  top:    0; left:  0;
+  border-width: 2px 0 0 2px;
+}
+
+.nr-panel::after {
+  bottom: 0; right: 0;
+  border-width: 0 2px 2px 0;
+}
+
+/* ── 캐릭터 카드 ────────────────────────────────────────────── */
+.nr-card {
+  position:   relative;
+  display:    flex;
+  flex-direction: column;
+  gap:        0.4em;
+  background: rgba(12, 14, 18, 0.92);
+  border:     1px solid rgba(176, 80, 48, 0.25);
+  padding:    0.6em 0.8em;
+  cursor:     pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.nr-card:hover {
+  border-color: rgba(176, 80, 48, 0.6);
+  box-shadow:   0 0 8px rgba(176, 80, 48, 0.2);
+}
+
+.nr-card.selected,
+.nr-card[aria-selected="true"] {
+  border-color: var(--color-rust, #b05030);
+  box-shadow:   0 0 12px rgba(176, 80, 48, 0.4);
+}
+
+.nr-card.dead {
+  opacity:      0.5;
+  border-color: rgba(100, 100, 100, 0.3);
+  pointer-events: none;
+}
+
+/* 카드 내부 레이아웃 헬퍼 */
+.nr-card__header {
+  display:     flex;
+  align-items: center;
+  gap:         0.5em;
+}
+
+.nr-card__name {
+  font-family:    var(--font-display, 'NeoDunggeunmoPro', monospace);
+  font-size:      clamp(11px, 1.1vw, 17px);
+  letter-spacing: 0.05em;
+  white-space:    nowrap;
+  overflow:       hidden;
+  text-overflow:  ellipsis;
+}
+
+.nr-card__job {
+  font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:    clamp(9px, 0.85vw, 13px);
+  opacity:      0.65;
+  letter-spacing: 0.08em;
+}
+
+.nr-card__cog {
+  font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:    clamp(9px, 0.8vw, 12px);
+  font-weight:  700;
+  /* 색은 JS가 inline style로 주입: style="color: #ffdd00" */
+}
+
+/* ── 팝업 / 모달 ──────────────────────────────────────────────── */
+.nr-popup {
+  position:   fixed;
+  inset:      0;
+  display:    flex;
+  align-items:     center;
+  justify-content: center;
+  background:  rgba(0, 0, 0, 0.6);
+  z-index:    var(--z-overlay, 300);
+  animation:  fadeIn 0.15s ease;
+}
+
+.nr-popup__box {
+  position:   relative;
+  background: rgba(8, 10, 14, 0.96);
+  border:     1px solid rgba(176, 80, 48, 0.5);
+  padding:    2em 2.5em;
+  min-width:  320px;
+  max-width:  90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.8);
+}
+
+/* ── 구분선 ────────────────────────────────────────────────────── */
+.nr-divider {
+  width:      100%;
+  height:     1px;
+  background: rgba(176, 80, 48, 0.25);
+  margin:     0.6em 0;
+}
+
+/* ── HUD 프레임 ─────────────────────────────────────────────────── */
+/*  인게임 화면 위에 올라오는 HTML 오버레이 HUD 컨테이너 */
+.nr-hud {
+  position:    absolute;
+  inset:       0;
+  pointer-events: none;     /* 기본: 클릭 통과 */
+}
+
+.nr-hud > * {
+  pointer-events: auto;     /* 자식은 클릭 가능 */
+}

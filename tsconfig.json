@@ -18,6 +18,8 @@
 
     "skipLibCheck": true,
 
+    "types": ["phaser"],
+
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
