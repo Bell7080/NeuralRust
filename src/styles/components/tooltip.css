@@ -1,0 +1,84 @@
+/* ================================================================
+   tooltip.css
+   경로: src/styles/components/tooltip.css
+
+   역할: 툴팁 공통 컴포넌트 스타일
+         스탯 설명, 능력 설명, 직업 설명 팝업에 사용
+
+   변수 의존:
+     --color-bg, --color-rust, --color-text
+     --font-display, --font-mono
+     --z-overlay
+   ================================================================ */
+
+/* ── 툴팁 컨테이너 ───────────────────────────────────────────── */
+.nr-tooltip {
+  position:      fixed;       /* JS가 top/left 주입 */
+  z-index:       calc(var(--z-overlay, 300) + 10);
+  pointer-events: none;
+
+  background:    rgba(8, 10, 14, 0.97);
+  border:        1px solid rgba(176, 80, 48, 0.45);
+  padding:       0.7em 1em;
+  max-width:     280px;
+  min-width:     160px;
+  box-shadow:    0 4px 16px rgba(0, 0, 0, 0.7);
+  animation:     tooltipIn 0.1s ease;
+}
+
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── 헤더 영역 ─────────────────────────────────────────────── */
+.nr-tooltip__name {
+  font-family:    var(--font-display, 'NeoDunggeunmoPro', monospace);
+  font-size:      clamp(11px, 1.1vw, 16px);
+  letter-spacing: 0.06em;
+  color:          var(--color-rust, #b05030);
+  margin-bottom:  0.3em;
+}
+
+.nr-tooltip__type {
+  font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:      clamp(8px, 0.75vw, 11px);
+  letter-spacing: 0.1em;
+  opacity:        0.55;
+  margin-bottom:  0.4em;
+}
+
+/* ── 구분선 ─────────────────────────────────────────────────── */
+.nr-tooltip__divider {
+  width:      100%;
+  height:     1px;
+  background: rgba(176, 80, 48, 0.25);
+  margin:     0.4em 0;
+}
+
+/* ── 본문 ────────────────────────────────────────────────────── */
+.nr-tooltip__body {
+  font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:    clamp(9px, 0.85vw, 13px);
+  line-height:  1.6;
+  color:        var(--color-text, #c8c8b0);
+  opacity:      0.85;
+}
+
+/* ── 수치 강조 ─────────────────────────────────────────────── */
+.nr-tooltip__value {
+  color:       #ddcc44;
+  font-weight: 700;
+}
+
+/* ── Cog 색상 배지 ──────────────────────────────────────────── */
+.nr-tooltip__cog {
+  display:     inline-block;
+  font-family: var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:   clamp(8px, 0.75vw, 11px);
+  padding:     1px 5px;
+  border:      1px solid currentColor;
+  margin-left: 0.3em;
+  vertical-align: middle;
+  /* color는 JS가 인라인으로 주입 */
+}

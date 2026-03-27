@@ -18,15 +18,21 @@
 import './styles/global.css';
 import './styles/overlay.css';
 import './styles/shader.css';
+// ── Scene CSS (컴포넌트 이미 global.css에서 임포트됨) ────────────
+import './Scenes/LobbyScene.css';
+import './Scenes/LoadingScene.css';
+import './Scenes/AtelierScene.css';
+import './Scenes/SettingsScene.css';
+import './Scenes/BattleScene.css';
 
 // ── 상수 ─────────────────────────────────────────────────────────
 import { GAME_VERSION } from './constants';
 
-// ── Step 4 완료 후 주석 해제 ─────────────────────────────────────
-// import { FontManager }            from './Managers/FontManager';
-// import { AudioManager }           from './Managers/AudioManager';
-// import { ShaderManager }          from './Managers/ShaderManager';
-// import { InputManager }           from './Managers/InputManager';
+// ── Managers (Step 4) ─────────────────────────────────────────────
+import { FontManager }            from './Managers/FontManager';
+import { AudioManager }           from './Managers/AudioManager';
+import { ShaderManager }          from './Managers/ShaderManager';
+import { InputManager }           from './Managers/InputManager';
 
 // ── Step 6~8 완료 후 주석 해제 ───────────────────────────────────
 // import { LobbyScene }             from './Scenes/LobbyScene';
@@ -71,21 +77,19 @@ function startGame(): void {
   );
   if (fsRequest) fsRequest.call(el).catch(() => {});
 
-  // Step 4 완료 후: FontManager.init().then(_initGame).catch(_initGame)
-  _initGame();
+  FontManager.init().then(_initGame).catch(_initGame);
 }
 
 function _initGame(): void {
   try {
-    // Step 4 완료 후 주석 해제
-    // AudioManager._load();
-    // ShaderManager.init();
+    AudioManager._load();
+    ShaderManager.init();
+    InputManager._loadBinds();
 
     // Step 6~8 완료 후 Phaser.Game 활성화
     // const game = new Phaser.Game({ ... });
-    // InputManager._loadBinds();
 
-    console.log('[main.ts] Step 4~9 완료 후 게임이 활성화됩니다.');
+    console.log('[main.ts] Step 6~9 완료 후 Phaser 게임이 활성화됩니다.');
 
     _setupWindowEvents(null);
 

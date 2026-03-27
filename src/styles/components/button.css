@@ -1,0 +1,138 @@
+/* ================================================================
+   button.css
+   경로: src/styles/components/button.css
+
+   역할: 게임 전역 버튼 컴포넌트 스타일
+         Phaser Text 버튼 → HTML DOM 버튼 마이그레이션 대상
+
+   변수 의존:
+     --color-rust, --color-bg, --color-text
+     --font-display, --font-mono
+     --z-overlay
+   ================================================================ */
+
+/* ── 기본 버튼 ────────────────────────────────────────────────── */
+.nr-btn {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             0.5em;
+
+  padding:         0.4em 1.2em;
+  border:          1px solid var(--color-rust, #b05030);
+  background:      transparent;
+  color:           var(--color-text, #c8c8b0);
+  font-family:     var(--font-display, 'NeoDunggeunmoPro', monospace);
+  font-size:       clamp(12px, 1.4vw, 22px);
+  letter-spacing:  0.12em;
+  cursor:          pointer;
+  user-select:     none;
+  text-transform:  none;
+  white-space:     nowrap;
+
+  transition:
+    color            0.15s ease,
+    border-color     0.15s ease,
+    background-color 0.15s ease,
+    box-shadow       0.15s ease;
+}
+
+.nr-btn:hover,
+.nr-btn:focus-visible {
+  color:        var(--color-rust, #b05030);
+  border-color: var(--color-rust, #b05030);
+  box-shadow:   0 0 8px rgba(176, 80, 48, 0.5);
+  outline:      none;
+}
+
+.nr-btn:active {
+  background: rgba(176, 80, 48, 0.15);
+}
+
+.nr-btn:disabled,
+.nr-btn[aria-disabled="true"] {
+  opacity: 0.35;
+  cursor:  not-allowed;
+  pointer-events: none;
+}
+
+/* ── 마커 버튼 (로비 메뉴 등) ───────────────────────────────── */
+/*  │ 새로 시작하기  형태 — 세로 바 마커 포함 */
+.nr-btn--marker {
+  position:   relative;
+  padding-left: 1.8em;
+}
+
+.nr-btn--marker::before {
+  content:    '│';
+  position:   absolute;
+  left:       0.5em;
+  color:      inherit;
+  opacity:    0.6;
+  transition: opacity 0.15s ease;
+}
+
+.nr-btn--marker:hover::before,
+.nr-btn--marker:focus-visible::before {
+  opacity: 1;
+}
+
+/* ── 강조(accent) 버튼 ──────────────────────────────────────── */
+.nr-btn--accent {
+  border-color: var(--color-rust, #b05030);
+  color:        var(--color-rust, #b05030);
+}
+
+.nr-btn--accent:hover,
+.nr-btn--accent:focus-visible {
+  background:   rgba(176, 80, 48, 0.12);
+  box-shadow:   0 0 12px rgba(176, 80, 48, 0.6);
+}
+
+/* ── 파괴/위험 버튼 ─────────────────────────────────────────── */
+.nr-btn--danger {
+  border-color: #cc2222;
+  color:        #cc2222;
+}
+
+.nr-btn--danger:hover,
+.nr-btn--danger:focus-visible {
+  background:   rgba(204, 34, 34, 0.12);
+  box-shadow:   0 0 10px rgba(204, 34, 34, 0.5);
+}
+
+/* ── 아이콘 전용(square) 버튼 ───────────────────────────────── */
+.nr-btn--icon {
+  padding:        0.4em;
+  width:          2.2em;
+  height:         2.2em;
+  border-radius:  2px;
+}
+
+/* ── 탭 버튼 ────────────────────────────────────────────────── */
+.nr-tab {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  padding:         0.3em 1.0em;
+  border:          none;
+  border-bottom:   2px solid transparent;
+  background:      transparent;
+  color:           rgba(200, 200, 176, 0.5);
+  font-family:     var(--font-display, 'NeoDunggeunmoPro', monospace);
+  font-size:       clamp(11px, 1.2vw, 18px);
+  letter-spacing:  0.1em;
+  cursor:          pointer;
+  user-select:     none;
+  transition:      color 0.15s, border-color 0.15s;
+}
+
+.nr-tab:hover {
+  color: var(--color-text, #c8c8b0);
+}
+
+.nr-tab[aria-selected="true"],
+.nr-tab.active {
+  color:        var(--color-rust, #b05030);
+  border-color: var(--color-rust, #b05030);
+}

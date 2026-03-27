@@ -31,14 +31,22 @@ export const JOB_DATA: JobDataMap = {
     ],
   },
 
+  helmsman: {
+    id:          'helmsman',
+    label:       '조타수',
+    short:       'HELM',
+    description: '이형 처치 시 50% 확률로 아크 발견. 이형에게 받는 피해 +2.',
+    traits: [
+      // 전투 단계에서 이형을 처치 시 캐릭터가 배치되어 살아있다면 Arc(화폐) 수집.
+    ],
+  },
+
   ai: {
     id:          'ai',
     label:       'A.I',
     short:       'A·I',
     description: '이형 처치 시 50% 확률로 아크 발견. 이형에게 받는 피해 +2.',
-    traits: [
-      // 전투 단계에서 이형을 처치 시 캐릭터가 배치되어 살아있다면 Arc(화폐) 수집.
-    ],
+    traits: [],
   },
 
 };

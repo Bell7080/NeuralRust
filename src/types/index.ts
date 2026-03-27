@@ -35,8 +35,8 @@ export interface IStatFormulas {
 }
 
 // ── 직업 ─────────────────────────────────────────────────────────
-export type JobId    = 'fisher' | 'diver' | 'ai';
-export type JobShort = 'FISH' | 'DIVE' | 'A·I';
+export type JobId    = 'fisher' | 'diver' | 'helmsman' | 'ai';
+export type JobShort = 'FISH' | 'DIVE' | 'HELM' | 'A·I';
 
 export interface JobDefinition {
   id:          JobId;
@@ -227,4 +227,102 @@ export interface IAbilityIndex {
   getGauge(id: string):                    number;
   clearCache():                            void;
   debug():                                 void;
+}
+
+// ── 캐릭터 ────────────────────────────────────────────────────────
+export interface CharacterStats {
+  hp:      number;
+  health:  number;
+  attack:  number;
+  agility: number;
+  luck:    number;
+}
+
+export interface Character {
+  id:          string;
+  name:        string;
+  age:         number;
+  job:         JobId;
+  jobLabel:    string;
+  stats:       CharacterStats;
+  statSum:     number;
+  cog:         number;
+  passive:     string;
+  action:      string;
+  enhanced:    string;
+  finale:      string;
+  overclock:   OverclockDefinition | null;
+  mastery:     number;
+  pendingStats: number;
+  currentHp:   number;
+  maxHp:       number;
+  status:      'alive' | 'dead_chip';
+  spriteKey:   string;
+  itemBonuses?:   Partial<CharacterStats>;
+  recordBonuses?: Partial<CharacterStats>;
+  _masteryMigrated?: boolean;
+  _hpMigrated?:      boolean;
+}
+
+export interface StatBreakdown {
+  base:      number;
+  overclock: number;
+  item:      number;
+  record:    number;
+  total:     number;
+}
+
+export interface CogColor {
+  css:       string;
+  phaser:    number;
+  glow:      number;
+  label:     string;
+  special:   boolean;
+  border?:   number;
+  gradStart?: number;
+  gradEnd?:   number;
+}
+
+export interface DeathLogEntry {
+  death:     number;
+  day:       number;
+  cog:       number;
+  round:     number;
+  killedBy:  string;
+  [key: string]: unknown;
+}
+
+export interface RecordChip {
+  expeditions:    number;
+  kills:          number;
+  deaths:         number;
+  highestRegion:  string;
+  highestCog:     number;
+  veteran:        boolean;
+  firstDay:       number;
+  deathLog:       DeathLogEntry[];
+}
+
+// ── 세이브 데이터 ─────────────────────────────────────────────────
+export interface GameSaveData {
+  arc:                  number;
+  day:                  number;
+  recruitPrice_fisher?: number;
+  recruitPrice_diver?:  number;
+  _currentScene?:       string;
+  _currentSceneData?:   Record<string, unknown>;
+  [key: string]:        unknown;
+}
+
+export interface StoryProgress {
+  day:   number;
+  phase: string;
+}
+
+export interface StorySave {
+  progress:      StoryProgress;
+  flags:         Record<string, unknown>;
+  log:           string[];
+  unlockedLore:  string[];
+  readLore:      string[];
 }

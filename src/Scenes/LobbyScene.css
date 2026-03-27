@@ -1,0 +1,114 @@
+/* ================================================================
+   LobbyScene.css
+   경로: src/Scenes/LobbyScene.css
+
+   역할: 로비 씬 HTML DOM 레이어 스타일
+         현재 Phaser canvas에서 그리던 아래 요소들의 DOM 버전:
+           - 배경 타이포그래피 레이어
+           - 타이틀 + 서브타이틀
+           - 메뉴 버튼 목록
+           - 버전 / 분위기 푸터
+
+   Phaser 캔버스는 #game-container 내부에 있고,
+   이 CSS는 canvas 위에 올라오는 절대 위치 DOM 레이어를 대상으로 함.
+
+   사용 예 (LobbyScene.ts create() 에서):
+     const hud = document.getElementById('lobby-hud');
+     hud.classList.add('visible');
+   ================================================================ */
+
+/* ── 로비 HUD 루트 ────────────────────────────────────────────── */
+#lobby-hud {
+  position:   absolute;
+  inset:      0;
+  display:    flex;
+  flex-direction: column;
+  pointer-events: none;
+  opacity:    0;
+  transition: opacity 0.4s ease;
+}
+
+#lobby-hud.visible {
+  opacity:    1;
+  pointer-events: auto;
+}
+
+/* ── 타이틀 섹션 ─────────────────────────────────────────────── */
+.lobby-title-wrap {
+  position:   absolute;
+  top:        20%;
+  left:       50%;
+  transform:  translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.lobby-title {
+  font-family:    var(--font-display, 'NeoDunggeunmoPro', monospace);
+  font-size:      clamp(36px, 6vw, 96px);
+  letter-spacing: 0.25em;
+  color:          var(--color-rust, #b05030);
+  text-shadow:
+    0 0  8px rgba(176, 80, 48, 0.6),
+    0 0 24px rgba(176, 80, 48, 0.3);
+  animation:      titleGlow 3s ease-in-out infinite;
+}
+
+.lobby-title-sub {
+  font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:      clamp(11px, 1.2vw, 18px);
+  letter-spacing: 0.35em;
+  color:          rgba(200, 200, 176, 0.55);
+  margin-top:     0.3em;
+  text-transform: uppercase;
+}
+
+@keyframes titleGlow {
+  0%, 100% { text-shadow: 0 0  8px rgba(176,80,48,0.6), 0 0 24px rgba(176,80,48,0.3); }
+  50%      { text-shadow: 0 0 14px rgba(176,80,48,0.9), 0 0 36px rgba(176,80,48,0.5); }
+}
+
+/* ── 메뉴 버튼 목록 ──────────────────────────────────────────── */
+.lobby-menu {
+  position:        absolute;
+  top:             50%;
+  left:            50%;
+  transform:       translate(-50%, -50%);
+  display:         flex;
+  flex-direction:  column;
+  align-items:     flex-start;
+  gap:             0.6em;
+  pointer-events:  auto;
+}
+
+.lobby-menu .nr-btn {
+  font-size:      clamp(14px, 1.6vw, 26px);
+  letter-spacing: 0.15em;
+  padding:        0.5em 1.4em;
+  min-width:      240px;
+}
+
+/* 비활성화된 "이어 하기" 버튼 */
+.lobby-menu .nr-btn--disabled {
+  opacity:        0.3;
+  pointer-events: none;
+}
+
+/* ── 푸터 (버전 / 분위기) ────────────────────────────────────── */
+.lobby-footer {
+  position:    absolute;
+  bottom:      2.5%;
+  left:        0; right: 0;
+  display:     flex;
+  justify-content: space-between;
+  padding:     0 3%;
+  pointer-events: none;
+}
+
+.lobby-footer__left,
+.lobby-footer__right {
+  font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:      clamp(9px, 0.85vw, 13px);
+  letter-spacing: 0.12em;
+  color:          rgba(200, 200, 176, 0.4);
+}

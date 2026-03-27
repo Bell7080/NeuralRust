@@ -1,0 +1,164 @@
+/* ================================================================
+   BattleScene.css
+   경로: src/Scenes/BattleScene.css
+
+   역할: 전투 씬 HTML DOM 레이어
+         현재 Phaser canvas에서 그리던 아래 요소들의 DOM 버전:
+           - 파티 슬롯 HUD (HP 바, 이름, Cog, 게이지)
+           - 적 정보 표시
+           - 라운드 / 웨이브 표시
+           - 전투 로그
+           - 피날레 버튼
+   ================================================================ */
+
+/* ── 전투 HUD 루트 ─────────────────────────────────────────────── */
+#battle-hud {
+  position:   absolute;
+  inset:      0;
+  pointer-events: none;
+  opacity:    0;
+  transition: opacity 0.3s ease;
+}
+
+#battle-hud.visible {
+  opacity:    1;
+  pointer-events: auto;
+}
+
+/* ── 파티 슬롯 컨테이너 (하단) ─────────────────────────────── */
+.battle-party {
+  position:        absolute;
+  bottom:          0; left: 0; right: 0;
+  height:          clamp(80px, 9vh, 130px);
+  display:         flex;
+  align-items:     stretch;
+  gap:             2px;
+  background:      rgba(4, 6, 10, 0.88);
+  border-top:      1px solid rgba(176, 80, 48, 0.25);
+  padding:         0 1%;
+  pointer-events:  auto;
+}
+
+/* ── 파티 슬롯 개별 카드 ─────────────────────────────────────── */
+.battle-slot {
+  flex:            1;
+  display:         flex;
+  flex-direction:  column;
+  justify-content: space-between;
+  padding:         0.4em 0.5em;
+  border-right:    1px solid rgba(176, 80, 48, 0.1);
+  cursor:          default;
+  min-width:       0;
+}
+
+.battle-slot:last-child { border-right: none; }
+
+.battle-slot.dead {
+  opacity:    0.4;
+}
+
+.battle-slot__header {
+  display:     flex;
+  align-items: center;
+  justify-content: space-between;
+  gap:         0.3em;
+}
+
+.battle-slot__name {
+  font-family:    var(--font-display, 'NeoDunggeunmoPro', monospace);
+  font-size:      clamp(9px, 1vw, 14px);
+  letter-spacing: 0.05em;
+  white-space:    nowrap;
+  overflow:       hidden;
+  text-overflow:  ellipsis;
+}
+
+.battle-slot__cog {
+  font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:    clamp(8px, 0.8vw, 12px);
+  font-weight:  700;
+  white-space:  nowrap;
+}
+
+/* ── 파티 슬롯 — 피날레 버튼 ───────────────────────────────── */
+.battle-slot__finale {
+  font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:      clamp(8px, 0.75vw, 11px);
+  letter-spacing: 0.05em;
+  padding:        2px 6px;
+  border:         1px solid var(--color-rust, #b05030);
+  color:          var(--color-rust, #b05030);
+  background:     transparent;
+  cursor:         pointer;
+  transition:     background 0.1s, box-shadow 0.1s;
+  white-space:    nowrap;
+  display:        none;     /* 게이지 100% 시 JS가 flex로 변환 */
+}
+
+.battle-slot__finale.ready {
+  display:    inline-flex;
+  animation:  finalePulse 1.2s ease-in-out infinite;
+}
+
+@keyframes finalePulse {
+  0%, 100% { box-shadow: none; }
+  50%      { box-shadow: 0 0 10px rgba(176, 80, 48, 0.7); }
+}
+
+.battle-slot__finale:hover {
+  background:  rgba(176, 80, 48, 0.2);
+  box-shadow:  0 0 8px rgba(176, 80, 48, 0.5);
+}
+
+/* ── 상단 정보 바 (라운드 / 웨이브) ──────────────────────────── */
+.battle-topbar {
+  position:        absolute;
+  top:             0; left: 0; right: 0;
+  height:          clamp(28px, 3vh, 42px);
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             2em;
+  background:      rgba(4, 6, 10, 0.75);
+  border-bottom:   1px solid rgba(176, 80, 48, 0.15);
+  pointer-events:  none;
+}
+
+.battle-topbar__info {
+  font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:      clamp(9px, 0.9vw, 14px);
+  letter-spacing: 0.1em;
+  color:          rgba(200, 200, 176, 0.65);
+}
+
+/* ── 전투 로그 (우측) ────────────────────────────────────────── */
+.battle-log {
+  position:     absolute;
+  right:        1%;
+  top:          clamp(28px, 3vh, 42px);
+  bottom:       clamp(80px, 9vh, 130px);
+  width:        clamp(160px, 18vw, 280px);
+  overflow-y:   auto;
+  display:      flex;
+  flex-direction: column-reverse;
+  gap:          2px;
+  padding:      0.5em;
+  pointer-events: none;
+}
+
+.battle-log__entry {
+  font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
+  font-size:    clamp(8px, 0.75vw, 11px);
+  color:        rgba(200, 200, 176, 0.65);
+  line-height:  1.4;
+  animation:    logEntry 0.2s ease;
+}
+
+.battle-log__entry--damage { color: #ff8888; }
+.battle-log__entry--heal   { color: #88ddaa; }
+.battle-log__entry--finale { color: var(--color-rust, #b05030); font-weight: 700; }
+
+@keyframes logEntry {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
