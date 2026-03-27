@@ -1,0 +1,30 @@
+/* ================================================================
+   fonts.css
+   경로: src/styles/fonts.css
+
+   역할: 커스텀 폰트 @font-face 등록
+         절대경로 /Games/Assets/Fonts/ 사용
+         (Vite dev 서버가 프로젝트 루트 전체를 서빙하므로 접근 가능)
+
+   등록 폰트:
+     BMKiranghaerang    — 디스플레이용 (타이틀, UI 헤더)
+     NeoDunggeunmoPro   — 모노스페이스 (본문, 수치, 로그)
+================================================================ */
+
+@font-face {
+  font-family: 'BMKiranghaerang';
+  src: url('/Games/Assets/Fonts/BMKIRANGHAERANG.woff2') format('woff2');
+  font-weight:  normal;
+  font-style:   normal;
+  font-display: block;
+  size-adjust:  160%;
+}
+
+@font-face {
+  font-family: 'NeoDunggeunmoPro';
+  src: url('/Games/Assets/Fonts/NeoDunggeunmoPro-Regular.woff2') format('woff2');
+  font-weight:  normal;
+  font-style:   normal;
+  font-display: block;
+  size-adjust:  110%;
+}

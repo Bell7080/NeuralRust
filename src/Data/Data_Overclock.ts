@@ -1,0 +1,91 @@
+// ================================================================
+//  Data_Overclock.ts
+//  경로: src/Data/Data_Overclock.ts
+//
+//  역할: 오버클럭 정의 테이블
+//        발생 확률 / 스탯별 보정 정보 / UI 표시용 색상·이름
+//
+//  수정할 때:
+//    · bonus    — 보정 배율 (0.50 = +50%)
+//    · color    — UI 강조 색상
+//    · name     — 인게임 표시 이름
+//    · description — 툴팁 설명
+//
+//  참조처:
+//    Recruit_Data.ts  → _rollOverclock()
+//    Recruit_Custom.ts → result.overclock
+//    Tab_CharProfile.ts, CharacterManager → overclock 필드
+//
+//  ✏️ color: CharacterManager.STAT_COLORS 기준 한 단계 밝게
+//    hp:#ffaad0 / health:#aaeecc / attack:#ff6655 / agility:#88ddff / luck:#ffee66
+// ================================================================
+
+import type { OverclockDefinition } from '../types';
+
+// ── 발생 확률 ────────────────────────────────────────────────────
+// ⚠️ 테스트 50% — 실서비스 시 0.05 로 복구
+export const OVERCLOCK_CHANCE: number = 0.50;
+
+// ── 오버클럭 풀 ──────────────────────────────────────────────────
+export const OVERCLOCK_POOL: OverclockDefinition[] = [
+  {
+    id:          'oc_hp',
+    name:        '강화 외피',
+    label:       '오버클럭 : 체력',
+    description: '체력 스탯이 50% 증가합니다.',
+    statKey:     'hp',
+    statIdx:     0,
+    bonus:       0.50,
+    color:       '#ffaad0',
+  },
+  {
+    id:          'oc_health',
+    name:        '자가 수복',
+    label:       '오버클럭 : 건강',
+    description: '건강 스탯이 50% 증가합니다.',
+    statKey:     'health',
+    statIdx:     1,
+    bonus:       0.50,
+    color:       '#aaeecc',
+  },
+  {
+    id:          'oc_attack',
+    name:        '분노 회로',
+    label:       '오버클럭 : 공격',
+    description: '공격 스탯이 50% 증가합니다.',
+    statKey:     'attack',
+    statIdx:     2,
+    bonus:       0.50,
+    color:       '#ff6655',
+  },
+  {
+    id:          'oc_agility',
+    name:        '가속 구동계',
+    label:       '오버클럭 : 민첩',
+    description: '민첩 스탯이 50% 증가합니다.',
+    statKey:     'agility',
+    statIdx:     3,
+    bonus:       0.50,
+    color:       '#88ddff',
+  },
+  {
+    id:          'oc_luck',
+    name:        '행운 코어',
+    label:       '오버클럭 : 행운',
+    description: '행운 스탯이 50% 증가합니다.',
+    statKey:     'luck',
+    statIdx:     4,
+    bonus:       0.50,
+    color:       '#ffee66',
+  },
+];
+
+// ── 편의 함수 ────────────────────────────────────────────────────
+
+export function getOverclockData(id: string): OverclockDefinition | null {
+  return OVERCLOCK_POOL.find(o => o.id === id) ?? null;
+}
+
+export function getOverclockByStat(statKey: string): OverclockDefinition | null {
+  return OVERCLOCK_POOL.find(o => o.statKey === statKey) ?? null;
+}

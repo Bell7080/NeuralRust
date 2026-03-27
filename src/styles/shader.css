@@ -1,0 +1,53 @@
+/* ================================================================
+   shader.css
+   경로: src/styles/shader.css
+
+   역할: 전체화면 CRT 쉐이더 오버레이 (#shader-overlay)
+         Phaser 캔버스 위를 덮어 모든 씬에 자동 적용
+         pointer-events: none → 게임 조작에 영향 없음
+
+   제어: ShaderManager.ts 가 CSS 변수(--vig-radius 등)를 실시간 업데이트
+   변수: src/styles/variables.css 에서 기본값 선언
+================================================================ */
+
+@import './variables.css';
+
+#shader-overlay {
+  position: fixed;
+  inset:    0;
+  pointer-events: none;
+  z-index:  var(--z-shader);
+  display:  block;
+  overflow: hidden;
+
+  /* ① 비네팅 */
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    transparent             var(--vig-radius),
+    rgba(2, 8, 12, var(--vig-alpha)) 100%
+  );
+}
+
+/* ② 스캔라인 */
+#shader-overlay::before {
+  content:  '';
+  position: absolute;
+  inset:    0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent                       0px,
+    transparent                       3px,
+    rgba(0, 0, 0, var(--scan-alpha)) 3px,
+    rgba(0, 0, 0, var(--scan-alpha)) 4px
+  );
+}
+
+/* ③ 심해 청록 틴트 + 색수차 */
+#shader-overlay::after {
+  content:        '';
+  position:       absolute;
+  inset:          0;
+  background:     rgba(0, 55, 45, var(--tint-alpha));
+  mix-blend-mode: screen;
+  transform:      translate(var(--aberr-x), var(--aberr-y));
+}
