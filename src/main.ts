@@ -34,11 +34,12 @@ import { AudioManager }           from './Managers/AudioManager';
 import { ShaderManager }          from './Managers/ShaderManager';
 import { InputManager }           from './Managers/InputManager';
 
-// ── Step 6~8 완료 후 주석 해제 ───────────────────────────────────
-// import { LobbyScene }             from './Scenes/LobbyScene';
-// import { LoadingScene }           from './Scenes/LoadingScene';
+// ── Step 6~7 완료 씬 ─────────────────────────────────────────────
+import { LobbyScene }             from './Scenes/LobbyScene';
+import { LoadingScene }           from './Scenes/LoadingScene';
+import { SettingsScene }          from './Scenes/SettingsScene';
+// ── Step 8 완료 후 주석 해제 ─────────────────────────────────────
 // import { DialogueScene }          from './Dialogues/DialogueScene';
-// import { SettingsScene }          from './Scenes/SettingsScene';
 // import { AtelierScene }           from './Scenes/AtelierScene';
 // import { ExploreScene }           from './Scenes/ExploreScene';
 // import { PartyScene }             from './Scenes/PartyScene';
@@ -86,31 +87,48 @@ function _initGame(): void {
     ShaderManager.init();
     InputManager._loadBinds();
 
-    // Step 6~8 완료 후 Phaser.Game 활성화
-    // const game = new Phaser.Game({ ... });
+    const game = new Phaser.Game({
+      type:            Phaser.AUTO,
+      backgroundColor: '#050407',
+      parent:          'game-container',
+      scene:           [LobbyScene, LoadingScene, SettingsScene],
+      // Step 8 완료 후 추가: DialogueScene, AtelierScene, ExploreScene, PartyScene, BattleScene, DiveScene
+      scale: {
+        mode:       Phaser.Scale.RESIZE,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width:      1920,
+        height:     1080,
+      },
+    });
 
-    console.log('[main.ts] Step 6~9 완료 후 Phaser 게임이 활성화됩니다.');
+    (window as Window & { _phaserGame?: Phaser.Game })._phaserGame = game;
 
-    _setupWindowEvents(null);
+    _setupWindowEvents(game);
 
   } catch (err) {
     console.error('[main.ts] 초기화 실패:', err);
   }
 }
 
-function _setupWindowEvents(game: unknown): void {
+function _setupWindowEvents(game: Phaser.Game | null): void {
   let resizeTimer: ReturnType<typeof setTimeout> | null = null;
 
   window.addEventListener('resize', () => {
     if (resizeTimer) clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-      // Step 6~8 완료 후: game.scale.resize(window.innerWidth, window.innerHeight)
+      game?.scale.resize(window.innerWidth, window.innerHeight);
     }, 100);
   });
 
   function handleFsChange(): void {
     setTimeout(() => {
-      // Step 6~8 완료 후: game.scale.resize / SettingsScene 갱신
+      game?.scale.resize(window.innerWidth, window.innerHeight);
+      game?.scene.getScenes(true).forEach(scene => {
+        const s = scene as Phaser.Scene & { _activeTab?: string; fromScene?: string };
+        if (s.scene.key === 'SettingsScene' && s._activeTab === 'video') {
+          s.scene.restart({ from: s.fromScene, tab: 'video' });
+        }
+      });
     }, 100);
   }
   document.addEventListener('fullscreenchange',       handleFsChange);
@@ -127,7 +145,13 @@ function _setupWindowEvents(game: unknown): void {
       return;
     }
     if (e.key === 'Escape') {
-      // Step 6~8 완료 후: game.scene.start('LobbyScene')
+      const activeScenes = game?.scene.getScenes(true) ?? [];
+      const inGame = activeScenes.some(s => s.scene.key === 'GameScene');
+      if (inGame) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        game?.scene.start('LobbyScene');
+      }
     }
   }, true);
 }
