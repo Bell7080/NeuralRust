@@ -1,0 +1,45 @@
+/* ================================================================
+   global.css
+   경로: src/styles/global.css
+
+   역할: 전역 기본 레이아웃 — body, canvas, game-container
+         씬별 CSS에서 공통으로 쓰이는 리셋 포함
+
+   임포트 순서: variables → fonts → global (반드시 이 순서)
+================================================================ */
+
+@import './variables.css';
+@import './fonts.css';
+
+* {
+  margin:     0;
+  padding:    0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width:              100%;
+  height:             100%;
+  overflow:           hidden;
+  background:         var(--color-bg);
+  user-select:        none;
+  -webkit-user-select: none;
+}
+
+#game-container {
+  width:    100vw;
+  height:   100vh;
+  position: relative;
+}
+
+canvas {
+  display:  block;
+  position: absolute;
+  top:  0;
+  left: 0;
+}
+
+/* 게임 진입 후 커서 */
+body.ingame {
+  cursor: default;
+}

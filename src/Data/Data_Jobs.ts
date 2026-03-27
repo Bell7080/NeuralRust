@@ -1,0 +1,58 @@
+// ================================================================
+//  Data_Jobs.ts
+//  경로: src/Data/Data_Jobs.ts
+//
+//  역할: 직업 정의 데이터
+//        id, label, description, traits (추후 전투 엔진 연결)
+//  의존: 없음
+// ================================================================
+
+import type { JobId, JobDefinition, JobDataMap } from '../types';
+
+export const JOB_DATA: JobDataMap = {
+
+  fisher: {
+    id:          'fisher',
+    label:       '낚시꾼',
+    short:       'FISH',
+    description: '이형에게 입히는 피해 +2. 이형에게 받는 피해 -1.',
+    traits: [
+      // 전투 단계에서 데미지 최후 계산 시 체력에 반영하기 이전 이 수치를 합연산함.
+    ],
+  },
+
+  diver: {
+    id:          'diver',
+    label:       '잠수부',
+    short:       'DIVE',
+    description: '이형 처치 시 50% 확률로 아이템 발견. 이형에게 받는 피해 +2.',
+    traits: [
+      // 전투 단계에서 이형을 처치 시 캐릭터가 배치되어 살아있다면 아이템 수집.
+    ],
+  },
+
+  ai: {
+    id:          'ai',
+    label:       'A.I',
+    short:       'A·I',
+    description: '이형 처치 시 50% 확률로 아크 발견. 이형에게 받는 피해 +2.',
+    traits: [
+      // 전투 단계에서 이형을 처치 시 캐릭터가 배치되어 살아있다면 Arc(화폐) 수집.
+    ],
+  },
+
+};
+
+// ── 편의 함수 ─────────────────────────────────────────────────────
+
+export function getJobData(jobId: string): JobDefinition | null {
+  return (JOB_DATA as Record<string, JobDefinition>)[jobId] ?? null;
+}
+
+export function getJobLabel(jobId: string): string {
+  return (JOB_DATA as Record<string, JobDefinition>)[jobId]?.label ?? jobId;
+}
+
+export function getJobDescription(jobId: string): string {
+  return (JOB_DATA as Record<string, JobDefinition>)[jobId]?.description ?? '';
+}
