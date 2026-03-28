@@ -24,6 +24,7 @@ import './Scenes/LoadingScene.css';
 import './Scenes/AtelierScene.css';
 import './Scenes/SettingsScene.css';
 import './Scenes/BattleScene.css';
+import './Scenes/DiveScene.css';
 import './Dialogues/DialogueScene.css';
 
 // ── 상수 ─────────────────────────────────────────────────────────
