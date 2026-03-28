@@ -182,7 +182,9 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       const spriteEl = document.createElement('img');
       spriteEl.className = 'battle-setup__card-sprite';
       if (this.textures.exists(char.spriteKey)) {
-        spriteEl.src = (this.textures.get(char.spriteKey).getSourceImage() as HTMLImageElement).src;
+        const raw = this.textures.get(char.spriteKey).getSourceImage();
+        const src = raw instanceof HTMLCanvasElement ? raw.toDataURL() : (raw as HTMLImageElement).src;
+        if (src) spriteEl.src = src; else spriteEl.style.opacity = '0';
       } else {
         spriteEl.style.opacity = '0';
       }
@@ -336,10 +338,9 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
         slot.nameTxt.style.display = 'block';
         slot.nameTxt.textContent   = char.name;
         if (this.textures.exists(char.spriteKey)) {
-          slot.sprite.src = (
-            this.textures.get(char.spriteKey).getSourceImage() as HTMLImageElement
-          ).src;
-          slot.sprite.style.display = 'block';
+          const raw = this.textures.get(char.spriteKey).getSourceImage();
+          const src = raw instanceof HTMLCanvasElement ? raw.toDataURL() : (raw as HTMLImageElement).src;
+          if (src) { slot.sprite.src = src; slot.sprite.style.display = 'block'; }
         }
       } else {
         slot.plus.style.display    = 'block';

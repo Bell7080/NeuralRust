@@ -282,11 +282,16 @@ export function renderParty(
   const renderCenter = (char: Character) => {
     centerEl.innerHTML = '';
     if (char.spriteKey && scene.textures.exists(char.spriteKey)) {
-      const canvas = scene.textures.get(char.spriteKey).getSourceImage() as HTMLImageElement;
-      const img = document.createElement('img');
-      img.src = canvas.src;
-      img.className = 'party-center__sprite';
-      centerEl.appendChild(img);
+      const raw = scene.textures.get(char.spriteKey).getSourceImage();
+      const src = raw instanceof HTMLCanvasElement ? raw.toDataURL() : (raw as HTMLImageElement).src;
+      if (src) {
+        const img = document.createElement('img');
+        img.src = src;
+        img.className = 'party-center__sprite';
+        centerEl.appendChild(img);
+      } else {
+        centerEl.innerHTML = `<div style="color:#2a1a0a;font-size:2em;font-family:monospace">?</div>`;
+      }
     } else {
       centerEl.innerHTML = `<div style="color:#2a1a0a;font-size:2em;font-family:monospace">?</div>`;
     }
