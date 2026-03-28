@@ -33,7 +33,10 @@
   --color-corner:        rgba(160, 90, 30, 0.35);
 
   /* ── 폰트 패밀리 ─────────────────────────────────────────── */
+  /* FontManager.applyCSSVars()가 런타임에 현재 프리셋으로 덮어씀 */
   --font-display:        'BMKiranghaerang', 'NeoDunggeunmoPro', monospace;
+  --font-title:          'BMKiranghaerang', 'NeoDunggeunmoPro', monospace;
+  --font-body:           'BMKiranghaerang', 'NeoDunggeunmoPro', monospace;
   --font-mono:           'NeoDunggeunmoPro', monospace;
 
   /* ── 쉐이더 오버레이 기본값 (ShaderManager 가 덮어씀) ─────── */

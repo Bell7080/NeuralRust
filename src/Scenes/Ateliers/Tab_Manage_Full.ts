@@ -168,13 +168,18 @@ export class Tab_Manage_Full {
         </div>
       `;
 
-      // 스프라이트
+      // 스프라이트 (canvas 텍스처 대응)
       if (this._scene.textures.exists(char.spriteKey)) {
-        const src = (this._scene.textures.get(char.spriteKey).getSourceImage() as HTMLImageElement).src;
-        const img = document.createElement('img');
-        img.src = src;
-        img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
-        card.querySelector(`#mng-spr-${char.id}`)?.appendChild(img);
+        const raw = this._scene.textures.get(char.spriteKey).getSourceImage();
+        const src = raw instanceof HTMLCanvasElement
+          ? raw.toDataURL()
+          : (raw as HTMLImageElement).src;
+        if (src) {
+          const img = document.createElement('img');
+          img.src = src;
+          img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
+          card.querySelector(`#mng-spr-${char.id}`)?.appendChild(img);
+        }
       }
 
       card.addEventListener('click', () => this._selectChar(char));
@@ -249,13 +254,18 @@ export class Tab_Manage_Full {
       </div>
     `;
 
-    // 스프라이트
+    // 스프라이트 (canvas 텍스처 대응)
     if (this._scene.textures.exists(char.spriteKey)) {
-      const src = (this._scene.textures.get(char.spriteKey).getSourceImage() as HTMLImageElement).src;
-      const img = document.createElement('img');
-      img.src = src;
-      img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
-      this._centerEl.querySelector('#mng-detail-spr')?.appendChild(img);
+      const raw = this._scene.textures.get(char.spriteKey).getSourceImage();
+      const src = raw instanceof HTMLCanvasElement
+        ? raw.toDataURL()
+        : (raw as HTMLImageElement).src;
+      if (src) {
+        const img = document.createElement('img');
+        img.src = src;
+        img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
+        this._centerEl.querySelector('#mng-detail-spr')?.appendChild(img);
+      }
     }
 
     // 스탯 지출 버튼

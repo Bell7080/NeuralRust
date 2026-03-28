@@ -101,12 +101,18 @@ function _fillModal(
   const portraitBox = document.createElement('div');
   portraitBox.className = 'cp-portrait-box';
 
-  // Phaser 씬에서 스프라이트 로드
+  // Phaser 씬에서 스프라이트 로드 (canvas 텍스처 대응)
   if (opts.scene?.textures.exists(char.spriteKey)) {
-    const img = document.createElement('img');
-    img.src = (opts.scene.textures.get(char.spriteKey).getSourceImage() as HTMLImageElement).src;
-    img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
-    portraitBox.appendChild(img);
+    const raw = opts.scene.textures.get(char.spriteKey).getSourceImage();
+    const src = raw instanceof HTMLCanvasElement
+      ? raw.toDataURL()
+      : (raw as HTMLImageElement).src;
+    if (src) {
+      const img = document.createElement('img');
+      img.src = src;
+      img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
+      portraitBox.appendChild(img);
+    }
   }
 
   const infoDiv = document.createElement('div');

@@ -432,7 +432,7 @@
    Tab_Manage_Full 스타일
    ================================================================ */
 
-.manage-full-panel { flex-direction: column; justify-content: flex-start; padding: 0; }
+.manage-full-panel { flex-direction: column; justify-content: flex-start; align-items: stretch; padding: 0; }
 
 /* 상단 바 */
 .mng-topbar {
@@ -546,7 +546,7 @@
   gap:            0.8em;
 }
 .stub-tab-title {
-  font-family:    var(--font-title, monospace);
+  font-family:    var(--font-display);
   font-size:      clamp(14px, 1.6vw, 20px);
   color:          #c8a070;
   letter-spacing: 0.08em;
