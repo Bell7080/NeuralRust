@@ -26,16 +26,13 @@
   left:             50%;
   transform:        translateX(-50%);
   bottom:           4%;
-  width:            63%;
+  width:            52%;
   min-height:       17%;
 
   background-image: url('/Games/Assets/Sprites/Textbox_001.png');
   background-size:  100% 100%;
   background-repeat: no-repeat;
-
-  /* PNG 없을 때 fallback */
-  background-color:    rgba(10, 8, 5, 0.92);
-  box-shadow:          0 0 24px rgba(0,0,0,0.7), inset 0 0 12px rgba(0,0,0,0.5);
+  background-color: transparent;
 
   padding:          2.8% 5% 2%;
   box-sizing:       border-box;
@@ -51,7 +48,7 @@
   background-image: url('/Games/Assets/Sprites/Textbox_002.png');
   background-size:  100% 100%;
   background-repeat: no-repeat;
-  background-color: rgba(10, 8, 5, 0.90);
+  background-color: transparent;
 
   padding:          0.25em 1.1em;
   transform:        rotate(-3deg);
@@ -114,7 +111,7 @@
   left:            50%;
   transform:       translateX(-50%);
   bottom:          calc(4% + 17% + 1em);   /* 대화창 위 */
-  width:           63%;
+  width:           52%;
 
   display:         flex;
   flex-direction:  column;

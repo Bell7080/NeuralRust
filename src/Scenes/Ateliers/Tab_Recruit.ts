@@ -110,11 +110,16 @@ export class Tab_Recruit {
   private _spriteEl(key: string, cls: string): HTMLElement {
     const w=document.createElement('div'); w.className=cls;
     if(this._scene.textures.exists(key)){
-      const src=(this._scene.textures.get(key).getSourceImage() as HTMLImageElement).src;
-      const img=document.createElement('img');
-      img.src=src;
-      img.style.cssText='width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
-      w.appendChild(img);
+      const raw=this._scene.textures.get(key).getSourceImage();
+      const src=raw instanceof HTMLCanvasElement
+        ? raw.toDataURL()
+        : (raw as HTMLImageElement).src;
+      if(src){
+        const img=document.createElement('img');
+        img.src=src;
+        img.style.cssText='width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
+        w.appendChild(img);
+      } else { w.textContent='?'; w.style.color='#3d2010'; }
     } else { w.textContent='?'; w.style.color='#3d2010'; }
     return w;
   }

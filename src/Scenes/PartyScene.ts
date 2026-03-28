@@ -35,6 +35,11 @@ export class PartyScene extends Phaser.Scene {
   }
 
   create(): void {
+    // 이전 씬 CSS DOM 잔여물 안전 정리
+    document.getElementById('atelier-hud')?.remove();
+    document.getElementById('dialogue-hud')?.remove();
+    document.getElementById('char-profile-overlay')?.remove();
+
     const W = this.scale.width, H = this.scale.height;
     this.W = W; this.H = H;
     InputManager.reinit(this);

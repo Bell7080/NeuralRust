@@ -23,10 +23,10 @@ export class Tab_Welcome {
     this._build(contentEl);
   }
 
-  private _build(contentEl: HTMLElement): void {
+  private _build(_contentEl: HTMLElement): void {
     const el = document.createElement('div');
     el.className = 'atelier-tab-panel active';
-    el.style.justifyContent = 'center';
+    el.style.cssText = 'justify-content:center; opacity:1; pointer-events:none; z-index:50;';
 
     const faces  = [':)', ':3', ':0'];
     const face   = faces[Math.floor(Math.random() * faces.length)];
@@ -39,7 +39,9 @@ export class Tab_Welcome {
         <div class="atelier-welcome-main" id="atelier-welcome-txt"></div>
       </div>
     `;
-    contentEl.appendChild(el);
+    // #atelier-hud는 opacity:0이므로 game-container 직접 삽입
+    const root = document.getElementById('game-container') ?? document.body;
+    root.appendChild(el);
     this._el = el;
 
     this._delay(80, () => {
