@@ -98,6 +98,7 @@ export class AtelierScene extends Phaser.Scene {
     this._hud?.destroy();
     // 씬 전환 시 미처 닫히지 않은 팝업 정리
     document.getElementById('char-profile-overlay')?.remove();
+    document.getElementById('dialogue-hud')?.remove();
   }
 
   // ── 배경 ──────────────────────────────────────────────────────
