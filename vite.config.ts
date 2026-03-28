@@ -21,6 +21,9 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 export default defineConfig({
   root: '.',
 
+  // GitHub Pages 배포 시 base 경로 (/NeuralRust/)
+  base: '/NeuralRust/',
+
   // public/ 폴더 비활성화 — 에셋은 Games/Assets/ 에서 직접 서빙
   publicDir: false,
 
