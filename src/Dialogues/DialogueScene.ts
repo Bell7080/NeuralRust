@@ -458,7 +458,11 @@ export class DialogueScene extends Phaser.Scene {
       btn.className = 'dlg-choice-btn';
       btn.textContent = choice.label;
 
-      btn.addEventListener('click', () => {
+      btn.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();   // document.pointerdown(_onAdvance) 전파 차단
+      });
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         this._choicesEl.innerHTML = '';
         if (choice.gotoIdx != null) {
           this._cursor = choice.gotoIdx;
@@ -541,13 +545,14 @@ export class DialogueScene extends Phaser.Scene {
   // ════════════════════════════════════════════════════════════
   private _buildInput(): void {
     this._onAdvanceBound = this._onAdvance.bind(this);
-    this.input.on('pointerdown', this._onAdvanceBound, this);
+    // DOM 이벤트로 처리 — Phaser input은 HTML DOM 레이어에 막혀 도달하지 못함
+    document.addEventListener('pointerdown', this._onAdvanceBound as EventListener);
     this.input.keyboard!.on('keydown-SPACE', this._onAdvanceBound, this);
     this.input.keyboard!.on('keydown-ENTER', this._onAdvanceBound, this);
   }
 
   private _removeInput(): void {
-    this.input.off('pointerdown', this._onAdvanceBound, this);
+    document.removeEventListener('pointerdown', this._onAdvanceBound as EventListener);
     this.input.keyboard?.off('keydown-SPACE', this._onAdvanceBound, this);
     this.input.keyboard?.off('keydown-ENTER', this._onAdvanceBound, this);
   }

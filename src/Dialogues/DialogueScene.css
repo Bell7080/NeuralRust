@@ -17,7 +17,7 @@
 }
 #dialogue-hud.visible {
   opacity:         1;
-  pointer-events:  auto;
+  /* pointer-events: none 유지 — Phaser 캔버스 이벤트 보존 */
 }
 
 /* ── 대화창 래퍼 (화면 하단 중앙) ───────────────────────────── */
@@ -27,7 +27,7 @@
   transform:        translateX(-50%);
   bottom:           4%;
   width:            63%;
-  min-height:       12%;
+  min-height:       17%;
 
   background-image: url('/Games/Assets/Sprites/Textbox_001.png');
   background-size:  100% 100%;
@@ -35,11 +35,11 @@
 
   /* PNG 없을 때 fallback */
   background-color:    rgba(10, 8, 5, 0.92);
-  border:              1px solid rgba(120, 64, 20, 0.6);
   box-shadow:          0 0 24px rgba(0,0,0,0.7), inset 0 0 12px rgba(0,0,0,0.5);
 
-  padding:          3.5% 5% 2.5%;
+  padding:          2.8% 5% 2%;
   box-sizing:       border-box;
+  pointer-events:   auto;   /* 대화창 클릭 이벤트 활성화 */
 }
 
 /* ── 이름창 ─────────────────────────────────────────────────── */
@@ -52,7 +52,6 @@
   background-size:  100% 100%;
   background-repeat: no-repeat;
   background-color: rgba(10, 8, 5, 0.90);
-  border:           1px solid rgba(100, 50, 15, 0.7);
 
   padding:          0.25em 1.1em;
   transform:        rotate(-3deg);
@@ -114,17 +113,19 @@
   position:        absolute;
   left:            50%;
   transform:       translateX(-50%);
-  bottom:          4%;
+  bottom:          calc(4% + 17% + 1em);   /* 대화창 위 */
   width:           63%;
 
   display:         flex;
   flex-direction:  column;
   align-items:     center;
   gap:             0.4em;
+  pointer-events:  none;   /* 컨테이너 자체는 통과 — 버튼에만 */
 }
 
 /* ── 선택지 버튼 ─────────────────────────────────────────────── */
 .dlg-choice-btn {
+  pointer-events:   auto;   /* 버튼에만 클릭 활성화 */
   width:            72%;
 
   background-image: url('/Games/Assets/Sprites/Textbox_003.png');
