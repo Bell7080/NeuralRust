@@ -96,6 +96,8 @@ export class AtelierScene extends Phaser.Scene {
     this._welcomeObj?.destroy();
     this._currentTabObj?.destroy();
     this._hud?.destroy();
+    // 씬 전환 시 미처 닫히지 않은 팝업 정리
+    document.getElementById('char-profile-overlay')?.remove();
   }
 
   // ── 배경 ──────────────────────────────────────────────────────

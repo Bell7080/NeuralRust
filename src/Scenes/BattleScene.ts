@@ -79,6 +79,7 @@ export class BattleScene extends BattleSceneBattle {
     this._sceneHits.forEach(h => { try { h.destroy(); } catch (_) {} });
     this._sceneHits = [];
     if (this._setupEl?.parentElement) this._setupEl.remove();
+    document.getElementById('battle-hud')?.remove();
   }
 
   // ════════════════════════════════════════════════════════════

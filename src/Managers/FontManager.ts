@@ -88,8 +88,8 @@ export const FontManager = {
     this._activePreset = saved as PresetKey;
     if (this.FONTS.length === 0) return Promise.resolve();
     return Promise.all(this.FONTS.map(f => this._loadFont(f)))
-      .then(() => console.log('[FontManager] 폰트 로드 완료'))
-      .catch(e => console.warn('[FontManager] 폰트 로드 중 오류 (무시됨)', e));
+      .then(() => { this.applyCSSVars(); console.log('[FontManager] 폰트 로드 완료'); })
+      .catch(e => { this.applyCSSVars(); console.warn('[FontManager] 폰트 로드 중 오류 (무시됨)', e); });
   },
 
   setActive(presetKey: PresetKey): void {
@@ -98,7 +98,18 @@ export const FontManager = {
       return;
     }
     this._activePreset = presetKey;
+    this.applyCSSVars();
     console.log(`[FontManager] 폰트 전환 → ${presetKey}`);
+  },
+
+  /** CSS 커스텀 프로퍼티를 현재 프리셋으로 동기화 — DOM 레이어 폰트 일괄 반영 */
+  applyCSSVars(): void {
+    const root    = document.documentElement;
+    const preset  = this.PRESETS[this._activePreset] ?? this.PRESETS.kirang;
+    root.style.setProperty('--font-display', preset.TITLE);
+    root.style.setProperty('--font-title',   preset.TITLE);
+    root.style.setProperty('--font-body',    preset.BODY);
+    root.style.setProperty('--font-mono',    preset.MONO);
   },
 
   get TITLE(): string { return (this.PRESETS[this._activePreset] ?? this.PRESETS.kirang).TITLE; },
