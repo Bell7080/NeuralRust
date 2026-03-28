@@ -7,6 +7,7 @@
 import { CharacterManager, getCogColor } from '../../Managers/CharacterManager';
 import { AbilityIndex } from '../../Data/AbilityIndex';
 import { SaveManager }  from '../../Managers/SaveManager';
+import { CharProfile }  from './CharProfile';
 import type { Character } from '../../types/index';
 
 // AtelierScene 호환용 null 필드 선언
@@ -296,6 +297,8 @@ export class Tab_Manage_Full {
         <div class="mng-right-divider"></div>
         <div class="mng-right-mastery">숙련도: ${char.mastery}</div>
         <div class="mng-right-divider"></div>
+        <button class="mng-action-btn" id="mng-profile">프  로  필</button>
+        <div class="mng-right-divider"></div>
         <button class="mng-dismiss-btn" id="mng-dismiss">해  고</button>
         <div class="mng-toast" style="opacity:0;transition:opacity 0.3s;text-align:center;color:#e87040;margin-top:0.5em;font-size:0.85em"></div>
       </div>
@@ -316,6 +319,26 @@ export class Tab_Manage_Full {
       this._applyFilter();
       this._renderCenter(t);
       this._renderRight(t);
+    });
+
+    this._rightEl.querySelector('#mng-profile')?.addEventListener('click', () => {
+      CharProfile.open(char, {
+        scene: this._scene,
+        onHeal: (c, cost) => {
+          const s = SaveManager.load() as Record<string, unknown> | null;
+          const a = typeof s?.arc === 'number' ? s.arc : 0;
+          if (a < cost) { this._showRightToast('Arc 부족'); return; }
+          const next = { ...s, arc: a - cost } as Parameters<typeof SaveManager.save>[0];
+          SaveManager.save(next);
+          const chars = CharacterManager.loadAll() ?? [];
+          const t = chars.find(ch => ch.id === c.id);
+          if (t) { t.currentHp = t.maxHp; CharacterManager.saveAll(chars); }
+          this._chars = CharacterManager.loadAll() ?? [];
+          this._selected = this._chars.find(ch => ch.id === c.id) ?? null;
+          this._applyFilter();
+          if (this._selected) { this._renderCenter(this._selected); this._renderRight(this._selected); }
+        },
+      });
     });
 
     this._rightEl.querySelector('#mng-dismiss')?.addEventListener('click', () => {

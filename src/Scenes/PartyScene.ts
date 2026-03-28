@@ -11,6 +11,7 @@ import { FontManager }      from '../Managers/FontManager';
 import { InputManager }     from '../Managers/InputManager';
 import { SaveManager }      from '../Managers/SaveManager';
 import { CharacterManager } from '../Managers/CharacterManager';
+import { CharProfile }      from './Ateliers/CharProfile';
 
 export class PartyScene extends Phaser.Scene {
   constructor() { super({ key: 'PartyScene' }); }
@@ -144,6 +145,12 @@ export class PartyScene extends Phaser.Scene {
         fontFamily: FontManager.MONO,
       }).setOrigin(0.5).setDepth(4);
 
+      this.add.text(cx, cy + cardH * 0.42, '더블클릭 → 프로필', {
+        fontSize:   FontManager.adjustedSize(7, this.scale),
+        color:      '#2a1a08',
+        fontFamily: FontManager.MONO,
+      }).setOrigin(0.5).setDepth(4);
+
       const hit = this.add.rectangle(cx, cy, cardW, cardH, 0, 0)
         .setInteractive({ useHandCursor: true }).setDepth(5);
 
@@ -157,18 +164,33 @@ export class PartyScene extends Phaser.Scene {
         drawCard(isSelected(), false);
         nameTxt.setStyle({ color: isSelected() ? '#e8c080' : '#c8a070' });
       });
+      // 단일 클릭: 파티 선택/해제 | 더블클릭: 프로필 팝업
+      let _clickTimer: ReturnType<typeof setTimeout> | null = null;
       hit.on('pointerdown', () => {
-        if (isSelected()) {
-          this._party = this._party.filter(id => id !== c.id);
-        } else if (this._party.length < 4) {
-          this._party.push(c.id);
+        if (_clickTimer) {
+          clearTimeout(_clickTimer);
+          _clickTimer = null;
+          // 더블클릭 — 프로필
+          const allChars = (CharacterManager.loadAll() || []) as ReturnType<typeof CharacterManager.loadAll>;
+          const full = allChars?.find(ch => ch.id === c.id);
+          if (full) CharProfile.open(full, { scene: this });
+          return;
         }
-        this._refreshPartySlots();
-        this._cardObjs.forEach(obj => {
-          const sel = this._party.includes(obj.id);
-          drawCard(sel, false);
-        });
-        nameTxt.setStyle({ color: isSelected() ? '#e8c080' : '#c8a070' });
+        _clickTimer = setTimeout(() => {
+          _clickTimer = null;
+          // 단일 클릭 — 파티 토글
+          if (isSelected()) {
+            this._party = this._party.filter(id => id !== c.id);
+          } else if (this._party.length < 4) {
+            this._party.push(c.id);
+          }
+          this._refreshPartySlots();
+          this._cardObjs.forEach(obj => {
+            const sel = this._party.includes(obj.id);
+            drawCard(sel, false);
+          });
+          nameTxt.setStyle({ color: isSelected() ? '#e8c080' : '#c8a070' });
+        }, 220);
       });
 
       this._cardObjs.push({ id: c.id, txt: nameTxt, bg });
