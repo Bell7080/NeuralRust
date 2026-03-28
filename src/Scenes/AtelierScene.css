@@ -532,3 +532,154 @@
 }
 .mng-dismiss-btn:hover { color: #cc3030; border-color: #aa2020; }
 .mng-empty { font-family: var(--font-mono); font-size: clamp(8px,0.85vw,13px); color: #3a2010; text-align: center; margin-top: 2em; }
+
+/* ================================================================
+   AtelierScene — 스텁 탭 공통 CSS (시설/외주/드레지/상점/창고/도감/회상)
+   ================================================================ */
+
+.stub-tab-wrap {
+  padding:        1.2em 1.4em;
+  height:         100%;
+  overflow-y:     auto;
+  display:        flex;
+  flex-direction: column;
+  gap:            0.8em;
+}
+.stub-tab-title {
+  font-family:    var(--font-title, monospace);
+  font-size:      clamp(14px, 1.6vw, 20px);
+  color:          #c8a070;
+  letter-spacing: 0.08em;
+  border-bottom:  1px solid rgba(42,26,10,0.7);
+  padding-bottom: 0.4em;
+  flex:           0 0 auto;
+}
+.stub-arc-display {
+  font-family:    var(--font-mono, monospace);
+  font-size:      clamp(10px, 1.1vw, 13px);
+  color:          #4a8ac0;
+}
+.stub-arc-val { color: #80b8e0; font-weight: 700; }
+.stub-empty {
+  font-family:    var(--font-mono, monospace);
+  font-size:      clamp(10px, 1.1vw, 13px);
+  color:          #2a1a0a;
+  text-align:     center;
+  padding:        2em 0;
+}
+
+/* 시설 */
+.stub-facility-grid { display: flex; flex-direction: column; gap: 6px; }
+.stub-fac-row {
+  display:        grid;
+  grid-template-columns: 5em 4em 1fr auto;
+  align-items:    center;
+  gap:            0.6em;
+  background:     rgba(12,9,6,1);
+  border:         1px solid rgba(42,26,8,0.5);
+  padding:        0.4em 0.7em;
+}
+.stub-fac-name  { font-family: var(--font-title,monospace); font-size: clamp(9px,1vw,12px); color: #c8a070; }
+.stub-fac-lv    { font-family: var(--font-mono,monospace);  font-size: clamp(8px,.9vw,11px); color: #5a4a28; }
+.stub-fac-effect{ font-family: var(--font-mono,monospace);  font-size: clamp(8px,.85vw,10px); color: #6a5a38; }
+.stub-fac-btn {
+  font-family:    var(--font-mono,monospace);
+  font-size:      clamp(8px,.9vw,11px);
+  color:          #c8a070;
+  background:     rgba(26,16,8,1);
+  border:         1px solid rgba(160,80,24,0.8);
+  padding:        0.2em 0.5em;
+  cursor:         pointer;
+  white-space:    nowrap;
+}
+.stub-fac-btn:hover:not(:disabled) { background: rgba(42,26,8,1); border-color: #c8a070; }
+.stub-fac-btn:disabled { color: #2a1a08; border-color: rgba(30,16,8,0.3); cursor: default; }
+
+/* 외주 */
+.stub-outsource-desc { font-family: var(--font-mono,monospace); font-size: clamp(8px,.9vw,11px); color: #3a2a10; }
+.stub-outsource-list { display: flex; flex-direction: column; gap: 5px; }
+.stub-out-row {
+  display:        grid;
+  grid-template-columns: 6em 8em 1fr auto;
+  align-items:    center;
+  gap:            0.5em;
+  background:     rgba(12,9,6,1);
+  border:         1px solid rgba(42,26,8,0.4);
+  padding:        0.35em 0.6em;
+}
+.stub-out-name { font-family: var(--font-title,monospace); font-size: clamp(9px,1vw,12px); color: #c8bfb0; }
+.stub-out-job  { font-family: var(--font-mono,monospace);  font-size: clamp(7px,.85vw,10px); color: #5a4a28; }
+.stub-out-earn { font-family: var(--font-mono,monospace);  font-size: clamp(7px,.8vw,9px);  color: #4a8ac0; }
+.stub-out-btn  {
+  font-family: var(--font-mono,monospace); font-size: clamp(8px,.9vw,11px);
+  color: #6a4020; background: rgba(12,9,6,1); border: 1px solid rgba(60,30,10,0.6);
+  padding: 0.15em 0.5em; cursor: pointer;
+}
+.stub-out-btn.active { color: #80c080; border-color: rgba(80,160,80,0.7); }
+.stub-out-btn:hover  { border-color: #c8a070; color: #c8a070; }
+
+/* 드레지 */
+.stub-dredge-info { display: flex; flex-direction: column; gap: 6px; }
+.stub-dredge-row {
+  display: flex; justify-content: space-between;
+  font-family: var(--font-mono,monospace); font-size: clamp(9px,1vw,12px); color: #5a4a28;
+}
+.stub-dredge-bar {
+  height: 6px; background: rgba(20,14,8,1); border: 1px solid rgba(42,26,8,0.5);
+}
+.stub-dredge-fill { height: 100%; background: #6a4820; }
+.stub-dredge-hint  { font-family: var(--font-mono,monospace); font-size: clamp(7px,.85vw,10px); color: #2a1a0a; }
+.stub-dredge-reward { display: flex; flex-direction: column; gap: 6px; margin-top: 0.4em; }
+
+/* 상점 */
+.stub-store-grid { display: flex; flex-direction: column; gap: 6px; }
+.stub-store-card {
+  display:        flex;
+  align-items:    center;
+  gap:            0.8em;
+  background:     rgba(14,11,8,1);
+  border:         1px solid rgba(58,42,16,0.7);
+  padding:        0.5em 0.7em;
+}
+.stub-store-name { font-family: var(--font-title,monospace); font-size: clamp(10px,1.1vw,13px); color: #c8a070; flex: 0 0 7em; }
+.stub-store-desc { font-family: var(--font-mono,monospace);  font-size: clamp(8px,.9vw,10px);  color: #6a5040; flex: 1; }
+.stub-store-btn  {
+  font-family: var(--font-mono,monospace); font-size: clamp(9px,1vw,12px);
+  color: #c8a070; background: rgba(26,16,8,1); border: 1px solid rgba(160,80,24,0.8);
+  padding: 0.25em 0.6em; cursor: pointer; white-space: nowrap;
+}
+.stub-store-btn:hover:not(:disabled) { background: rgba(42,26,8,1); }
+.stub-store-btn:disabled { color: #2a1a08; border-color: rgba(30,16,8,0.3); cursor: default; }
+
+/* 창고 */
+.stub-storage-list  { display: flex; flex-direction: column; gap: 4px; }
+.stub-storage-row   {
+  display: grid; grid-template-columns: 8em 1fr 4em;
+  gap: 0.5em; padding: 0.3em 0.6em;
+  background: rgba(12,9,6,1); border: 1px solid rgba(42,26,8,0.4);
+}
+.stub-storage-name  { font-family: var(--font-title,monospace); font-size: clamp(9px,1vw,12px); color: #c8a070; }
+.stub-storage-desc  { font-family: var(--font-mono,monospace);  font-size: clamp(7px,.85vw,10px); color: #5a4a28; }
+.stub-storage-count { font-family: var(--font-mono,monospace);  font-size: clamp(8px,.9vw,11px); color: #80b8e0; text-align: right; }
+.stub-storage-hint  { font-family: var(--font-mono,monospace);  font-size: clamp(7px,.8vw,9px);  color: #2a1a0a; }
+
+/* 도감 */
+.stub-codex-section { margin-bottom: 1em; }
+.stub-codex-type    {
+  font-family: var(--font-mono,monospace); font-size: clamp(8px,.85vw,10px);
+  letter-spacing: 0.1em; margin-bottom: 4px; padding-bottom: 3px;
+  border-bottom: 1px solid rgba(42,26,8,0.4);
+}
+.stub-codex-entry   { padding: 0.25em 0.4em; border-bottom: 1px solid rgba(30,18,6,0.25); }
+.stub-codex-name    { font-family: var(--font-mono,monospace); font-size: clamp(9px,1vw,12px); }
+.stub-codex-desc    { font-family: var(--font-mono,monospace); font-size: clamp(7px,.8vw,10px); color: #5a4a28; }
+
+/* 회상 */
+.stub-memory-list { display: flex; flex-direction: column; gap: 6px; }
+.stub-memory-row  {
+  background: rgba(12,6,6,1); border: 1px solid rgba(60,20,10,0.5);
+  padding: 0.4em 0.6em; display: flex; flex-direction: column; gap: 2px;
+}
+.stub-memory-name { font-family: var(--font-title,monospace); font-size: clamp(10px,1.1vw,13px); color: #c89090; }
+.stub-memory-info { font-family: var(--font-mono,monospace);  font-size: clamp(7px,.85vw,10px); color: #5a3a28; }
+.stub-memory-by   { font-family: var(--font-mono,monospace);  font-size: clamp(7px,.8vw,9px);  color: #6a2a10; }
