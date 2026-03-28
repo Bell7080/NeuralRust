@@ -11,6 +11,7 @@ import { FontManager }      from '../Managers/FontManager';
 import { InputManager }     from '../Managers/InputManager';
 import { SaveManager }      from '../Managers/SaveManager';
 import { CharacterManager } from '../Managers/CharacterManager';
+import { clearAllSceneDom } from '../utils/sceneCleanup';
 import {
   renderInventory, renderSubmarine, renderShop,
   renderParty, renderJournal,
@@ -106,6 +107,7 @@ export class DiveScene extends Phaser.Scene {
   }
 
   create(): void {
+    clearAllSceneDom();
     const { width: W, height: H } = this.scale;
     this.W = W; this.H = H;
     InputManager.reinit(this);

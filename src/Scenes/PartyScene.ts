@@ -12,6 +12,7 @@ import { InputManager }     from '../Managers/InputManager';
 import { SaveManager }      from '../Managers/SaveManager';
 import { CharacterManager } from '../Managers/CharacterManager';
 import { CharProfile }      from './Ateliers/CharProfile';
+import { clearAllSceneDom } from '../utils/sceneCleanup';
 
 export class PartyScene extends Phaser.Scene {
   constructor() { super({ key: 'PartyScene' }); }
@@ -35,10 +36,8 @@ export class PartyScene extends Phaser.Scene {
   }
 
   create(): void {
-    // 이전 씬 CSS DOM 잔여물 안전 정리
-    document.getElementById('atelier-hud')?.remove();
-    document.getElementById('dialogue-hud')?.remove();
-    document.getElementById('char-profile-overlay')?.remove();
+    // ★ 다른 씬의 DOM 잔여물 일괄 제거
+    clearAllSceneDom();
 
     const W = this.scale.width, H = this.scale.height;
     this.W = W; this.H = H;

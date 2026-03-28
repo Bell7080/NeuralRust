@@ -9,6 +9,7 @@
 import { SaveManager }    from '../Managers/SaveManager';
 import { InputManager }   from '../Managers/InputManager';
 import { CharacterManager } from '../Managers/CharacterManager';
+import { clearAllSceneDom } from '../utils/sceneCleanup';
 import { AtelierHUD, type TabKey } from './Ateliers/AtelierHUD';
 import { Tab_Welcome }    from './Ateliers/Tab_Welcome';
 import { Tab_Explore }    from './Ateliers/Tab_Explore';
@@ -71,6 +72,9 @@ export class AtelierScene extends Phaser.Scene {
   }
 
   create(): void {
+    // ★ 다른 씬의 DOM 잔여물 일괄 제거 (씬 종속성 보장)
+    clearAllSceneDom();
+
     const W = this.scale.width;
     const H = this.scale.height;
     this.W = W;
@@ -83,12 +87,13 @@ export class AtelierScene extends Phaser.Scene {
     this._buildBackground(W, H);
     this._buildHUD();
 
-    this._switchTab(this._pendingTab, true);
-
     if (!this._skipWelcome && this._fromScene === 'LobbyScene') {
+      // 최초 진입: 환영 팝업만 표시, 탭 콘텐츠 없음
       this._showWelcome();
     } else {
+      // 이후 진입: 바로 탭 표시
       this._hud.show();
+      this._switchTab(this._pendingTab, true);
     }
   }
 
@@ -96,7 +101,8 @@ export class AtelierScene extends Phaser.Scene {
     this._welcomeObj?.destroy();
     this._currentTabObj?.destroy();
     this._hud?.destroy();
-    // 씬 전환 시 미처 닫히지 않은 팝업 정리
+    // 씬 전환 시 잔여 DOM 정리
+    document.getElementById('atelier-welcome-overlay')?.remove();
     document.getElementById('char-profile-overlay')?.remove();
     document.getElementById('dialogue-hud')?.remove();
   }
@@ -116,12 +122,11 @@ export class AtelierScene extends Phaser.Scene {
   // ── HUD 빌드 ─────────────────────────────────────────────────
   private _buildHUD(): void {
     this._hud = new AtelierHUD({
-      onTab:      (key) => this._switchTab(key),
+      onTab:      (key) => this._onTabClick(key),
       onSettings: () => this.scene.start('SettingsScene', { from: 'AtelierScene' }),
       onLobby:    () => this._goLobby(),
     });
 
-    // arcUpdated 이벤트 반영
     this.events.on('arcUpdated', (newArc: number) => {
       this._hud.updateArc(newArc);
     }, this);
@@ -132,18 +137,29 @@ export class AtelierScene extends Phaser.Scene {
     this._welcomeObj = new Tab_Welcome(
       this, this.W, this.H,
       () => {
-        // 타이핑 완료 → HUD 표시
+        // 타이핑 완료 → HUD(버튼들) 표시, 탭 콘텐츠는 표시 안 함
         this._hud.show();
       },
       this._hud.contentEl,
     );
   }
 
+  // 탭 버튼 클릭 핸들러 — 환영 팝업이 있으면 먼저 페이드아웃
+  private _onTabClick(key: TabKey): void {
+    if (this._welcomeObj) {
+      const wo = this._welcomeObj;
+      this._welcomeObj = null;
+      wo.fadeOut(() => this._switchTab(key));
+    } else {
+      this._switchTab(key);
+    }
+  }
+
   // ════════════════════════════════════════════════════════════
   //  탭 전환
   // ════════════════════════════════════════════════════════════
   private _switchTab(key: TabKey, instant = false): void {
-    if (!instant && key === this._activeTab && !this._welcomeObj) return;
+    if (!instant && key === this._activeTab) return;
     if (this._tabSwitching) return;
 
     if (key === 'manage') {
@@ -154,14 +170,6 @@ export class AtelierScene extends Phaser.Scene {
     const build = () => {
       this._tabSwitching = false;
 
-      // 웰컴 팝업 제거
-      if (this._welcomeObj) {
-        const wo = this._welcomeObj;
-        this._welcomeObj = null;
-        wo.destroy();
-      }
-
-      // 이전 탭 제거
       if (this._currentTabObj) {
         this._currentTabObj.destroy();
         this._currentTabObj = null;
@@ -189,9 +197,10 @@ export class AtelierScene extends Phaser.Scene {
     const prev = this._currentTabObj;
     if (prev) {
       prev.hide();
-      this.time.delayedCall(120, build);
+      this.time.delayedCall(200, build);
     } else {
-      build();
+      // 이전 탭 없이 바로 빌드 (환영 팝업에서 첫 탭 선택 시)
+      this.time.delayedCall(50, build);
     }
   }
 
@@ -206,7 +215,12 @@ export class AtelierScene extends Phaser.Scene {
 
     const W = this.W, H = this.H;
 
-    this.time.delayedCall(260, () => {
+    // 이전 탭 페이드아웃 후 관리탭 빌드
+    if (this._currentTabObj) {
+      this._currentTabObj.hide();
+    }
+
+    this.time.delayedCall(220, () => {
       this._tabSwitching = false;
 
       if (this._currentTabObj) {

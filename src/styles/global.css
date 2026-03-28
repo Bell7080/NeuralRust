@@ -47,3 +47,22 @@ canvas {
 body.ingame {
   cursor: default;
 }
+
+/* ── 스크롤바 — 게임 테마 색감 ───────────────────────────────── */
+::-webkit-scrollbar {
+  width:  6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(8, 5, 3, 0.4);
+}
+::-webkit-scrollbar-thumb {
+  background:    rgba(70, 36, 12, 0.65);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 60, 20, 0.85);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
