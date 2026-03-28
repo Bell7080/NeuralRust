@@ -30,7 +30,12 @@ export class Tab_Explore {
     `;
 
     el.querySelector('#atelier-explore-start')!.addEventListener('click', () => {
-      this._scene.scene.start('PartyScene', { from: 'AtelierScene' });
+      const s = this._scene as Phaser.Scene & { _slideOutUIThen?: (cb: () => void) => void };
+      if (s._slideOutUIThen) {
+        s._slideOutUIThen(() => this._scene.scene.start('PartyScene', { from: 'AtelierScene' }));
+      } else {
+        this._scene.scene.start('PartyScene', { from: 'AtelierScene' });
+      }
     });
 
     contentEl.appendChild(el);

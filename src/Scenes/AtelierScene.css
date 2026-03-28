@@ -176,9 +176,10 @@
 
 /* ── 공통 탭 패널 ────────────────────────────────────────────── */
 .atelier-tab-panel {
-  position:   absolute;
-  inset:      0;
-  display:    flex;
+  position:       absolute;
+  inset:          0;
+  display:        flex;
+  pointer-events: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -188,7 +189,8 @@
   transition: opacity 0.18s ease;
 }
 .atelier-tab-panel.active {
-  opacity:    1;
+  opacity:        1;
+  pointer-events: auto;
 }
 
 /* 탭 패널 공통 박스 */
@@ -539,11 +541,14 @@
 
 .stub-tab-wrap {
   padding:        1.2em 1.4em;
+  width:          100%;
   height:         100%;
   overflow-y:     auto;
   display:        flex;
   flex-direction: column;
   gap:            0.8em;
+  align-self:     stretch;
+  box-sizing:     border-box;
 }
 .stub-tab-title {
   font-family:    var(--font-display);
