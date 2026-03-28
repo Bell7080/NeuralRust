@@ -9,7 +9,7 @@
 //    neural_rust_settings — 설정 데이터 (폰트 등)
 //    neural_rust_story    — 스토리 진행 데이터 (플래그, 로그, 로어)
 //
-//  TODO(Electron):
+//  DONE(Electron):
 //    localStorage → fs.readFileSync / fs.writeFileSync 교체
 //    _read() / _write() 두 함수만 수정하면 전체 반영됨
 // ================================================================
