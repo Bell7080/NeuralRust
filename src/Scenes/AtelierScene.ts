@@ -54,6 +54,7 @@ export class AtelierScene extends Phaser.Scene {
   private _currentTabObj:  TabInstance | null = null;
   private _welcomeObj:     Tab_Welcome | null = null;
   private _tabSwitching  = false;
+  private _pendingSwitch: TabKey | null = null;
 
   // ════════════════════════════════════════════════════════════
   //  생명주기
@@ -160,7 +161,11 @@ export class AtelierScene extends Phaser.Scene {
   // ════════════════════════════════════════════════════════════
   private _switchTab(key: TabKey, instant = false): void {
     if (!instant && key === this._activeTab) return;
-    if (this._tabSwitching) return;
+    if (this._tabSwitching) {
+      // 전환 중일 때는 요청을 보류하고 완료 후 실행
+      this._pendingSwitch = key;
+      return;
+    }
 
     if (key === 'manage') {
       this._enterManageFull();
@@ -179,7 +184,13 @@ export class AtelierScene extends Phaser.Scene {
       this._hud.setActiveTab(key);
 
       const Cls = TAB_MAP[key];
-      if (!Cls) return;
+      if (!Cls) {
+        // 보류 탭 처리
+        const pending = this._pendingSwitch;
+        this._pendingSwitch = null;
+        if (pending && pending !== key) this._switchTab(pending);
+        return;
+      }
 
       const tab = new (Cls as new (
         scene: Phaser.Scene, W: number, H: number,
@@ -189,6 +200,11 @@ export class AtelierScene extends Phaser.Scene {
       );
       this._currentTabObj = tab;
       tab.show();
+
+      // 전환 완료 후 보류된 탭이 있으면 처리
+      const pending = this._pendingSwitch;
+      this._pendingSwitch = null;
+      if (pending && pending !== key) this._switchTab(pending);
     };
 
     if (instant) { build(); return; }
@@ -209,7 +225,10 @@ export class AtelierScene extends Phaser.Scene {
     if (this._tabSwitching) return;
     this._tabSwitching = true;
 
-    if (!this._preManageTab) this._preManageTab = 'explore';
+    // 복귀용 탭: 진입 직전 활성 탭 기억
+    this._preManageTab = this._activeTab && this._activeTab !== 'manage'
+      ? this._activeTab
+      : 'explore';
 
     this._hud.setManageMode(true);
 
@@ -238,6 +257,11 @@ export class AtelierScene extends Phaser.Scene {
       );
       this._currentTabObj = tab;
       tab.show();
+
+      // 보류된 탭 처리
+      const pending = this._pendingSwitch;
+      this._pendingSwitch = null;
+      if (pending && pending !== 'manage') this._switchTab(pending);
     });
   }
 

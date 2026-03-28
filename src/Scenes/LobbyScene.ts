@@ -6,10 +6,11 @@
 //  의존: FontManager, SaveManager, AudioManager, GAME_VERSION
 // ================================================================
 
-import { FontManager }  from '../Managers/FontManager';
-import { SaveManager }  from '../Managers/SaveManager';
-import { AudioManager } from '../Managers/AudioManager';
-import { GAME_VERSION } from '../constants';
+import { FontManager }     from '../Managers/FontManager';
+import { SaveManager }     from '../Managers/SaveManager';
+import { AudioManager }    from '../Managers/AudioManager';
+import { GAME_VERSION }    from '../constants';
+import { clearAllSceneDom } from '../utils/sceneCleanup';
 
 export class LobbyScene extends Phaser.Scene {
   constructor() { super({ key: 'LobbyScene' }); }
@@ -21,6 +22,8 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   create(): void {
+    clearAllSceneDom();
+
     const W  = this.scale.width;
     const H  = this.scale.height;
     const cx = W / 2;

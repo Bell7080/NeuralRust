@@ -6,8 +6,9 @@
 //        전부 Phaser 캔버스 (슬롯머신 비주얼)
 // ================================================================
 
-import { FontManager }  from '../Managers/FontManager';
-import { InputManager } from '../Managers/InputManager';
+import { FontManager }     from '../Managers/FontManager';
+import { InputManager }    from '../Managers/InputManager';
+import { clearAllSceneDom } from '../utils/sceneCleanup';
 
 interface ExploreCard {
   type: 'combat';
@@ -74,6 +75,8 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   create(): void {
+    clearAllSceneDom();
+
     const W = this.scale.width;
     const H = this.scale.height;
     this.W = W; this.H = H;
