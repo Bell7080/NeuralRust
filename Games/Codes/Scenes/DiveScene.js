@@ -36,7 +36,7 @@
 //
 //  슬롯 유형: 'normal' | 'wave' | 'raid'
 //
-//  TODO:
+//  DONE:
 //    - 음식 시스템 (maxRound 연장)
 //    - 황금 코인 슬롯 보정 아이템
 //    - 증강 효과 BattleScene 실제 연동

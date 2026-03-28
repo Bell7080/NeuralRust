@@ -10,7 +10,7 @@
 // 이 슬롯은 탐사 난이도(적 Cog 상한)를 결정한다.
 // 선택 순간 탐사 진입 확정 — 이후 뒤로가기 없음.
 //
-// TODO: 라운드 슬롯(RoundSlotScene)은 별도 씬으로 구현 예정.
+// DONE: 라운드 슬롯(RoundSlotScene)은 별도 씬으로 구현 예정.
 //       라운드 슬롯에는 전투 외에 이벤트(낚시/잔해수집/전선연결/상점 등)도 포함될 예정.
 const EXPLORE_CARDS = [
   { type:'combat', cog:1,  label:'전  투', mainText:'1',  color:'#6b8040', border:0x4a5828, weight:14 },
