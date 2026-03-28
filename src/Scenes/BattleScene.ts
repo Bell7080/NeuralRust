@@ -2,44 +2,24 @@
 //  BattleScene.ts
 //  경로: src/Scenes/BattleScene.ts
 //
-//  역할: 전투 씬 스텁
-//        원본: 편성(setup) + 자동전투(battle) + 결산
-//        스텁: 기본 HUD + 결과 버튼
+//  역할: 전투 씬 최종 클래스
+//        init / create / shutdown + 적 생성 + 배경/HUD
+//
+//  상속: BattleSceneSetup → BattleSceneBattle → BattleScene
 // ================================================================
 
-import { FontManager }  from '../Managers/FontManager';
-import { InputManager } from '../Managers/InputManager';
-import { SaveManager }  from '../Managers/SaveManager';
+import { CharacterManager } from '../Managers/CharacterManager';
+import { FontManager }      from '../Managers/FontManager';
+import { InputManager }     from '../Managers/InputManager';
+import { SaveManager }      from '../Managers/SaveManager';
+import { ENEMY_DATA, getEnemyScaledStats } from '../Data/Data_Enemies';
+import { BattleSceneBattle }               from './BattleScene_Battle';
+import type { BattleInitData, EnemyInstance } from './BattleScene_Setup';
 
-interface BattleInitData {
-  cogMax?:      number;
-  battleParty?: string[];
-  round?:       number;
-  battleType?:  string;
-  maxRound?:    number;
-  deepCoin?:    number;
-  log?:         unknown[];
-  inventory?:   unknown;
-  submarine?:   unknown;
-  shopItems?:   unknown;
-}
-
-export class BattleScene extends Phaser.Scene {
+export class BattleScene extends BattleSceneBattle {
   constructor() { super({ key: 'BattleScene' }); }
 
-  private _cogMax      = 1;
-  private _battleParty: string[] = [];
-  private _round       = 1;
-  private _battleType  = 'normal';
-  private _maxRound    = 5;
-  private _deepCoin    = 0;
-  private _log:        unknown[] = [];
-  private _inventory:  unknown = null;
-  private _submarine:  unknown = null;
-  private _shopItems:  unknown = null;
-  private W = 0;
-  private H = 0;
-
+  // ────────────────────────────────────────────────────────────
   init(data: BattleInitData): void {
     this._cogMax      = data.cogMax      ?? 1;
     this._battleParty = data.battleParty ?? [];
@@ -55,7 +35,6 @@ export class BattleScene extends Phaser.Scene {
 
   create(): void {
     const W = this.scale.width, H = this.scale.height;
-    this.W = W; this.H = H;
     InputManager.reinit(this);
 
     SaveManager.saveCurrentScene('DiveScene', {
@@ -70,11 +49,41 @@ export class BattleScene extends Phaser.Scene {
       shopItems:   this._shopItems,
     });
 
+    // 상태 초기화
+    this._battleActive = false;
+    this._attackTimers = [];
+    this._allyObjs     = [];
+    this._enemyObjs    = [];
+    this._sceneHits    = [];
+
+    this._allChars   = CharacterManager.loadAll() ?? [];
+    this._partyChars = this._battleParty
+      .map(id => this._allChars.find(c => c.id === id))
+      .filter((c): c is NonNullable<typeof c> =>
+        Boolean(c) && c!.status === 'alive'
+      );
+    this._combatParty = [];
+    this._enemies     = this._spawnEnemies(this._cogMax);
+
     this._buildBackground(W, H);
     this._buildHUD(W, H);
-    this._buildStub(W, H);
+    this._buildEnemyArea(W, H);
+    this._buildSetupUI();
+    this._buildLogArea(W, H);
   }
 
+  shutdown(): void {
+    this._battleActive = false;
+    this._attackTimers.forEach(t => { try { t.remove(); } catch (_) {} });
+    this._attackTimers = [];
+    this._sceneHits.forEach(h => { try { h.destroy(); } catch (_) {} });
+    this._sceneHits = [];
+    if (this._setupEl?.parentElement) this._setupEl.remove();
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  배경 / HUD
+  // ════════════════════════════════════════════════════════════
   private _buildBackground(W: number, H: number): void {
     this.add.rectangle(0, 0, W, H, 0x050407).setOrigin(0);
     const grid = this.add.graphics();
@@ -89,106 +98,117 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private _buildHUD(W: number, H: number): void {
-    this.add.text(W * 0.05, H * 0.04, `ROUND  ${this._round} / ${this._maxRound}`, {
-      fontSize: FontManager.adjustedSize(14, this.scale),
-      color: '#5a3a18', fontFamily: FontManager.MONO,
+    const TYPE_LABELS: Record<string, string> = {
+      normal: '일  반  전', wave: '웨  이  브', raid: '레  이  드',
+    };
+    const TYPE_COLORS: Record<string, string> = {
+      normal: '#8a9060', wave: '#406090', raid: '#904030',
+    };
+
+    this.add.text(W * 0.05, H * 0.03, `ROUND  ${this._round} / ${this._maxRound}`, {
+      fontSize: this._fs(14), color: '#5a3a18', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    const typeLabel: Record<string, string> = { normal: '일반', wave: '웨이브', raid: '레이드' };
-    this.add.text(W * 0.5, H * 0.04,
-      `COG ${this._cogMax}  ·  ${typeLabel[this._battleType] || this._battleType}`, {
-      fontSize: FontManager.adjustedSize(14, this.scale),
-      color: '#5a3a18', fontFamily: FontManager.MONO,
-    }).setOrigin(0.5, 0.5);
+    this.add.text(W * 0.5, H * 0.03,
+      TYPE_LABELS[this._battleType] ?? '일  반  전', {
+        fontSize: this._fs(13),
+        color: TYPE_COLORS[this._battleType] ?? '#8a9060',
+        fontFamily: FontManager.MONO,
+      }).setOrigin(0.5, 0.5);
 
-    this.add.text(W * 0.95, H * 0.04, `심해화폐 ${this._deepCoin}`, {
-      fontSize: FontManager.adjustedSize(13, this.scale),
-      color: '#5a3a18', fontFamily: FontManager.MONO,
+    const cogC = CharacterManager.getCogColor(this._cogMax);
+    this.add.text(W * 0.95, H * 0.03, `COG  ${this._cogMax}`, {
+      fontSize: this._fs(14), color: cogC.css, fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5);
+
+    const lg = this.add.graphics();
+    lg.lineStyle(1, 0x1e1008, 0.8);
+    lg.lineBetween(0, H * 0.06, W, H * 0.06);
   }
 
-  private _buildStub(W: number, H: number): void {
-    // 중앙 스텁 패널
-    const cx = W / 2, cy = H / 2;
-    const pw = W * 0.42, ph = H * 0.50;
-
-    const panel = this.add.graphics();
-    panel.fillStyle(0x0e0905, 0.96);
-    panel.lineStyle(2, 0x3a2010, 0.9);
-    panel.strokeRect(cx - pw / 2, cy - ph / 2, pw, ph);
-    panel.fillRect  (cx - pw / 2, cy - ph / 2, pw, ph);
-
-    this.add.text(cx, cy - ph / 2 + parseInt(FontManager.adjustedSize(24, this.scale)), '[ 전  투 ]', {
-      fontSize: FontManager.adjustedSize(12, this.scale),
-      color: '#7a5028', fontFamily: FontManager.MONO, letterSpacing: 3,
-    }).setOrigin(0.5);
-
-    this.add.text(cx, cy - ph * 0.12, '— 개발 중 —', {
-      fontSize: FontManager.adjustedSize(18, this.scale),
-      color: '#3a2010', fontFamily: FontManager.MONO,
-    }).setOrigin(0.5);
-
-    this.add.text(cx, cy + ph * 0.05,
-      `파티 ${this._battleParty.length}명  vs  Cog ${this._cogMax}`, {
-      fontSize: FontManager.adjustedSize(14, this.scale),
-      color: '#5a3a18', fontFamily: FontManager.MONO,
-    }).setOrigin(0.5);
-
-    // 승리 / 패배 버튼
-    const bw = W * 0.13, bh = H * 0.06;
-    const winX  = cx - bw * 0.75;
-    const loseX = cx + bw * 0.75;
-
-    this._makeBtn(winX,  cy + ph * 0.30, bw, bh, '승  리', '#6b8040', () => {
-      this._deepCoin += this._cogMax * 5;
-      this._goBack(this._round + 1);
-    });
-    this._makeBtn(loseX, cy + ph * 0.30, bw, bh, '패  배', '#883020', () => {
-      this._goBack(this._maxRound + 1);
-    });
+  // ════════════════════════════════════════════════════════════
+  //  적 생성
+  // ════════════════════════════════════════════════════════════
+  private _spawnEnemies(cogMax: number): EnemyInstance[] {
+    if (this._battleType === 'raid') return this._spawnRaid(cogMax);
+    if (this._battleType === 'wave') return this._spawnWave(cogMax);
+    return this._spawnNormal(cogMax);
   }
 
-  private _makeBtn(
-    bx: number, by: number, bw: number, bh: number,
-    label: string, color: string, onClick: () => void
-  ): void {
-    const bg = this.add.graphics();
-    bg.fillStyle(0x0e0905, 1);
-    bg.lineStyle(1, 0x2a1a0a, 0.9);
-    bg.strokeRect(bx - bw / 2, by - bh / 2, bw, bh);
-    bg.fillRect  (bx - bw / 2, by - bh / 2, bw, bh);
-
-    const txt = this.add.text(bx, by, label, {
-      fontSize:   FontManager.adjustedSize(17, this.scale),
-      color,
-      fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5);
-
-    const hit = this.add.rectangle(bx, by, bw, bh, 0, 0)
-      .setInteractive({ useHandCursor: true }).setDepth(5);
-    hit.on('pointerover',  () => txt.setAlpha(0.7));
-    hit.on('pointerout',   () => txt.setAlpha(1));
-    hit.on('pointerdown',  onClick);
+  private _spawnNormal(cogMax: number): EnemyInstance[] {
+    const pool = ENEMY_DATA.filter(e =>
+      e.cogMin <= cogMax && (e.cogMax === null || e.cogMax >= cogMax)
+    );
+    if (!pool.length) return [];
+    const totalW = pool.reduce((s, e) => s + e.spawnWeight, 0);
+    let r = Math.random() * totalW, picked = pool[0];
+    for (const e of pool) { r -= e.spawnWeight; if (r <= 0) { picked = e; break; } }
+    const [minC, maxC] = picked.spawnCount;
+    const count  = minC + Math.floor(Math.random() * (maxC - minC + 1));
+    const scaled = getEnemyScaledStats(picked.id, cogMax);
+    if (!scaled) return [];
+    return this._buildEnemyArray(picked.id, picked.name, picked.behavior, scaled, count);
   }
 
-  private _goBack(nextRound: number): void {
-    const fl = this.add.rectangle(0, 0, this.W, this.H, 0x050407, 0)
-      .setOrigin(0).setDepth(999);
-    this.tweens.add({
-      targets: fl, alpha: 1, duration: 350, ease: 'Sine.easeIn',
-      onComplete: () => {
-        this.scene.start('DiveScene', {
-          cogMax:      this._cogMax,
-          round:       nextRound,
-          maxRound:    this._maxRound,
-          deepCoin:    this._deepCoin,
-          log:         this._log,
-          battleParty: this._battleParty,
-          inventory:   this._inventory,
-          submarine:   this._submarine,
-          shopItems:   this._shopItems,
-        });
-      },
-    });
+  private _spawnWave(cogMax: number): EnemyInstance[] {
+    const pool = ENEMY_DATA.filter(e =>
+      e.cogMin <= cogMax && (e.cogMax === null || e.cogMax >= cogMax)
+    );
+    if (!pool.length) return this._spawnNormal(cogMax);
+    const picked = pool.find(e => e.id === 'drowned')
+      ?? pool.reduce((best, e) =>
+          e.spawnCount[1] > best.spawnCount[1] ? e : best, pool[0]);
+    const [minC, maxC] = picked.spawnCount;
+    const count  = (minC + 1) + Math.floor(Math.random() * (maxC - minC + 3));
+    const scaled = getEnemyScaledStats(picked.id, cogMax);
+    if (!scaled) return [];
+    const enemies = this._buildEnemyArray(
+      picked.id, picked.name, picked.behavior, scaled, count
+    );
+    if (picked.waveBonus) {
+      const { attackBonus, hpBonus } = picked.waveBonus;
+      const bonus = enemies.length - 1;
+      enemies.forEach(e => {
+        e.attack = Math.round(e.attack * (1 + attackBonus * bonus));
+        e._hp    = Math.round(e._hp    * (1 + hpBonus    * bonus));
+        e._maxHp = e._hp;
+      });
+    }
+    return enemies;
+  }
+
+  private _spawnRaid(cogMax: number): EnemyInstance[] {
+    const pool = ENEMY_DATA.filter(e =>
+      e.cogMin <= cogMax && (e.cogMax === null || e.cogMax >= cogMax)
+    );
+    if (!pool.length) return [];
+    const picked = pool.reduce((best, e) =>
+      e.baseStats.hp > best.baseStats.hp ? e : best, pool[0]);
+    const scaled = getEnemyScaledStats(picked.id, cogMax);
+    if (!scaled) return [];
+    const M = 2.5;
+    return [{
+      _uid: `e_raid_${Date.now()}`, id: picked.id,
+      name: `[레이드] ${picked.name}`, behavior: picked.behavior,
+      _hp:     Math.round(scaled.hp      * M),
+      _maxHp:  Math.round(scaled.hp      * M),
+      attack:  Math.round(scaled.attack  * M),
+      agility: Math.round(scaled.agility * 1.2),
+      luck:    Math.round(scaled.luck    * 1.5),
+      _dead: false, _attackCount: 0,
+    }];
+  }
+
+  private _buildEnemyArray(
+    id: string, name: string, behavior: string,
+    scaled: { hp: number; attack: number; agility: number; luck: number },
+    count: number
+  ): EnemyInstance[] {
+    return Array.from({ length: count }, (_, i) => ({
+      _uid: `e_${i}_${Date.now()}`, id, name, behavior,
+      _hp: scaled.hp, _maxHp: scaled.hp,
+      attack: scaled.attack, agility: scaled.agility, luck: scaled.luck,
+      _dead: false, _attackCount: 0,
+    }));
   }
 }

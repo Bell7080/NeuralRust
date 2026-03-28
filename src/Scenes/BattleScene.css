@@ -162,3 +162,279 @@
   from { opacity: 0; transform: translateX(8px); }
   to   { opacity: 1; transform: translateX(0); }
 }
+
+/* ================================================================
+   Phase 1 — 편성 오버레이
+   ================================================================ */
+
+/* ── 전체 오버레이 (Phaser canvas 위) ──────────────────────────── */
+#battle-setup {
+  position:        absolute;
+  inset:           0;
+  display:         flex;
+  pointer-events:  none;
+  transition:      transform 0.32s cubic-bezier(0.55, 0, 1, 0.45),
+                   opacity   0.32s ease;
+  z-index:         10;
+}
+
+#battle-setup.slide-out {
+  transform: translateX(-28%);
+  opacity:   0;
+  pointer-events: none;
+}
+
+/* ── 좌측 패널 ─────────────────────────────────────────────────── */
+.battle-setup__panel {
+  width:            24%;
+  height:           100%;
+  background:       rgba(8, 6, 8, 0.94);
+  border-right:     1px solid rgba(42, 26, 10, 0.8);
+  display:          flex;
+  flex-direction:   column;
+  padding:          0 0.5%;
+  overflow-y:       auto;
+  pointer-events:   auto;
+}
+
+.battle-setup__title {
+  font-family:    var(--font-display, monospace);
+  font-size:      clamp(10px, 1.0vw, 15px);
+  color:          #4a2a10;
+  text-align:     center;
+  padding:        2.5vh 0 0.5vh;
+  letter-spacing: 0.1em;
+}
+
+.battle-setup__sub {
+  font-family:  var(--font-mono, monospace);
+  font-size:    clamp(8px, 0.7vw, 11px);
+  color:        #2a1508;
+  text-align:   center;
+  margin-bottom: 1.2vh;
+}
+
+/* ── 캐릭터 그리드 (3열) ─────────────────────────────────────── */
+.battle-setup__grid {
+  display:               grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:                   clamp(2px, 0.4vh, 5px);
+  padding:               0 2%;
+}
+
+.battle-setup__card {
+  aspect-ratio:   0.85;
+  background:     rgba(12, 9, 6, 0.95);
+  border:         1px solid var(--card-cog-color, rgba(80,60,30,0.4));
+  border-radius:  1px;
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  justify-content:space-between;
+  padding:        4% 3% 3%;
+  cursor:         pointer;
+  position:       relative;
+  transition:     background 0.1s, border-color 0.1s;
+  overflow:       hidden;
+}
+
+.battle-setup__card:hover {
+  background:    rgba(26, 16, 8, 1);
+  border-color:  rgba(160, 80, 24, 0.8);
+}
+
+.battle-setup__card.selected {
+  background:    rgba(26, 42, 26, 1);
+  border-color:  rgba(96, 192, 96, 0.9);
+  border-width:  2px;
+}
+
+.battle-setup__card-cog {
+  position:     absolute;
+  top:          4%;
+  left:         5%;
+  font-family:  var(--font-mono, monospace);
+  font-size:    clamp(6px, 0.6vw, 9px);
+  font-weight:  700;
+  /* color set inline via style */
+}
+
+.battle-setup__card-mark {
+  position:   absolute;
+  top:        50%;
+  left:       50%;
+  transform:  translate(-50%, -50%);
+  font-size:  clamp(12px, 1.2vw, 18px);
+  color:      #60c060;
+  opacity:    0;
+  pointer-events: none;
+  transition: opacity 0.1s;
+}
+
+.battle-setup__card.selected .battle-setup__card-mark {
+  opacity: 1;
+}
+
+.battle-setup__card-sprite {
+  width:       72%;
+  aspect-ratio:1;
+  object-fit:  contain;
+  opacity:     0.85;
+}
+
+.battle-setup__card-name {
+  font-family:  var(--font-display, monospace);
+  font-size:    clamp(6px, 0.65vw, 10px);
+  color:        #c8bfb0;
+  text-align:   center;
+  word-break:   keep-all;
+  line-height:  1.2;
+}
+
+.battle-setup__card-hp {
+  width:         82%;
+  height:        clamp(2px, 0.5vh, 4px);
+  background:    rgba(26, 16, 8, 0.8);
+  border-radius: 1px;
+  overflow:      hidden;
+}
+
+.battle-setup__card-hp-fill {
+  height:        100%;
+  border-radius: 1px;
+  transition:    width 0.1s;
+}
+
+/* ── 우측 영역 (진행 버튼 + 배치 슬롯) ─────────────────────────── */
+.battle-setup__right {
+  flex:            1;
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         6vh 2% 2%;
+  pointer-events:  none;
+}
+
+/* ── 진행 버튼 ─────────────────────────────────────────────────── */
+.battle-setup__go-wrap {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            0.5vh;
+  pointer-events: auto;
+}
+
+.battle-setup__go-btn {
+  font-family:    var(--font-display, monospace);
+  font-size:      clamp(16px, 2vw, 30px);
+  color:          #2a1a0a;
+  background:     rgba(10, 8, 7, 0.8);
+  border:         1px solid rgba(30, 16, 8, 0.4);
+  padding:        1.2vh 3.5vw;
+  cursor:         not-allowed;
+  letter-spacing: 0.2em;
+  transition:     background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.battle-setup__go-btn.active {
+  color:       #c8a070;
+  background:  rgba(30, 16, 8, 1);
+  border:      2px solid rgba(160, 80, 24, 0.9);
+  cursor:      pointer;
+}
+
+.battle-setup__go-btn.active:hover {
+  background:  rgba(42, 26, 8, 1);
+  border-color:rgba(200, 160, 112, 1);
+  color:       #e8d090;
+}
+
+.battle-setup__go-sub {
+  font-family:  var(--font-mono, monospace);
+  font-size:    clamp(8px, 0.75vw, 11px);
+  color:        #3a2010;
+  text-align:   center;
+}
+
+.battle-setup__go-sub.has-party {
+  color: #6a4020;
+}
+
+/* ── 배치 슬롯 영역 ─────────────────────────────────────────────── */
+.battle-setup__slots-wrap {
+  width:          100%;
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            0.6vh;
+  pointer-events: auto;
+}
+
+.battle-setup__slots-label {
+  font-family:    var(--font-mono, monospace);
+  font-size:      clamp(8px, 0.7vw, 10px);
+  color:          #2a1508;
+  letter-spacing: 0.1em;
+  border-top:     1px solid rgba(30, 16, 8, 0.5);
+  padding-top:    0.6vh;
+  width:          90%;
+  text-align:     center;
+}
+
+.battle-setup__slots {
+  display:    flex;
+  gap:        clamp(3px, 0.5vw, 8px);
+  flex-wrap:  wrap;
+  justify-content: center;
+}
+
+.battle-setup__slot {
+  width:          clamp(40px, 5.5vw, 80px);
+  aspect-ratio:   1;
+  background:     rgba(8, 6, 7, 0.7);
+  border:         1px solid rgba(30, 16, 8, 0.35);
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  justify-content:center;
+  cursor:         default;
+  position:       relative;
+  transition:     border-color 0.1s;
+}
+
+.battle-setup__slot.filled {
+  cursor:       pointer;
+  border-width: 2px;
+  /* border-color set inline via cog color */
+}
+
+.battle-setup__slot-num {
+  position:    absolute;
+  top:         4%;
+  left:        6%;
+  font-family: var(--font-mono, monospace);
+  font-size:   clamp(6px, 0.55vw, 9px);
+  color:       #1e1008;
+}
+
+.battle-setup__slot-plus {
+  font-size:  clamp(14px, 1.4vw, 22px);
+  color:      #1e1008;
+  font-family:var(--font-display, monospace);
+}
+
+.battle-setup__slot-name {
+  font-family:  var(--font-display, monospace);
+  font-size:    clamp(6px, 0.55vw, 8px);
+  color:        #c8bfb0;
+  text-align:   center;
+  word-break:   keep-all;
+  padding:      0 4%;
+}
+
+.battle-setup__slot-sprite {
+  width:        65%;
+  aspect-ratio: 1;
+  object-fit:   contain;
+}
