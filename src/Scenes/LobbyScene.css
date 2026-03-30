@@ -45,7 +45,7 @@
 
 .lobby-title {
   font-family:    var(--font-display, 'NeoDunggeunmoPro', monospace);
-  font-size:      clamp(36px, 6vw, 96px);
+  font-size:      clamp(47px, 7.8vw, 125px);
   letter-spacing: 0.25em;
   color:          var(--color-rust, #b05030);
   text-shadow:
@@ -56,7 +56,7 @@
 
 .lobby-title-sub {
   font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:      clamp(11px, 1.2vw, 18px);
+  font-size:      clamp(14px, 1.56vw, 23px);
   letter-spacing: 0.35em;
   color:          rgba(200, 200, 176, 0.55);
   margin-top:     0.3em;
@@ -82,10 +82,10 @@
 }
 
 .lobby-menu .nr-btn {
-  font-size:      clamp(14px, 1.6vw, 26px);
+  font-size:      clamp(18px, 2.08vw, 34px);
   letter-spacing: 0.15em;
   padding:        0.5em 1.4em;
-  min-width:      240px;
+  min-width: 312px;
 }
 
 /* 비활성화된 "이어 하기" 버튼 */
@@ -108,7 +108,7 @@
 .lobby-footer__left,
 .lobby-footer__right {
   font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:      clamp(9px, 0.85vw, 13px);
+  font-size:      clamp(12px, 1.1vw, 17px);
   letter-spacing: 0.12em;
   color:          rgba(200, 200, 176, 0.4);
 }
