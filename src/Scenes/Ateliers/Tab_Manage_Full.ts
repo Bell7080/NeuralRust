@@ -8,7 +8,9 @@ import { CharacterManager, getCogColor } from '../../Managers/CharacterManager';
 import { AbilityIndex } from '../../Data/AbilityIndex';
 import { SaveManager }  from '../../Managers/SaveManager';
 import { CharProfile }  from './CharProfile';
+import { getStatTooltipDynamic, getJobTooltip } from '../../Data/Data_Tooltips';
 import type { Character } from '../../types/index';
+import type { StatKey } from '../../types';
 
 // AtelierScene 호환용 null 필드 선언
 export class Tab_Manage_Full {
@@ -233,7 +235,7 @@ export class Tab_Manage_Full {
           <div class="mng-detail-sprite" id="mng-detail-spr"></div>
           <div class="mng-detail-basic">
             <div class="mng-detail-name">${char.name}</div>
-            <div class="mng-detail-job" style="color:${jobCol}">${char.jobLabel}</div>
+            <div class="mng-detail-job" style="color:${jobCol}" data-job="${char.job}">${char.jobLabel}</div>
             <div class="mng-detail-cog" style="color:${cogC.css}">Cog ${char.cog}</div>
             <div class="mng-detail-hprow">
               <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(char.maxHp>0?char.currentHp/char.maxHp*100:0)}%;background:${char.currentHp/char.maxHp>0.6?'#306030':char.currentHp/char.maxHp>0.3?'#806020':'#803020'}"></div></div>
@@ -246,9 +248,14 @@ export class Tab_Manage_Full {
           ${Object.entries(char.stats).map(([k,v]) => {
             const effV = (eff as unknown as Record<string,number>)[k] ?? v;
             const bonus = effV - v;
-            return `<div class="mng-stat-row">
+            const bonusHtml = bonus > 0
+              ? `<span class="mng-stat-bonus mng-stat-bonus--up">▲+${bonus}</span>`
+              : bonus < 0
+              ? `<span class="mng-stat-bonus mng-stat-bonus--dn">▼${bonus}</span>`
+              : '';
+            return `<div class="mng-stat-row" data-stat-key="${k}" data-stat-eff="${effV}">
               <span class="mng-stat-key">${SL[k]??k}</span>
-              <span class="mng-stat-val" style="color:${SC[k]??'#c8bfb0'}">${v}${bonus>0?`<span class="mng-stat-bonus">+${bonus}</span>`:''}${char.pendingStats>0&&['hp','health','attack','agility','luck'].includes(k)?`<button class="mng-spend-btn" data-key="${k}">+</button>`:''}
+              <span class="mng-stat-val" style="color:${SC[k]??'#c8bfb0'}">${v}${bonusHtml}${char.pendingStats>0&&['hp','health','attack','agility','luck'].includes(k)?`<button class="mng-spend-btn" data-key="${k}">+</button>`:''}
               </span>
             </div>`;
           }).join('')}
@@ -260,7 +267,7 @@ export class Tab_Manage_Full {
             const id = char[type as keyof typeof char] as string;
             const nm = AbilityIndex.getName(type, id) || id;
             const ds = AbilityIndex.getDesc(type, id) || '';
-            return `<div class="mng-ab-row">
+            return `<div class="mng-ab-row" data-ab-type="${type}" data-ab-id="${id}">
               <span class="mng-ab-type">${AL[type]}</span>
               <span class="mng-ab-name">${nm}</span>
               ${ds ? `<span class="mng-ab-desc">${ds}</span>` : ''}
@@ -288,6 +295,9 @@ export class Tab_Manage_Full {
       }
     }
 
+    // 툴팁 바인딩
+    this._bindTooltips(char, eff as unknown as Record<string,number>);
+
     // 스탯 지출 버튼
     this._centerEl.querySelectorAll<HTMLButtonElement>('.mng-spend-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -307,6 +317,79 @@ export class Tab_Manage_Full {
         this._renderCenter(target);
         this._renderRight(target);
       });
+    });
+  }
+
+  // ── 툴팁 ────────────────────────────────────────────────────────
+  private _tip: HTMLElement | null = null;
+
+  private _showTip(x: number, y: number, text: string): void {
+    if (!this._tip) {
+      const el = document.createElement('div');
+      el.className = 'mng-tooltip';
+      document.getElementById('game-container')?.appendChild(el) ?? document.body.appendChild(el);
+      this._tip = el;
+    }
+    this._tip.innerHTML = text.replace(/\n/g, '<br>');
+    this._tip.style.display = 'block';
+    this._moveTip(x, y);
+  }
+
+  private _moveTip(x: number, y: number): void {
+    if (!this._tip) return;
+    const W = this._tip.offsetWidth || 160;
+    const H = this._tip.offsetHeight || 60;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const lx = x + 12 + W > vw ? x - W - 8 : x + 12;
+    const ly = y + 8 + H > vh ? y - H - 8 : y + 8;
+    this._tip.style.left = `${lx}px`;
+    this._tip.style.top  = `${ly}px`;
+  }
+
+  private _hideTip(): void {
+    if (this._tip) this._tip.style.display = 'none';
+  }
+
+  private _bindTooltips(char: Character, eff: Record<string,number>): void {
+    // 직업 툴팁
+    const jobEl = this._centerEl.querySelector<HTMLElement>('[data-job]');
+    if (jobEl) {
+      jobEl.style.cursor = 'help';
+      jobEl.addEventListener('mouseenter', e => {
+        const tip = getJobTooltip(char.job);
+        if (tip) this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, tip);
+      });
+      jobEl.addEventListener('mousemove', e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
+      jobEl.addEventListener('mouseleave', () => this._hideTip());
+    }
+
+    // 스탯 행 툴팁
+    this._centerEl.querySelectorAll<HTMLElement>('.mng-stat-row[data-stat-key]').forEach(row => {
+      const key = row.dataset.statKey as StatKey;
+      const effV = Number(row.dataset.statEff ?? 0);
+      row.style.cursor = 'help';
+      row.addEventListener('mouseenter', e => {
+        const tip = getStatTooltipDynamic(key, effV);
+        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, tip);
+      });
+      row.addEventListener('mousemove', e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
+      row.addEventListener('mouseleave', () => this._hideTip());
+    });
+
+    // 능력 행 툴팁
+    this._centerEl.querySelectorAll<HTMLElement>('.mng-ab-row[data-ab-id]').forEach(row => {
+      const type = row.dataset.abType as 'passive'|'action'|'enhanced'|'finale';
+      const id   = row.dataset.abId!;
+      const desc = AbilityIndex.getDesc(type, id);
+      if (!desc) return;
+      row.style.cursor = 'help';
+      row.addEventListener('mouseenter', e => {
+        const nm = AbilityIndex.getName(type, id) || id;
+        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, `${nm}\n${desc}`);
+      });
+      row.addEventListener('mousemove', e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
+      row.addEventListener('mouseleave', () => this._hideTip());
     });
   }
 
@@ -394,6 +477,8 @@ export class Tab_Manage_Full {
   destroy() {
     this._timers.forEach(t => { try { t.remove(); } catch(_) {} });
     this._timers = [];
+    this._tip?.remove();
+    this._tip = null;
     this._el.remove();
   }
 }

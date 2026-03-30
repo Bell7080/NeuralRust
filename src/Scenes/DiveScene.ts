@@ -20,6 +20,34 @@ import {
   type LogEntry, type SubmarineData,
 } from './Dives/DivePanels';
 
+// ── 슬롯 카드 정의 ───────────────────────────────────────────────
+const DIVE_SLOT_STATE_KEY = 'nr_dive_slot_state';
+
+interface SlotCard {
+  type:      'normal' | 'wave' | 'raid';
+  label:     string;
+  desc:      string;
+  color:     string;
+  borderHex: number;
+  weight:    number;
+}
+
+const DIVE_SLOT_CARDS: SlotCard[] = [
+  { type: 'normal', label: '일  반  전', desc: '무작위 이형이 출현한다',               color: '#8a9060', borderHex: 0x505828, weight: 5 },
+  { type: 'wave',   label: '웨  이  브', desc: '다수의 이형이 떼를 지어 몰려온다',    color: '#406090', borderHex: 0x284868, weight: 3 },
+  { type: 'raid',   label: '레  이  드', desc: '강대한 이형 하나가 단독으로 나타난다', color: '#904030', borderHex: 0x682818, weight: 2 },
+];
+
+interface SlotObj {
+  frame:      Phaser.GameObjects.Graphics;
+  emptyBg:    Phaser.GameObjects.Graphics;
+  stripCt:    Phaser.GameObjects.Container;
+  cx: number; cy: number; cw: number; ch: number;
+  stopped:    boolean;
+  targetCard: SlotCard | null;
+  hitArea:    Phaser.GameObjects.Rectangle;
+}
+
 // ── 초기화 데이터 ───────────────────────────────────────────────
 interface DiveInitData {
   cogMax?:      number;
@@ -65,6 +93,26 @@ export class DiveScene extends Phaser.Scene {
   private _sceneHits: Phaser.GameObjects.GameObject[] = [];
   private _hudTexts:  Phaser.GameObjects.Text[]       = [];
 
+  // ── 슬롯 머신 상태 ────────────────────────────────────────────
+  private _phase:     'idle' | 'spinning' | 'stopped' | 'chosen' = 'idle';
+  private _slots:     SlotObj[]         = [];
+  private _results:   (SlotCard|null)[] = [null, null, null];
+  private _chosen     = -1;
+  private _canChoose  = false;
+  private _spinTimer: Phaser.Time.TimerEvent | null = null;
+  private _hintText!: Phaser.GameObjects.Text;
+  private _leverX     = 0;
+  private _leverCY    = 0;
+  private _leverW     = 0;
+  private _leverH     = 0;
+  private _leverKnobY = 0;
+  private _leverKnob!:     Phaser.GameObjects.Graphics;
+  private _leverHit!:      Phaser.GameObjects.Rectangle;
+  private _leverLabelTxt!: Phaser.GameObjects.Text;
+  private _rerollTxt!:     Phaser.GameObjects.Text;
+  private _drawLever!:     (state: 'idle'|'hover'|'active'|'pulling'|'disabled') => void;
+  private _deepCoinTxt:    Phaser.GameObjects.Text | null = null;
+
   // ── CSS DOM ───────────────────────────────────────────────────
   private _rootEl!:   HTMLElement;
   private _dimEl!:    HTMLElement;
@@ -100,10 +148,17 @@ export class DiveScene extends Phaser.Scene {
       ? data.shopItems
       : SHOP_DEFAULTS.map(i => ({ ...i }));
 
-    this._sceneHits = [];
-    this._hudTexts  = [];
-    this._tabBtns   = new Map();
-    this._activeTab = null;
+    this._sceneHits  = [];
+    this._hudTexts   = [];
+    this._tabBtns    = new Map();
+    this._activeTab  = null;
+    this._phase      = 'idle';
+    this._slots      = [];
+    this._results    = [null, null, null];
+    this._chosen     = -1;
+    this._canChoose  = false;
+    this._spinTimer  = null;
+    this._deepCoinTxt = null;
   }
 
   create(): void {
@@ -179,57 +234,432 @@ export class DiveScene extends Phaser.Scene {
   }
 
   // ================================================================
-  //  Phaser: 배틀 슬롯 3개
+  //  Phaser: 슬롯 머신 영역
   // ================================================================
   private _buildSlots(W: number, H: number): void {
-    const types: Array<['normal' | 'wave' | 'raid', string, number]> = [
-      ['normal', '일반 전투', 0x6a4820],
-      ['wave',   '웨이브',   0x6a6020],
-      ['raid',   '레이드',   0x8a2020],
-    ];
-    const shuffled = [...types].sort(() => Math.random() - 0.5);
-    const tabColW  = W * 0.095;
-    const slotW    = W * 0.20;
-    const slotH    = H * 0.55;
-    const gap      = W * 0.04;
-    const usableW  = W - tabColW;
-    const totalW   = slotW * 3 + gap * 2;
-    const startX   = tabColW + (usableW - totalW) / 2;
-    const cy       = H * 0.54;
+    const fs     = (n: number) => FontManager.adjustedSize(n, this.scale);
+    const tabW   = W * 0.10;
+    const topH   = H * 0.13;
+    const areaX  = tabW;
+    const areaY  = topH;
+    const areaW  = W - tabW;
+    const areaH  = H - topH;
 
-    shuffled.forEach(([battleType, label, color], i) => {
-      const cx = startX + i * (slotW + gap) + slotW / 2;
-      const bg = this.add.graphics().setDepth(2);
-      const draw = (hover: boolean) => {
-        bg.clear();
-        bg.fillStyle(hover ? 0x1a1008 : 0x0e0905, 0.97);
-        bg.lineStyle(hover ? 2 : 1, color, hover ? 0.85 : 0.5);
-        bg.strokeRect(cx - slotW / 2, cy - slotH / 2, slotW, slotH);
-        bg.fillRect  (cx - slotW / 2, cy - slotH / 2, slotW, slotH);
-      };
-      draw(false);
+    // 라운드 헤더
+    this.add.text(areaX + areaW * 0.44, areaY + areaH * 0.04,
+      `ROUND  ${this._round}  —  SELECT ENCOUNTER`, {
+        fontSize: fs(10), color: '#1e1008', fontFamily: FontManager.MONO,
+      }).setOrigin(0.5).setDepth(2);
 
-      const hexCol = `#${color.toString(16).padStart(6, '0')}`;
-      this.add.text(cx, cy - slotH * 0.32, label, {
-        fontSize: FontManager.adjustedSize(13, this.scale),
-        color: hexCol, fontFamily: FontManager.MONO,
-      }).setOrigin(0.5).setDepth(3);
-      this.add.text(cx, cy, `COG ${this._cogMax}`, {
-        fontSize: FontManager.adjustedSize(30, this.scale),
-        color: hexCol, fontFamily: FontManager.TITLE,
-      }).setOrigin(0.5).setDepth(3);
-      this.add.text(cx, cy + slotH * 0.28, '클릭하여 진입', {
-        fontSize: FontManager.adjustedSize(10, this.scale),
-        color: '#3a2010', fontFamily: FontManager.MONO,
-      }).setOrigin(0.5).setDepth(3);
+    // 힌트 텍스트
+    this._hintText = this.add.text(areaX + areaW * 0.44, areaY + areaH * 0.10,
+      '슬롯을 돌려 라운드를 결정하십시오', {
+        fontSize: fs(12), color: '#2a1508', fontFamily: FontManager.MONO,
+      }).setOrigin(0.5).setDepth(2);
 
-      const hit = this.add.rectangle(cx, cy, slotW, slotH, 0, 0)
-        .setInteractive({ useHandCursor: true }).setDepth(5);
-      hit.on('pointerover',  () => draw(true));
-      hit.on('pointerout',   () => draw(false));
-      hit.on('pointerdown',  () => { hit.disableInteractive(); this._enterBattle(battleType); });
-      this._sceneHits.push(hit);
+    // 구분선
+    this.add.graphics().setDepth(2)
+      .lineStyle(1, 0x2a1a0a, 0.6)
+      .lineBetween(areaX + W * 0.004, areaY + areaH * 0.16, areaX + areaW * 0.88, areaY + areaH * 0.16);
+
+    // 슬롯 3개
+    const slotZoneW = areaW * 0.86;
+    const cw  = Math.round(slotZoneW * 0.26);
+    const ch  = Math.min(Math.round(areaH * 0.62), Math.round(H * 0.55));
+    const cy  = areaY + areaH * 0.50;
+    const gap = (slotZoneW - cw * 3) / 4;
+    const startX = areaX + gap + cw / 2;
+
+    this._slots = [];
+    for (let i = 0; i < 3; i++) {
+      const cx = startX + i * (cw + gap);
+      this._slots.push(this._buildOneSlot(cx, cy, cw, ch));
+    }
+
+    // 레버
+    this._buildLever(areaX, areaY, areaW, areaH, fs);
+
+    // 저장된 결과 복원
+    this._restoreSlotState();
+  }
+
+  private _buildOneSlot(cx: number, cy: number, cw: number, ch: number): SlotObj {
+    const frame = this.add.graphics().setDepth(3);
+    frame.lineStyle(1, 0x2a1a0a, 0.6);
+    frame.strokeRect(cx - cw / 2, cy - ch / 2, cw, ch);
+
+    const emptyBg = this.add.graphics().setDepth(3);
+    emptyBg.fillStyle(0x080806, 1);
+    emptyBg.fillRect(cx - cw / 2, cy - ch / 2, cw, ch);
+
+    const maskShape = this.make.graphics({});
+    maskShape.fillStyle(0xffffff, 1);
+    maskShape.fillRect(cx - cw / 2, cy - ch / 2, cw, ch);
+    const geomMask = maskShape.createGeometryMask();
+
+    const stripCt = this.add.container(cx, cy - ch / 2).setDepth(4);
+    stripCt.setMask(geomMask);
+
+    const hitArea = this.add.rectangle(cx, cy, cw, ch, 0, 0).setDepth(6);
+    return { frame, emptyBg, stripCt, cx, cy, cw, ch, stopped: false, targetCard: null, hitArea };
+  }
+
+  private _renderStrip(container: Phaser.GameObjects.Container, strip: SlotCard[], cw: number, ch: number): void {
+    const fs = (n: number) => FontManager.adjustedSize(n, this.scale);
+    strip.forEach((card, j) => {
+      const cardY = j * ch;
+      const bg = this.add.graphics();
+      bg.fillStyle(0x0e0c08, 1);
+      bg.lineStyle(1, card.borderHex, 0.5);
+      bg.fillRect(-cw / 2, cardY, cw, ch);
+      bg.strokeRect(-cw / 2, cardY, cw, ch);
+      const mainTxt = this.add.text(0, cardY + ch * 0.38, card.label, {
+        fontSize: fs(16), color: card.color, fontFamily: FontManager.TITLE,
+        align: 'center', wordWrap: { width: cw * 0.85 },
+      }).setOrigin(0.5);
+      const descTxt = this.add.text(0, cardY + ch * 0.62, card.desc, {
+        fontSize: fs(9), color: card.color, fontFamily: FontManager.MONO,
+        align: 'center', wordWrap: { width: cw * 0.82 },
+      }).setOrigin(0.5).setAlpha(0.7);
+      container.add([bg, mainTxt, descTxt]);
     });
+  }
+
+  private _drawCard(slot: SlotObj, card: SlotCard): void {
+    const fs = (n: number) => FontManager.adjustedSize(n, this.scale);
+    slot.stripCt.removeAll(true);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0e0c08, 1);
+    bg.lineStyle(1, card.borderHex, 0.8);
+    bg.fillRect(-slot.cw / 2, 0, slot.cw, slot.ch);
+    bg.strokeRect(-slot.cw / 2, 0, slot.cw, slot.ch);
+    const mainTxt = this.add.text(0, slot.ch * 0.38, card.label, {
+      fontSize: fs(16), color: card.color, fontFamily: FontManager.TITLE,
+      align: 'center', wordWrap: { width: slot.cw * 0.85 },
+    }).setOrigin(0.5);
+    const descTxt = this.add.text(0, slot.ch * 0.62, card.desc, {
+      fontSize: fs(9), color: card.color, fontFamily: FontManager.MONO,
+      align: 'center', wordWrap: { width: slot.cw * 0.82 },
+    }).setOrigin(0.5).setAlpha(0.7);
+    slot.stripCt.add([bg, mainTxt, descTxt]);
+    slot.stripCt.setY(slot.cy - slot.ch / 2);
+  }
+
+  private _buildLever(areaX: number, areaY: number, areaW: number, areaH: number, fs: (n: number) => string): void {
+    const leverX  = areaX + areaW * 0.92;
+    const leverCY = areaY + areaH * 0.52;
+    const leverW  = Math.round(areaW * 0.075);
+    const leverH  = Math.round(areaH * 0.55);
+
+    this._leverX      = leverX;
+    this._leverCY     = leverCY;
+    this._leverW      = leverW;
+    this._leverH      = leverH;
+    this._leverKnobY  = leverCY - leverH * 0.35;
+
+    const leverBg = this.add.graphics().setDepth(3);
+    this._drawLever = (state) => {
+      leverBg.clear();
+      if      (state === 'disabled') { leverBg.fillStyle(0x080a08, 1); leverBg.lineStyle(1, 0x1a2a1a, 0.4); }
+      else if (state === 'hover')    { leverBg.fillStyle(0x1a3a1a, 1); leverBg.lineStyle(2, 0x70d070, 1);   }
+      else if (state === 'active')   { leverBg.fillStyle(0x142014, 1); leverBg.lineStyle(2, 0x50a050, 0.9); }
+      else                           { leverBg.fillStyle(0x0a280a, 1); leverBg.lineStyle(2, 0x80ff80, 1);   }
+      leverBg.fillRect(leverX - leverW / 2, leverCY - leverH / 2, leverW, leverH);
+      leverBg.strokeRect(leverX - leverW / 2, leverCY - leverH / 2, leverW, leverH);
+    };
+    this._drawLever('active');
+
+    // 기둥
+    this.add.graphics().setDepth(3)
+      .lineStyle(3, 0x305030, 0.8)
+      .lineBetween(leverX, leverCY - leverH * 0.35, leverX, leverCY + leverH * 0.1);
+
+    // 손잡이
+    this._leverKnob = this.add.graphics().setDepth(4);
+    this._drawKnob(this._leverKnobY);
+
+    // 라벨
+    this._leverLabelTxt = this.add.text(leverX, leverCY + leverH * 0.38, '▶ 당기기', {
+      fontSize: fs(9), color: '#50a050', fontFamily: FontManager.MONO,
+    }).setOrigin(0.5).setDepth(4);
+
+    this._rerollTxt = this.add.text(leverX, leverCY + leverH * 0.52, `◈ ${this._deepCoin}`, {
+      fontSize: fs(9), color: '#2a3a50', fontFamily: FontManager.MONO,
+    }).setOrigin(0.5).setDepth(4).setAlpha(0);
+
+    const hit = this.add.rectangle(leverX, leverCY, leverW, leverH, 0, 0)
+      .setInteractive({ useHandCursor: true }).setDepth(10);
+    this._leverHit = hit;
+    this._sceneHits.push(hit);
+
+    hit.on('pointerover', () => {
+      if (this._phase === 'idle')    { this._drawLever('hover'); this._leverLabelTxt.setStyle({ color: '#80ff80' }); }
+      if (this._phase === 'stopped' && this._deepCoin > 0) { this._drawLever('hover'); this._rerollTxt.setStyle({ color: '#6ab0e0' }); }
+    });
+    hit.on('pointerout', () => {
+      if (this._phase === 'idle')    { this._drawLever('active'); this._leverLabelTxt.setStyle({ color: '#50a050' }); }
+      if (this._phase === 'stopped') { this._drawLever('active'); this._rerollTxt.setStyle({ color: '#2a3a50' }); }
+    });
+    hit.on('pointerdown', () => {
+      if (this._phase === 'idle') {
+        this._drawLever('pulling');
+        this._animLeverPull(() => this._startSpin());
+      } else if (this._phase === 'stopped' && this._deepCoin > 0) {
+        this._deepCoin -= 1;
+        this._rerollTxt.setText(`◈ ${this._deepCoin}`);
+        this._updateDeepCoinHUD();
+        this._resetSlots();
+        this._animLeverPull(() => this._startSpin());
+      }
+    });
+  }
+
+  private _drawKnob(y: number): void {
+    this._leverKnob.clear();
+    this._leverKnob.fillStyle(0x60a060, 1);
+    this._leverKnob.fillCircle(this._leverX, y, this._leverW * 0.28);
+    this._leverKnob.lineStyle(2, 0x80d080, 0.8);
+    this._leverKnob.strokeCircle(this._leverX, y, this._leverW * 0.28);
+  }
+
+  private _animLeverPull(onComplete: () => void): void {
+    const startY   = this._leverKnobY;
+    const pullY    = this._leverCY + this._leverH * 0.1;
+    let   progress = 0;
+    this.time.addEvent({
+      delay: 16, repeat: 18,
+      callback: () => {
+        progress++;
+        const y = progress <= 9
+          ? startY + (pullY - startY) * (progress / 9)
+          : pullY  + (startY - pullY) * ((progress - 9) / 9);
+        this._drawKnob(y);
+        if (progress >= 18) { this._drawKnob(startY); onComplete(); }
+      },
+    });
+  }
+
+  private _diveDrawCard(total?: number): SlotCard {
+    const tot = total ?? DIVE_SLOT_CARDS.reduce((s, c) => s + c.weight, 0);
+    let r = Math.random() * tot;
+    for (const card of DIVE_SLOT_CARDS) { r -= card.weight; if (r <= 0) return card; }
+    return DIVE_SLOT_CARDS[0];
+  }
+
+  private _makeStrip(count: number): SlotCard[] {
+    return Array.from({ length: count }, () => this._diveDrawCard());
+  }
+
+  private _startSpin(): void {
+    this._phase     = 'spinning';
+    this._results   = [null, null, null];
+    this._chosen    = -1;
+    this._canChoose = false;
+
+    this._drawLever('disabled');
+    this._leverHit.disableInteractive();
+    this._leverLabelTxt.setStyle({ color: '#2a4a2a' });
+    this._rerollTxt.setAlpha(0);
+    this._hintText.setText('라운드를 결정하는 중...');
+    this._hintText.setStyle({ color: '#2a1508' });
+
+    const stopDelays = [1400, 2200, 3000];
+    this._slots.forEach((slot, i) => {
+      if (slot.emptyBg) slot.emptyBg.setVisible(false);
+      const strip    = this._makeStrip(22);
+      slot.stopped   = false;
+      slot.targetCard = strip[strip.length - 2];
+      slot.stripCt.removeAll(true);
+      this._renderStrip(slot.stripCt, strip, slot.cw, slot.ch);
+      slot.stripCt.setY(slot.cy - slot.ch / 2);
+
+      this.tweens.add({
+        targets:  slot.stripCt,
+        y:        slot.cy - slot.ch / 2 - slot.ch * (strip.length - 2),
+        duration: stopDelays[i] + 600,
+        ease:     'Cubic.easeOut',
+        onComplete: () => {
+          slot.stopped    = true;
+          this._results[i] = slot.targetCard;
+          this._onSlotStopped(i);
+        },
+      });
+    });
+
+    let dotCount = 0;
+    this._spinTimer = this.time.addEvent({
+      delay: 400, loop: true,
+      callback: () => {
+        this._hintText.setText('라운드를 결정하는 중  ' + ['·', '· ·', '· · ·'][dotCount++ % 3]);
+      },
+    });
+  }
+
+  private _onSlotStopped(idx: number): void {
+    const slot = this._slots[idx];
+    slot.frame.clear();
+    slot.frame.lineStyle(2, slot.targetCard!.borderHex, 1);
+    slot.frame.strokeRect(slot.cx - slot.cw / 2, slot.cy - slot.ch / 2, slot.cw, slot.ch);
+
+    if (!this._slots.every(s => s.stopped)) return;
+
+    if (this._spinTimer) { this._spinTimer.remove(); this._spinTimer = null; }
+    this._phase     = 'stopped';
+    this._canChoose = true;
+    this._hintText.setText('라운드 유형을 선택하십시오');
+    this._hintText.setStyle({ color: '#8a6040' });
+
+    if (this._deepCoin > 0) {
+      this._drawLever('active');
+      this._leverLabelTxt.setText('◈ 재굴림').setStyle({ color: '#2a3a50' });
+      this._rerollTxt.setText(`심해화폐 ${this._deepCoin}`).setAlpha(1);
+      this._leverHit.setInteractive({ useHandCursor: true });
+    } else {
+      this._drawLever('disabled');
+      this._leverLabelTxt.setText('재굴림 불가').setStyle({ color: '#2a1a0a' });
+    }
+
+    this._saveSlotState();
+    this._enableCardSelection();
+  }
+
+  private _enableCardSelection(): void {
+    this._slots.forEach((slot, i) => {
+      const hit = slot.hitArea;
+      hit.setInteractive({ useHandCursor: true });
+      hit.on('pointerover', () => {
+        if (this._chosen >= 0) return;
+        slot.frame.clear();
+        slot.frame.lineStyle(2, slot.targetCard!.borderHex, 1);
+        slot.frame.fillStyle(0x140c05, 0.3);
+        slot.frame.fillRect(slot.cx - slot.cw / 2, slot.cy - slot.ch / 2, slot.cw, slot.ch);
+        slot.frame.strokeRect(slot.cx - slot.cw / 2, slot.cy - slot.ch / 2, slot.cw, slot.ch);
+      });
+      hit.on('pointerout', () => {
+        if (this._chosen >= 0) return;
+        slot.frame.clear();
+        slot.frame.lineStyle(2, slot.targetCard!.borderHex, 1);
+        slot.frame.strokeRect(slot.cx - slot.cw / 2, slot.cy - slot.ch / 2, slot.cw, slot.ch);
+      });
+      hit.on('pointerdown', () => {
+        if (!this._canChoose || this._chosen >= 0) return;
+        this._chooseCard(i);
+      });
+    });
+  }
+
+  private _chooseCard(idx: number): void {
+    this._chosen    = idx;
+    this._canChoose = false;
+    this._phase     = 'chosen';
+
+    this._drawLever('disabled');
+    this._leverHit.disableInteractive();
+    this._rerollTxt.setAlpha(0);
+
+    const chosen = this._slots[idx];
+    chosen.frame.clear();
+    chosen.frame.lineStyle(3, chosen.targetCard!.borderHex, 1);
+    chosen.frame.fillStyle(0x1e1008, 0.4);
+    chosen.frame.fillRect(chosen.cx - chosen.cw / 2, chosen.cy - chosen.ch / 2, chosen.cw, chosen.ch);
+    chosen.frame.strokeRect(chosen.cx - chosen.cw / 2, chosen.cy - chosen.ch / 2, chosen.cw, chosen.ch);
+
+    this._slots.forEach((slot, i) => {
+      if (i === idx) return;
+      slot.frame.clear();
+      slot.frame.lineStyle(1, 0x1a1008, 0.3);
+      slot.frame.fillStyle(0x000000, 0.55);
+      slot.frame.fillRect(slot.cx - slot.cw / 2, slot.cy - slot.ch / 2, slot.cw, slot.ch);
+      slot.frame.strokeRect(slot.cx - slot.cw / 2, slot.cy - slot.ch / 2, slot.cw, slot.ch);
+      slot.hitArea.disableInteractive();
+    });
+
+    const card = chosen.targetCard!;
+    this._hintText.setText(`${card.label.replace(/\s/g, '')}  —  전투 진입`);
+    this._hintText.setStyle({ color: card.color });
+
+    this._log.push({
+      round: this._round, type: card.type as 'normal' | 'wave' | 'raid',
+      result: 'pending', note: `R${this._round}  ${card.label.replace(/\s/g, '')}`,
+    } as unknown as LogEntry);
+
+    this._clearSlotState();
+    this.time.delayedCall(800, () => this._enterBattle(card.type));
+  }
+
+  private _resetSlots(): void {
+    this._clearSlotState();
+    this._slots.forEach(slot => {
+      slot.stopped    = false;
+      slot.targetCard = null;
+      slot.stripCt.removeAll(true);
+      if (slot.emptyBg) slot.emptyBg.setVisible(true);
+      slot.frame.clear();
+      slot.frame.lineStyle(1, 0x2a1a0a, 0.6);
+      slot.frame.strokeRect(slot.cx - slot.cw / 2, slot.cy - slot.ch / 2, slot.cw, slot.ch);
+      slot.hitArea.disableInteractive();
+    });
+    this._phase = 'idle';
+    this._drawLever('active');
+    this._leverLabelTxt.setText('▶ 당기기').setStyle({ color: '#50a050' });
+    this._leverHit.setInteractive({ useHandCursor: true });
+  }
+
+  private _restoreSlotState(): void {
+    try {
+      const raw = localStorage.getItem(DIVE_SLOT_STATE_KEY);
+      if (!raw) return;
+      const state = JSON.parse(raw) as { phase: string; results: (string|null)[] };
+      if (state.phase !== 'stopped' || !Array.isArray(state.results)) return;
+      const restored = state.results.map(t => t ? DIVE_SLOT_CARDS.find(c => c.type === t) ?? null : null);
+      if (!restored.every(c => c !== null)) return;
+
+      this._slots.forEach((slot, i) => {
+        const card = restored[i]!;
+        slot.targetCard = card;
+        slot.stopped    = true;
+        if (slot.emptyBg) slot.emptyBg.setVisible(false);
+        this._drawCard(slot, card);
+        slot.frame.clear();
+        slot.frame.lineStyle(2, card.borderHex, 1);
+        slot.frame.strokeRect(slot.cx - slot.cw / 2, slot.cy - slot.ch / 2, slot.cw, slot.ch);
+      });
+
+      this._results   = restored;
+      this._phase     = 'stopped';
+      this._canChoose = true;
+      this._hintText.setText('라운드 유형을 선택하십시오');
+      this._hintText.setStyle({ color: '#8a6040' });
+
+      if (this._deepCoin > 0) {
+        this._drawLever('active');
+        this._leverLabelTxt.setText('◈ 재굴림').setStyle({ color: '#2a3a50' });
+        this._rerollTxt.setText(`심해화폐 ${this._deepCoin}`).setAlpha(1);
+        this._leverHit.setInteractive({ useHandCursor: true });
+      } else {
+        this._drawLever('disabled');
+        this._leverLabelTxt.setText('재굴림 불가').setStyle({ color: '#2a1a0a' });
+      }
+      this._enableCardSelection();
+    } catch (_) {}
+  }
+
+  private _saveSlotState(): void {
+    const state = {
+      phase:   this._phase,
+      chosen:  this._chosen,
+      results: this._results.map(r => r?.type ?? null),
+    };
+    localStorage.setItem(DIVE_SLOT_STATE_KEY, JSON.stringify(state));
+  }
+
+  private _clearSlotState(): void {
+    localStorage.removeItem(DIVE_SLOT_STATE_KEY);
+  }
+
+  private _updateDeepCoinHUD(): void {
+    if (this._hudTexts[0]) this._hudTexts[0].setText(`심해화폐  ${this._deepCoin}`);
+    if (this._deepCoinTxt) this._deepCoinTxt.setText(`${this._deepCoin}`);
   }
 
   // ================================================================
