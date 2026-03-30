@@ -259,7 +259,61 @@ export class Tab_Recruit {
     const sd   = this._spriteEl(roll.spriteKey, 'rct-custom-sprite');
     const bSpr = document.createElement('button'); bSpr.className = 'recruit-reroll-btn';
     bSpr.textContent = this._rerolls.sprite > 0 ? `외형 재설정 (${this._rerolls.sprite}회)` : '외형 재설정 ✕';
-    const nd   = document.createElement('div'); nd.className   = 'rct-custom-name'; nd.textContent = roll.name;
+    // ── 이름 인라인 편집 필드 (Recruit_Name.js 대응) ──────────────
+    const nd = document.createElement('div'); nd.className = 'rct-custom-name-field';
+    const ndTxt = document.createElement('span'); ndTxt.className = 'rct-custom-name-text'; ndTxt.textContent = roll.name;
+    const ndCursor = document.createElement('span'); ndCursor.className = 'rct-custom-name-cursor'; ndCursor.textContent = '|'; ndCursor.style.opacity = '0';
+    nd.append(ndTxt, ndCursor);
+
+    let nameEditing = false;
+    let nameBuffer = roll.name;
+    let nameCursorTimer: Phaser.Time.TimerEvent | null = null;
+    let nameCursorOn = false;
+    let nameKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+
+    const refreshNameTxt = () => {
+      ndTxt.textContent = nameBuffer;
+      ndCursor.style.opacity = (nameEditing && nameCursorOn) ? '1' : '0';
+    };
+    const commitNameEdit = () => {
+      if (!nameEditing) return;
+      nameEditing = false;
+      nd.classList.remove('editing');
+      ndCursor.style.opacity = '0';
+      if (nameCursorTimer) { nameCursorTimer.remove(); nameCursorTimer = null; }
+      if (nameKeyHandler) { window.removeEventListener('keydown', nameKeyHandler); nameKeyHandler = null; }
+      const v = nameBuffer.trim();
+      if (/^[가-힣]+$/.test(v)) { roll.name = v; }
+      else {
+        nameBuffer = roll.name;
+        if (v && v !== roll.name) this._toastMsg(toast, '이름은 한글 완성형으로 입력하십시오');
+      }
+      ndTxt.textContent = roll.name;
+    };
+    nd.addEventListener('click', () => {
+      if (nameEditing) return;
+      nameEditing = true;
+      nameBuffer = roll.name;
+      nd.classList.add('editing');
+      nameCursorOn = true; refreshNameTxt();
+      nameCursorTimer = this._scene.time.addEvent({
+        delay: 500, loop: true,
+        callback: () => { if (!nameEditing) return; nameCursorOn = !nameCursorOn; refreshNameTxt(); },
+      });
+      this._timers.push(nameCursorTimer);
+      nameKeyHandler = (evt: KeyboardEvent) => {
+        if (!nameEditing) return;
+        if (evt.key === 'Enter' || evt.key === 'Escape') { commitNameEdit(); }
+        else if (evt.key === 'Backspace') { nameBuffer = [...nameBuffer].slice(0,-1).join(''); refreshNameTxt(); }
+        else if (evt.key.length === 1 && nameBuffer.length < 10) { nameBuffer += evt.key; refreshNameTxt(); }
+      };
+      window.addEventListener('keydown', nameKeyHandler);
+    });
+    document.addEventListener('pointerdown', (e) => {
+      if (!nameEditing) return;
+      if (!nd.contains(e.target as Node)) commitNameEdit();
+    });
+
     const cd   = document.createElement('div'); cd.className   = 'rct-custom-cog';  cd.style.color = cogC.css; cd.textContent = `Cog  ${roll.cog}`;
     const sumd = document.createElement('div'); sumd.className = 'rct-custom-sum';  sumd.textContent = `합계  ${roll.statSum}`;
     left.append(jd, sd, bSpr, nd, cd, sumd);

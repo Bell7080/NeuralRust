@@ -438,6 +438,18 @@
 .rct-custom-sprite { width: 80%; aspect-ratio: 1; overflow: hidden; background: rgba(26,16,8,0.6); margin: 0 auto; }
 .rct-custom-sprite-img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
 .rct-custom-name   { font-family: var(--font-display); font-size: clamp(12px,1.2vw,18px); color: #e8c080; text-align: center; }
+/* ── 이름 인라인 편집 필드 ─────────────────────────────────── */
+.rct-custom-name-field {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: clamp(12px,1.2vw,18px); color: #e8c080;
+  text-align: center; padding: 0.25em 0.6em; cursor: pointer;
+  border: 1px solid rgba(42,26,10,0.4); background: rgba(20,10,4,0.7);
+  transition: border-color 0.15s, background 0.15s; min-width: 6em;
+}
+.rct-custom-name-field:hover { border-color: rgba(160,80,24,0.7); background: rgba(30,16,6,0.9); }
+.rct-custom-name-field.editing { border-color: rgba(200,112,48,0.9); background: rgba(42,20,8,0.95); cursor: text; }
+.rct-custom-name-text { }
+.rct-custom-name-cursor { font-weight: bold; color: #c87030; margin-left: 1px; }
 .rct-custom-cog    { font-family: var(--font-mono); font-size: clamp(9px,0.9vw,13px); text-align: center; font-weight: bold; }
 .rct-custom-sum    { font-family: var(--font-mono); font-size: clamp(8px,0.8vw,12px); color: #7a5028; text-align: center; }
 .rct-section-label { font-family: var(--font-mono); font-size: clamp(8px,0.85vw,13px); color: #4a2a10; letter-spacing: 0.2em; margin-bottom: 0.4em; }
@@ -563,6 +575,13 @@
 }
 .mng-filter-btn.active, .mng-sort-btn.active { color: #c8a070; border-color: rgba(122,64,24,0.9); }
 .mng-filter-btn:hover, .mng-sort-btn:hover   { color: #c8a070; }
+.mng-cog-btn {
+  font-family: var(--font-mono); font-size: clamp(7px,0.72vw,11px); color: #5a3a18;
+  background: rgba(14,9,5,0.95); border: 1px solid rgba(42,26,10,0.5);
+  padding: 0.2em 0.5em; cursor: pointer; transition: color 0.1s, border-color 0.1s;
+}
+.mng-cog-btn.active { color: #c8a070; border-color: rgba(122,64,24,0.9); }
+.mng-cog-btn:hover  { color: #c8a070; }
 .mng-back-btn {
   margin-left: auto; font-family: var(--font-mono); font-size: clamp(7px,0.72vw,11px);
   color: #4a2a10; background: none; border: 1px solid rgba(42,26,10,0.4);
