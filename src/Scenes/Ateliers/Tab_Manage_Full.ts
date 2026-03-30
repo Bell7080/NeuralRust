@@ -72,6 +72,18 @@ export class Tab_Manage_Full {
         <button class="mng-filter-btn" data-job="helmsman">조타수</button>
       </div>
       <div class="mng-filter-group">
+        <span class="mng-filter-label">Cog</span>
+        <button class="mng-cog-btn active" data-cog="all">전체</button>
+        <button class="mng-cog-btn" data-cog="1">1</button>
+        <button class="mng-cog-btn" data-cog="2">2</button>
+        <button class="mng-cog-btn" data-cog="3">3</button>
+        <button class="mng-cog-btn" data-cog="4">4</button>
+        <button class="mng-cog-btn" data-cog="5">5</button>
+        <button class="mng-cog-btn" data-cog="6">6</button>
+        <button class="mng-cog-btn" data-cog="7">7</button>
+        <button class="mng-cog-btn" data-cog="8">8</button>
+      </div>
+      <div class="mng-filter-group">
         <span class="mng-filter-label">정렬</span>
         <button class="mng-sort-btn active" data-sort="none">기본</button>
         <button class="mng-sort-btn" data-sort="stat">스탯↕</button>
@@ -104,6 +116,14 @@ export class Tab_Manage_Full {
         top.querySelectorAll('[data-job]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this._filterJob = btn.dataset.job!;
+        this._applyFilter();
+      });
+    });
+    top.querySelectorAll<HTMLElement>('[data-cog]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        top.querySelectorAll('[data-cog]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this._filterCog = btn.dataset.cog!;
         this._applyFilter();
       });
     });
