@@ -25,6 +25,36 @@ export class AtelierHUD {
   private _daySpan!: HTMLElement;
   private _btns:     Map<TabKey, HTMLButtonElement> = new Map();
   private _cb!:      HUDCallbacks;
+  private _gearEl!:  SVGElement;
+  private _gearDeg = 0;
+
+  // ── 기어 SVG 경로 생성 ──────────────────────────────────────────
+  private static _makeGearPath(R: number, r: number, hole: number, n: number): string {
+    const PI2 = Math.PI * 2;
+    const step = PI2 / n;
+    const halfTooth = step * 0.22;
+    let d = '';
+    for (let i = 0; i < n; i++) {
+      const base  = i * step - Math.PI / 2;
+      const ia0 = base - step * 0.5 + halfTooth;
+      const ia1 = base - halfTooth;
+      const oa0 = base - halfTooth;
+      const oa1 = base + halfTooth;
+      const ia2 = base + halfTooth;
+
+      const px = (rad: number, a: number) => rad * Math.cos(a);
+      const py = (rad: number, a: number) => rad * Math.sin(a);
+
+      if (i === 0) d += `M ${px(r, ia0).toFixed(2)},${py(r, ia0).toFixed(2)} `;
+      else         d += `L ${px(r, ia0).toFixed(2)},${py(r, ia0).toFixed(2)} `;
+      d += `L ${px(r, ia1).toFixed(2)},${py(r, ia1).toFixed(2)} `;
+      d += `L ${px(R, oa0).toFixed(2)},${py(R, oa0).toFixed(2)} `;
+      d += `L ${px(R, oa1).toFixed(2)},${py(R, oa1).toFixed(2)} `;
+      d += `L ${px(r, ia2).toFixed(2)},${py(r, ia2).toFixed(2)} `;
+    }
+    d += `Z M ${hole},0 A ${hole},${hole} 0 1 0 ${-hole},0 A ${hole},${hole} 0 1 0 ${hole},0 Z`;
+    return d;
+  }
 
   constructor(cb: HUDCallbacks) {
     this._cb = cb;
@@ -71,6 +101,13 @@ export class AtelierHUD {
       <!-- 탭 콘텐츠 영역 -->
       <div id="atelier-content"></div>
 
+      <!-- 중앙 기어 장식 -->
+      <div class="atelier-gear-wrap" id="atelier-gear-wrap">
+        <svg class="atelier-gear" id="atelier-gear" viewBox="-55 -55 110 110" xmlns="http://www.w3.org/2000/svg">
+          <path class="atelier-gear__path" fill-rule="evenodd"/>
+        </svg>
+      </div>
+
       <!-- 탐색 버튼 (하단 중앙) -->
       <div class="atelier-explore-area" id="atelier-explore-area">
         <div class="atelier-explore-sep"></div>
@@ -87,6 +124,12 @@ export class AtelierHUD {
     this._contentEl = hud.querySelector('#atelier-content')!;
     this._arcSpan   = hud.querySelector('#atelier-arc')!;
     this._daySpan   = hud.querySelector('#atelier-day')!;
+
+    // 기어 SVG 경로 주입
+    const gearEl  = hud.querySelector('#atelier-gear') as SVGElement;
+    const pathEl  = gearEl.querySelector('path');
+    if (pathEl) pathEl.setAttribute('d', AtelierHUD._makeGearPath(50, 36, 14, 10));
+    this._gearEl  = gearEl;
 
     // 버튼 참조 수집 + 이벤트
     hud.querySelectorAll<HTMLButtonElement>('.atelier-side-btn, .atelier-explore-btn').forEach(btn => {
@@ -111,6 +154,11 @@ export class AtelierHUD {
     this._btns.forEach((btn, k) => {
       btn.classList.toggle('active', k === key);
     });
+    // 기어 36° 회전 (360° / 10 teeth)
+    this._gearDeg += 36;
+    if (this._gearEl) {
+      this._gearEl.style.transform = `rotate(${this._gearDeg}deg)`;
+    }
   }
 
   setManageMode(on: boolean): void {

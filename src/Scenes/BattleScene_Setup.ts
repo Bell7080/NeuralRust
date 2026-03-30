@@ -360,10 +360,17 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
 
   // ── 편성 패널 슬라이드 아웃 후 콜백 ──────────────────────────
   protected _slideOutSetup(onDone: () => void): void {
-    this._setupEl.classList.add('slide-out');
-    this._setupEl.addEventListener('transitionend', () => {
-      this._setupEl.style.display = 'none';
+    const el = this._setupEl;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      el.style.display = 'none';
       onDone();
-    }, { once: true });
+    };
+    el.classList.add('slide-out');
+    el.addEventListener('transitionend', finish, { once: true });
+    // fallback: transitionend 미발화 시 400ms 후 강제 실행
+    this.time.delayedCall(420, finish);
   }
 }

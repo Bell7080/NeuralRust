@@ -408,35 +408,35 @@ export class Tab_Recruit {
     const prevPanel = mkPanel(false);
     const nextPanel = mkPanel(true);
 
+    // 패널 클릭 힌트 텍스트
+    const hint = document.createElement('div');
+    hint.className = 'rct-popup-hint';
+    hint.textContent = '패널을 클릭해 선택';
+
     const close = (apply: boolean, nextVal?: unknown) => {
       if (apply) {
         if (type === 'sprite' && typeof nextVal === 'string') roll.spriteKey = nextVal;
         else if (type === 'stat' && nextVal && typeof nextVal === 'object') roll.stats = nextVal as Roll['stats'];
         else if (type !== 'sprite' && type !== 'stat' && typeof nextVal === 'string') roll[type] = nextVal;
-        overlay.remove();
-        onApply();
-      } else {
-        overlay.remove();
-        onApply(); // 재렌더링 (횟수는 이미 차감됨 — 취소해도 소진)
       }
+      overlay.remove();
+      onApply();
     };
 
-    const mkBtnRow = (onKeep: () => void, onApplyFn: () => void) => {
-      const row = document.createElement('div'); row.className = 'rct-popup-btn-row';
-      const bk  = document.createElement('button'); bk.className = 'rct-popup-btn rct-popup-btn--keep'; bk.textContent = '유  지';
-      const ba  = document.createElement('button'); ba.className = 'rct-popup-btn rct-popup-btn--apply'; ba.textContent = '적  용';
-      bk.addEventListener('click', onKeep);
-      ba.addEventListener('click', onApplyFn);
-      row.append(bk, ba);
-      return row;
+    // 패널에 클릭 핸들러 + hover 효과 부여
+    const bindPanel = (panel: HTMLElement, onClickFn: () => void) => {
+      panel.style.cursor = 'pointer';
+      panel.addEventListener('mouseenter', () => panel.classList.add('hover'));
+      panel.addEventListener('mouseleave', () => panel.classList.remove('hover'));
+      panel.addEventListener('click', onClickFn);
     };
 
     if (type === 'sprite') {
       const nextKey = `char_${String(Math.floor(Math.random() * SPRITE_COUNT)).padStart(3, '0')}`;
       prevPanel.appendChild(this._spriteEl(roll.spriteKey, 'rct-popup-sprite'));
       nextPanel.appendChild(this._spriteEl(nextKey, 'rct-popup-sprite'));
-      prevPanel.appendChild(mkBtnRow(() => close(false), () => close(true, roll.spriteKey)));
-      nextPanel.appendChild(mkBtnRow(() => close(false), () => close(true, nextKey)));
+      bindPanel(prevPanel, () => close(false));           // 현재 = 유지 (변경 없음)
+      bindPanel(nextPanel, () => close(true, nextKey));   // 새로운 = 적용
 
     } else if (type === 'stat') {
       const prevStats = { ...roll.stats };
@@ -465,8 +465,8 @@ export class Tab_Recruit {
 
       prevPanel.appendChild(mkStatList(prevStats, false));
       nextPanel.appendChild(mkStatList(nextStats, true));
-      prevPanel.appendChild(mkBtnRow(() => close(false), () => close(true, prevStats)));
-      nextPanel.appendChild(mkBtnRow(() => close(false), () => close(true, nextStats)));
+      bindPanel(prevPanel, () => close(false));              // 현재 유지
+      bindPanel(nextPanel, () => close(true, nextStats));    // 새 스탯 적용
 
     } else {
       const abilType = type as 'passive'|'action'|'enhanced'|'finale';
@@ -483,13 +483,13 @@ export class Tab_Recruit {
 
       mkAbContent(prevId).forEach(el => prevPanel.appendChild(el));
       mkAbContent(nextId).forEach(el => nextPanel.appendChild(el));
-      prevPanel.appendChild(mkBtnRow(() => close(false), () => close(true, prevId)));
-      nextPanel.appendChild(mkBtnRow(() => close(false), () => close(true, nextId)));
+      bindPanel(prevPanel, () => close(false));           // 현재 유지
+      bindPanel(nextPanel, () => close(true, nextId));    // 새 능력 적용
     }
 
     const row = document.createElement('div'); row.className = 'rct-popup-row';
     row.append(prevPanel, nextPanel);
-    overlay.appendChild(row);
+    overlay.append(hint, row);
     root.appendChild(overlay);
   }
 
