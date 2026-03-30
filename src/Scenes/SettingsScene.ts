@@ -14,6 +14,7 @@ import { Settings_Tab_Font }     from './Settings/Settings_Tab_Font';
 import { Settings_Tab_Keys }     from './Settings/Settings_Tab_Keys';
 import { Settings_Tab_Video }    from './Settings/Settings_Tab_Video';
 import { Settings_Tab_Save }     from './Settings/Settings_Tab_Save';
+import { clearAllSceneDom }      from '../utils/sceneCleanup';
 
 export class SettingsScene extends Phaser.Scene {
   fromScene!:  string;
@@ -31,6 +32,9 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   create(): void {
+    // ★ 다른 씬의 DOM 잔여물 제거 (씬 종속성 보장)
+    clearAllSceneDom();
+
     const W  = this.scale.width;
     const H  = this.scale.height;
     const cx = W / 2;

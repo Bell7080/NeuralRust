@@ -16,6 +16,7 @@
 import { FontManager }            from '../Managers/FontManager';
 import { StoryManager }           from '../Managers/StoryManager';
 import { CharacterSpriteManager } from '../Managers/CharacterSpriteManager';
+import { clearAllSceneDom }       from '../utils/sceneCleanup';
 
 export class LoadingScene extends Phaser.Scene {
   private _nextScene!: string;
@@ -41,6 +42,8 @@ export class LoadingScene extends Phaser.Scene {
   }
 
   create(): void {
+    clearAllSceneDom();
+
     const W = this.scale.width;
     const H = this.scale.height;
 

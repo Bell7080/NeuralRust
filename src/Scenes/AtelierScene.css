@@ -19,12 +19,18 @@
   opacity:         1;
   pointer-events:  auto;
 }
-/* 관리 탭 진입 시 사이드 버튼 숨김 */
+/* 관리 탭 진입 시 사이드 버튼 숨김 + 콘텐츠 영역 확장 */
 #atelier-hud.manage-mode .atelier-sidenav,
 #atelier-hud.manage-mode .atelier-explore-area {
   opacity:    0;
   pointer-events: none;
   transition: opacity 0.22s ease;
+}
+#atelier-hud.manage-mode #atelier-content {
+  left:   0;
+  right:  0;
+  bottom: 0;
+  transition: left 0.22s ease, right 0.22s ease, bottom 0.22s ease;
 }
 
 /* ── 상단 바 ─────────────────────────────────────────────────── */
@@ -324,8 +330,18 @@
 .recruit-box {
   width: 52%; max-width: 600px; padding: 2.5% 5%;
   background: rgba(18,13,7,1); border: 2px solid rgba(122,64,24,0.85);
-  box-sizing: border-box; text-align: center;
+  box-sizing: border-box; text-align: center; position: relative;
 }
+/* 코너 장식 — JS 버전 deco 그래픽 대응 */
+.recruit-box::before,
+.recruit-box::after {
+  content: ''; position: absolute;
+  width: 14px; height: 14px;
+  border-color: rgba(122, 64, 24, 0.7);
+  border-style: solid;
+}
+.recruit-box::before { top: 8px; left: 8px; border-width: 1px 0 0 1px; }
+.recruit-box::after  { bottom: 8px; right: 8px; border-width: 0 1px 1px 0; }
 .recruit-main-txt {
   font-family: var(--font-display); font-size: clamp(12px,1.5vw,22px);
   color: #e8c080; min-height: 2em; margin: 0.6em 0 1em;
@@ -351,7 +367,18 @@
   width: clamp(120px,14vw,210px); padding: 3% 5%; box-sizing: border-box;
   background: rgba(18,13,7,0.95); border: 1px solid rgba(58,34,16,0.8);
   text-align: center; display: flex; flex-direction: column; gap: 0.4em;
+  position: relative;
 }
+/* 슬롯 카드 코너 장식 */
+.recruit-slot-card::before,
+.recruit-slot-card::after {
+  content: ''; position: absolute;
+  width: 10px; height: 10px;
+  border-color: rgba(90, 48, 16, 0.6);
+  border-style: solid;
+}
+.recruit-slot-card::before { top: 5px; left: 5px; border-width: 1px 0 0 1px; }
+.recruit-slot-card::after  { bottom: 5px; right: 5px; border-width: 0 1px 1px 0; }
 .rct-card-num  { font-family: var(--font-mono); font-size: clamp(8px,0.8vw,12px); color: #3a2010; }
 .rct-card-job  { font-family: var(--font-display); font-size: clamp(12px,1.4vw,20px); color: #7a5028; min-height: 1.4em; }
 .rct-card-sep  { width: 60%; height: 1px; background: rgba(42,26,10,0.8); margin: 0.2em auto; }
@@ -370,9 +397,27 @@
   width: clamp(110px,12vw,180px); padding: 4% 5%; box-sizing: border-box;
   background: rgba(14,9,5,0.96); border: 1px solid rgba(122,64,24,0.25);
   display: flex; flex-direction: column; align-items: center; gap: 0.4em;
-  cursor: pointer; transition: border-color 0.15s, background 0.12s;
+  cursor: pointer; transition: border-color 0.15s, background 0.12s, box-shadow 0.15s;
+  position: relative;
 }
-.recruit-pick-card:hover { background: rgba(18,13,7,0.98); }
+/* 픽 카드 코너 장식 */
+.recruit-pick-card::before,
+.recruit-pick-card::after {
+  content: ''; position: absolute;
+  width: 10px; height: 10px;
+  border-color: rgba(90, 48, 16, 0.5);
+  border-style: solid;
+  transition: border-color 0.15s;
+}
+.recruit-pick-card::before { top: 5px; left: 5px; border-width: 1px 0 0 1px; }
+.recruit-pick-card::after  { bottom: 5px; right: 5px; border-width: 0 1px 1px 0; }
+.recruit-pick-card:hover {
+  background: rgba(22,15,8,0.99);
+  border-color: rgba(160,80,24,0.65);
+  box-shadow: inset 0 0 18px rgba(122,50,10,0.12);
+}
+.recruit-pick-card:hover::before,
+.recruit-pick-card:hover::after { border-color: rgba(160,80,24,0.7); }
 .rct-pick-job    { font-family: var(--font-display); font-size: clamp(10px,1.1vw,16px); }
 .rct-pick-sprite { width: 70%; aspect-ratio: 1; overflow: hidden; background: rgba(26,16,8,0.6); }
 .rct-pick-name   { font-family: var(--font-display); font-size: clamp(11px,1.2vw,17px); color: #e8c080; }
@@ -462,31 +507,46 @@
 .mng-layout {
   display: flex; flex: 1; overflow: hidden; min-height: 0;
 }
-.mng-list   { width: 28%; overflow-y: auto; border-right: 1px solid rgba(30,16,8,0.7); padding: 0.4em; display: flex; flex-direction: column; gap: 0.3em; }
-.mng-center { flex: 1; overflow-y: auto; padding: 1%; border-right: 1px solid rgba(30,16,8,0.7); }
+.mng-list   {
+  width: 30%; overflow-y: auto;
+  border-right: 1px solid rgba(30,16,8,0.7);
+  padding: 0.5em;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: max-content;
+  gap: 0.35em;
+  align-content: start;
+}
+/* 빈 상태 메시지는 그리드 전체 폭 사용 */
+.mng-list > .mng-empty { grid-column: 1 / -1; }
+.mng-center { flex: 1; overflow-y: auto; padding: 1.2%; border-right: 1px solid rgba(30,16,8,0.7); }
 .mng-right  { width: 22%; overflow-y: auto; padding: 1%; }
 
-/* 카드 */
+/* 카드 — 세로 초상화형 (JS 참고) */
 .mng-card {
-  display: flex; gap: 0.5em; padding: 0.5em; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 0; padding: 0; box-sizing: border-box;
   background: rgba(10,7,4,0.95); border: 1px solid rgba(42,26,10,0.4);
   cursor: pointer; transition: border-color 0.12s, background 0.12s;
+  overflow: hidden;
 }
 .mng-card:hover    { border-color: rgba(122,64,24,0.6); background: rgba(18,13,7,0.98); }
-.mng-card.selected { border-color: var(--card-cog,rgba(122,64,24,0.9)); background: rgba(18,13,7,1); }
-.mng-card-sprite   { width: clamp(36px,4vw,60px); height: clamp(36px,4vw,60px); flex-shrink: 0; overflow: hidden; background: rgba(20,12,6,0.6); }
-.mng-card-info     { flex: 1; display: flex; flex-direction: column; gap: 0.2em; min-width: 0; }
-.mng-card-name     { font-family: var(--font-display); font-size: clamp(9px,0.9vw,13px); color: #e8c080; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mng-card-job      { font-family: var(--font-mono); font-size: clamp(7px,0.7vw,10px); }
-.mng-card-cog      { font-family: var(--font-mono); font-size: clamp(7px,0.7vw,10px); }
-.mng-card-hpbar    { width: 100%; height: 3px; background: rgba(20,10,6,1); }
+.mng-card.selected { border-color: var(--card-cog,rgba(122,64,24,0.9)); background: rgba(18,13,7,1); box-shadow: inset 0 0 10px rgba(90,36,8,0.2); }
+/* 스프라이트: 카드 상단 꽉 채움 */
+.mng-card-sprite   { width: 100%; aspect-ratio: 1; flex-shrink: 0; overflow: hidden; background: rgba(14,9,5,0.8); }
+.mng-card-sprite img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+/* 카드 하단 정보 */
+.mng-card-info     { padding: 0.3em 0.4em; display: flex; flex-direction: column; gap: 0.15em; }
+.mng-card-name     { font-family: var(--font-display); font-size: clamp(8px,0.85vw,12px); color: #e8c080; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mng-card-job      { font-family: var(--font-mono); font-size: clamp(6px,0.65vw,9px); }
+.mng-card-cog      { font-family: var(--font-mono); font-size: clamp(6px,0.65vw,9px); }
+.mng-card-hpbar    { width: 100%; height: 2px; background: rgba(20,10,6,1); margin-top: 0.15em; }
 .mng-card-hpfill   { height: 100%; transition: width 0.3s; }
-.mng-card-hptxt    { font-family: var(--font-mono); font-size: clamp(6px,0.6vw,9px); color: #3a2010; }
+.mng-card-hptxt    { font-family: var(--font-mono); font-size: clamp(5px,0.55vw,8px); color: #3a2010; }
 
 /* 상세 */
 .mng-detail        { display: flex; flex-direction: column; gap: 0.8em; padding: 0.5em; }
 .mng-detail-header { display: flex; gap: 1em; align-items: flex-start; }
-.mng-detail-sprite { width: clamp(60px,8vw,110px); height: clamp(60px,8vw,110px); flex-shrink: 0; overflow: hidden; background: rgba(20,12,6,0.6); border: 1px solid rgba(42,26,10,0.5); }
+.mng-detail-sprite { width: clamp(70px,9vw,130px); aspect-ratio: 1; flex-shrink: 0; overflow: hidden; background: rgba(20,12,6,0.6); border: 1px solid rgba(42,26,10,0.5); }
 .mng-detail-basic  { flex: 1; display: flex; flex-direction: column; gap: 0.3em; }
 .mng-detail-name   { font-family: var(--font-display); font-size: clamp(14px,1.6vw,22px); color: #e8c080; }
 .mng-detail-job    { font-family: var(--font-mono); font-size: clamp(9px,0.9vw,13px); }

@@ -12,6 +12,7 @@ import { CharacterManager } from '../Managers/CharacterManager';
 import { FontManager }      from '../Managers/FontManager';
 import { InputManager }     from '../Managers/InputManager';
 import { SaveManager }      from '../Managers/SaveManager';
+import { clearAllSceneDom } from '../utils/sceneCleanup';
 import { ENEMY_DATA, getEnemyScaledStats } from '../Data/Data_Enemies';
 import { BattleSceneBattle }               from './BattleScene_Battle';
 import type { BattleInitData, EnemyInstance } from './BattleScene_Setup';
@@ -34,6 +35,7 @@ export class BattleScene extends BattleSceneBattle {
   }
 
   create(): void {
+    clearAllSceneDom();
     const W = this.scale.width, H = this.scale.height;
     InputManager.reinit(this);
 
