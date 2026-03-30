@@ -38,7 +38,7 @@
 
 .settings-title {
   font-family:    var(--font-display, 'NeoDunggeunmoPro', monospace);
-  font-size:      clamp(20px, 3vw, 48px);
+  font-size:      clamp(26px, 3.9vw, 62px);
   letter-spacing: 0.3em;
   color:          var(--color-text, #c8c8b0);
 }
@@ -69,7 +69,7 @@
 /* ── 설정 행 ─────────────────────────────────────────────────── */
 .settings-row {
   display:     grid;
-  grid-template-columns: clamp(120px, 18%, 240px) 1fr;
+  grid-template-columns: clamp(156px, 23.4%, 312px) 1fr;
   align-items: center;
   gap:         1em;
   padding:     0.7em 0;
@@ -78,7 +78,7 @@
 
 .settings-row__label {
   font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:    clamp(10px, 1.1vw, 16px);
+  font-size:    clamp(13px, 1.43vw, 21px);
   letter-spacing: 0.08em;
   color:        rgba(200, 200, 176, 0.75);
 }
@@ -94,7 +94,7 @@
   -webkit-appearance: none;
   appearance:   none;
   width:        100%;
-  max-width:    320px;
+  max-width: 416px;
   height:       4px;
   background:   rgba(176, 80, 48, 0.2);
   outline:      none;
@@ -129,7 +129,7 @@
 /* 슬라이더 옆 수치 레이블 */
 .nr-slider-label {
   font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:    clamp(10px, 1vw, 15px);
+  font-size:    clamp(13px, 1.3vw, 20px);
   letter-spacing: 0.05em;
   color:        var(--color-rust, #b05030);
   min-width:    3em;
@@ -139,7 +139,7 @@
 /* ── 키바인딩 그리드 ─────────────────────────────────────────── */
 .settings-keybind-grid {
   display:               grid;
-  grid-template-columns: repeat(auto-fill, minmax(clamp(200px, 28%, 320px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(clamp(260px, 36.4%, 416px), 1fr));
   gap:                   0.5em;
 }
 
@@ -154,13 +154,13 @@
 
 .settings-keybind-row__action {
   font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:    clamp(9px, 0.9vw, 14px);
+  font-size:    clamp(12px, 1.17vw, 18px);
   opacity:      0.75;
 }
 
 .settings-keybind-row__key {
   font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:    clamp(10px, 1vw, 15px);
+  font-size:    clamp(13px, 1.3vw, 20px);
   color:        var(--color-rust, #b05030);
   min-width:    4em;
   text-align:   center;

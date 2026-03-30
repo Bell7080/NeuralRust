@@ -29,7 +29,7 @@
 .battle-party {
   position:        absolute;
   bottom:          0; left: 0; right: 0;
-  height:          clamp(80px, 9vh, 130px);
+  height:          clamp(104px, 9vh, 169px);
   display:         flex;
   align-items:     stretch;
   gap:             2px;
@@ -66,7 +66,7 @@
 
 .battle-slot__name {
   font-family:    var(--font-display, 'NeoDunggeunmoPro', monospace);
-  font-size:      clamp(9px, 1vw, 14px);
+  font-size:      clamp(12px, 1.3vw, 18px);
   letter-spacing: 0.05em;
   white-space:    nowrap;
   overflow:       hidden;
@@ -75,7 +75,7 @@
 
 .battle-slot__cog {
   font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:    clamp(8px, 0.8vw, 12px);
+  font-size:    clamp(10px, 1.04vw, 16px);
   font-weight:  700;
   white-space:  nowrap;
 }
@@ -83,7 +83,7 @@
 /* ── 파티 슬롯 — 피날레 버튼 ───────────────────────────────── */
 .battle-slot__finale {
   font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:      clamp(8px, 0.75vw, 11px);
+  font-size:      clamp(10px, 0.98vw, 14px);
   letter-spacing: 0.05em;
   padding:        2px 6px;
   border:         1px solid var(--color-rust, #b05030);
@@ -114,7 +114,7 @@
 .battle-topbar {
   position:        absolute;
   top:             0; left: 0; right: 0;
-  height:          clamp(28px, 3vh, 42px);
+  height:          clamp(36px, 3vh, 55px);
   display:         flex;
   align-items:     center;
   justify-content: center;
@@ -126,7 +126,7 @@
 
 .battle-topbar__info {
   font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:      clamp(9px, 0.9vw, 14px);
+  font-size:      clamp(12px, 1.17vw, 18px);
   letter-spacing: 0.1em;
   color:          rgba(200, 200, 176, 0.65);
 }
@@ -135,9 +135,9 @@
 .battle-log {
   position:     absolute;
   right:        1%;
-  top:          clamp(28px, 3vh, 42px);
-  bottom:       clamp(80px, 9vh, 130px);
-  width:        clamp(160px, 18vw, 280px);
+  top:          clamp(36px, 3vh, 55px);
+  bottom:       clamp(104px, 9vh, 169px);
+  width:        clamp(208px, 23.4vw, 364px);
   overflow-y:   auto;
   display:      flex;
   flex-direction: column-reverse;
@@ -148,7 +148,7 @@
 
 .battle-log__entry {
   font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:    clamp(8px, 0.75vw, 11px);
+  font-size:    clamp(10px, 0.98vw, 14px);
   color:        rgba(200, 200, 176, 0.65);
   line-height:  1.4;
   animation:    logEntry 0.2s ease;
@@ -199,7 +199,7 @@
 
 .battle-setup__title {
   font-family:    var(--font-display, monospace);
-  font-size:      clamp(10px, 1.0vw, 15px);
+  font-size:      clamp(13px, 1.3vw, 20px);
   color:          #4a2a10;
   text-align:     center;
   padding:        2.5vh 0 0.5vh;
@@ -208,7 +208,7 @@
 
 .battle-setup__sub {
   font-family:  var(--font-mono, monospace);
-  font-size:    clamp(8px, 0.7vw, 11px);
+  font-size:    clamp(10px, 0.91vw, 14px);
   color:        #2a1508;
   text-align:   center;
   margin-bottom: 1.2vh;
@@ -218,7 +218,7 @@
 .battle-setup__grid {
   display:               grid;
   grid-template-columns: repeat(3, 1fr);
-  gap:                   clamp(2px, 0.4vh, 5px);
+  gap:                   clamp(3px, 0.4vh, 6px);
   padding:               0 2%;
 }
 
@@ -254,7 +254,7 @@
   top:          4%;
   left:         5%;
   font-family:  var(--font-mono, monospace);
-  font-size:    clamp(6px, 0.6vw, 9px);
+  font-size:    clamp(8px, 0.78vw, 12px);
   font-weight:  700;
   /* color set inline via style */
 }
@@ -264,7 +264,7 @@
   top:        50%;
   left:       50%;
   transform:  translate(-50%, -50%);
-  font-size:  clamp(12px, 1.2vw, 18px);
+  font-size:  clamp(16px, 1.56vw, 23px);
   color:      #60c060;
   opacity:    0;
   pointer-events: none;
@@ -284,7 +284,7 @@
 
 .battle-setup__card-name {
   font-family:  var(--font-display, monospace);
-  font-size:    clamp(6px, 0.65vw, 10px);
+  font-size:    clamp(8px, 0.85vw, 13px);
   color:        #c8bfb0;
   text-align:   center;
   word-break:   keep-all;
@@ -293,7 +293,7 @@
 
 .battle-setup__card-hp {
   width:         82%;
-  height:        clamp(2px, 0.5vh, 4px);
+  height:        clamp(3px, 0.5vh, 5px);
   background:    rgba(26, 16, 8, 0.8);
   border-radius: 1px;
   overflow:      hidden;
@@ -327,7 +327,7 @@
 
 .battle-setup__go-btn {
   font-family:    var(--font-display, monospace);
-  font-size:      clamp(16px, 2vw, 30px);
+  font-size:      clamp(21px, 2.6vw, 39px);
   color:          #2a1a0a;
   background:     rgba(10, 8, 7, 0.8);
   border:         1px solid rgba(30, 16, 8, 0.4);
@@ -352,7 +352,7 @@
 
 .battle-setup__go-sub {
   font-family:  var(--font-mono, monospace);
-  font-size:    clamp(8px, 0.75vw, 11px);
+  font-size:    clamp(10px, 0.98vw, 14px);
   color:        #3a2010;
   text-align:   center;
 }
@@ -373,7 +373,7 @@
 
 .battle-setup__slots-label {
   font-family:    var(--font-mono, monospace);
-  font-size:      clamp(8px, 0.7vw, 10px);
+  font-size:      clamp(10px, 0.91vw, 13px);
   color:          #2a1508;
   letter-spacing: 0.1em;
   border-top:     1px solid rgba(30, 16, 8, 0.5);
@@ -384,13 +384,13 @@
 
 .battle-setup__slots {
   display:    flex;
-  gap:        clamp(3px, 0.5vw, 8px);
+  gap:        clamp(4px, 0.65vw, 10px);
   flex-wrap:  wrap;
   justify-content: center;
 }
 
 .battle-setup__slot {
-  width:          clamp(40px, 5.5vw, 80px);
+  width:          clamp(52px, 7.15vw, 104px);
   aspect-ratio:   1;
   background:     rgba(8, 6, 7, 0.7);
   border:         1px solid rgba(30, 16, 8, 0.35);
@@ -414,19 +414,19 @@
   top:         4%;
   left:        6%;
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(6px, 0.55vw, 9px);
+  font-size:   clamp(8px, 0.72vw, 12px);
   color:       #1e1008;
 }
 
 .battle-setup__slot-plus {
-  font-size:  clamp(14px, 1.4vw, 22px);
+  font-size:  clamp(18px, 1.82vw, 29px);
   color:      #1e1008;
   font-family:var(--font-display, monospace);
 }
 
 .battle-setup__slot-name {
   font-family:  var(--font-display, monospace);
-  font-size:    clamp(6px, 0.55vw, 8px);
+  font-size:    clamp(8px, 0.72vw, 10px);
   color:        #c8bfb0;
   text-align:   center;
   word-break:   keep-all;
