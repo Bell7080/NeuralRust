@@ -476,6 +476,73 @@
 .recruit-complete-sub  { font-family: var(--font-mono); font-size: clamp(8px,0.85vw,13px); color: #5a3a18; }
 
 /* ================================================================
+   재설정 비교 팝업 (Recruit_Popup.js 대응)
+   ================================================================ */
+
+.rct-popup-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300;
+}
+.rct-popup-row {
+  display: flex; gap: clamp(12px, 2.5vw, 40px); align-items: stretch;
+}
+.rct-popup-panel {
+  width:   clamp(140px, 18vw, 260px);
+  padding: 3% 4%; box-sizing: border-box;
+  background: rgba(18,13,7,0.98);
+  border: 1px solid rgba(58,34,16,0.6);
+  display: flex; flex-direction: column; gap: 0.6em;
+  position: relative;
+  transition: border-color 0.15s, background 0.12s;
+}
+.rct-popup-panel::before,
+.rct-popup-panel::after {
+  content: ''; position: absolute;
+  width: 10px; height: 10px;
+  border-color: rgba(80,42,14,0.5);
+  border-style: solid;
+}
+.rct-popup-panel::before { top: 6px; left: 6px; border-width: 1px 0 0 1px; }
+.rct-popup-panel::after  { bottom: 6px; right: 6px; border-width: 0 1px 1px 0; }
+.rct-popup-header {
+  font-family: var(--font-mono); font-size: clamp(8px,0.85vw,12px);
+  color: #6a4020; letter-spacing: 0.12em;
+}
+.rct-popup-header--next { color: #408840; }
+.rct-popup-divider { width: 100%; height: 1px; background: rgba(42,26,10,0.6); }
+/* 스프라이트 팝업 */
+.rct-popup-sprite {
+  width: 100%; aspect-ratio: 1;
+  overflow: hidden; background: rgba(20,12,6,0.8);
+  border: 1px solid rgba(42,26,10,0.4);
+}
+.rct-popup-sprite img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+/* 스탯 팝업 */
+.rct-popup-stat-list { display: flex; flex-direction: column; gap: 0.3em; }
+.rct-popup-stat-row  { display: flex; justify-content: space-between; align-items: center; gap: 0.4em; }
+.rct-popup-stat-key  { font-family: var(--font-mono); font-size: clamp(7px,0.75vw,11px); color: #5a3a18; }
+.rct-popup-stat-val  { font-family: var(--font-mono); font-size: clamp(8px,0.85vw,12px); font-weight: bold; }
+.rct-popup-stat-diff { font-family: var(--font-mono); font-size: clamp(7px,0.7vw,10px); }
+/* 능력 팝업 */
+.rct-popup-ab-name { font-family: var(--font-display); font-size: clamp(10px,1.1vw,16px); color: #e8c080; }
+.rct-popup-ab-desc { font-family: var(--font-mono); font-size: clamp(7px,0.75vw,11px); color: #7a5028; line-height: 1.4; }
+/* 버튼 행 */
+.rct-popup-btn-row { display: flex; gap: 0.4em; margin-top: auto; padding-top: 0.5em; }
+.rct-popup-btn {
+  flex: 1;
+  font-family: var(--font-mono); font-size: clamp(7px,0.75vw,11px);
+  background: rgba(10,7,4,1); border: 1px solid rgba(58,34,16,0.6);
+  padding: 0.35em 0.4em; cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+}
+.rct-popup-btn--keep  { color: #5a3a18; }
+.rct-popup-btn--keep:hover  { color: #c8a070; border-color: rgba(122,64,24,0.8); }
+.rct-popup-btn--apply { color: #408840; border-color: rgba(40,100,40,0.5); }
+.rct-popup-btn--apply:hover { color: #70c870; border-color: rgba(60,140,60,0.8); }
+
+/* ================================================================
    Tab_Manage_Full 스타일
    ================================================================ */
 

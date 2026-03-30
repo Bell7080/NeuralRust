@@ -89,6 +89,8 @@ export class Tab_Recruit {
     this._timers.forEach(t=>{try{t.remove();}catch(_){}});
     this._timers=[];
     this._el.innerHTML='';
+    // 재설정 팝업이 열려있으면 함께 제거
+    document.querySelectorAll('.rct-popup-overlay').forEach(el => el.remove());
   }
   private _delay(ms: number, fn: ()=>void) {
     this._timers.push(this._scene.time.delayedCall(ms,fn));
@@ -236,77 +238,210 @@ export class Tab_Recruit {
   private _showCustom() { this._clear(); this._renderCustom(this._chosen!); }
 
   private _renderCustom(roll: Roll) {
-    const cogC=getCogColor(roll.cog);
-    const jobCol=roll.job==='fisher'?'#c8a070':roll.job==='diver'?'#7ab0c8':'#a080e0';
-    const SL:Record<string,string>={hp:'체력',health:'건강',attack:'공격',agility:'민첩',luck:'행운'};
-    const AL:Record<string,string>={passive:'패시브',action:'행동',enhanced:'강화',finale:'피날레'};
-    const SC=CharacterManager.STAT_COLORS as Record<string,string>;
+    // ★ 매 렌더링 전 기존 DOM 제거 (재설정 클릭 시 중복 방지)
+    this._el.innerHTML = '';
 
-    const wrap=document.createElement('div'); wrap.className='recruit-custom-wrap';
-    const toast=document.createElement('div'); toast.className='rct-toast'; toast.style.cssText='opacity:0;transition:opacity 0.3s;text-align:center;color:#e87040;font-size:0.9em;min-height:1.2em';
+    const cogC  = getCogColor(roll.cog);
+    const jobCol = roll.job==='fisher'?'#c8a070':roll.job==='diver'?'#7ab0c8':'#a080e0';
+    const SL: Record<string,string> = {hp:'체력',health:'건강',attack:'공격',agility:'민첩',luck:'행운'};
+    const AL: Record<string,string> = {passive:'패시브',action:'행동',enhanced:'강화',finale:'피날레'};
+    const SC = CharacterManager.STAT_COLORS as Record<string,string>;
 
-    // 좌측
-    const left=document.createElement('div'); left.className='recruit-custom-left';
-    const jd=document.createElement('div');jd.className='rct-custom-job';jd.style.color=jobCol;jd.textContent=JOB_LABEL[roll.job];
-    const sd=this._spriteEl(roll.spriteKey,'rct-custom-sprite');
-    const bSpr=document.createElement('button');bSpr.className='recruit-reroll-btn';bSpr.textContent=`외형 재설정 (${this._rerolls.sprite}회)`;
-    const nd=document.createElement('div');nd.className='rct-custom-name';nd.textContent=roll.name;
-    const cd=document.createElement('div');cd.className='rct-custom-cog';cd.style.color=cogC.css;cd.textContent=`Cog  ${roll.cog}`;
-    const sumd=document.createElement('div');sumd.className='rct-custom-sum';sumd.textContent=`합계  ${roll.statSum}`;
-    left.append(jd,sd,bSpr,nd,cd,sumd);
-    bSpr.addEventListener('click',()=>{
-      if(!this._rerolls.sprite){toast.style.opacity='1';toast.textContent='재설정 횟수 소진';this._delay(1500,()=>{toast.style.opacity='0';});return;}
+    // 토스트 (actions 영역에 배치)
+    const toast = document.createElement('div');
+    toast.style.cssText = 'opacity:0;transition:opacity 0.3s;text-align:center;color:#e87040;font-size:0.9em;min-height:1.2em';
+
+    const wrap  = document.createElement('div'); wrap.className  = 'recruit-custom-wrap';
+
+    // ── 좌측: 스프라이트 / 기본 정보 ──────────────────────────────
+    const left = document.createElement('div'); left.className = 'recruit-custom-left';
+    const jd   = document.createElement('div'); jd.className   = 'rct-custom-job'; jd.style.color = jobCol; jd.textContent = JOB_LABEL[roll.job];
+    const sd   = this._spriteEl(roll.spriteKey, 'rct-custom-sprite');
+    const bSpr = document.createElement('button'); bSpr.className = 'recruit-reroll-btn';
+    bSpr.textContent = this._rerolls.sprite > 0 ? `외형 재설정 (${this._rerolls.sprite}회)` : '외형 재설정 ✕';
+    const nd   = document.createElement('div'); nd.className   = 'rct-custom-name'; nd.textContent = roll.name;
+    const cd   = document.createElement('div'); cd.className   = 'rct-custom-cog';  cd.style.color = cogC.css; cd.textContent = `Cog  ${roll.cog}`;
+    const sumd = document.createElement('div'); sumd.className = 'rct-custom-sum';  sumd.textContent = `합계  ${roll.statSum}`;
+    left.append(jd, sd, bSpr, nd, cd, sumd);
+
+    bSpr.addEventListener('click', () => {
+      if (!this._rerolls.sprite) { this._toastMsg(toast, '재설정 횟수 소진'); return; }
       this._rerolls.sprite--;
-      roll.spriteKey=`char_${String(Math.floor(Math.random()*SPRITE_COUNT)).padStart(3,'0')}`;
-      this._renderCustom(roll);
+      this._showRerollPopup('sprite', roll, () => this._renderCustom(roll));
     });
 
-    // 중앙: 스탯
-    const mid=document.createElement('div'); mid.className='recruit-custom-mid';
-    const sl=document.createElement('div');sl.className='rct-section-label';sl.textContent='스  탯';
-    const slist=document.createElement('div');slist.className='rct-stat-list';
-    Object.entries(roll.stats).forEach(([k,v])=>{
-      const row2=document.createElement('div');row2.className='rct-stat-row';
-      const ke=document.createElement('span');ke.className='rct-stat-key';ke.textContent=SL[k]??k;
-      const ve=document.createElement('span');ve.className='rct-stat-val';ve.style.color=SC[k]??'#c8bfb0';ve.textContent=String(v);
-      row2.append(ke,ve); slist.appendChild(row2);
+    // ── 중앙: 스탯 ──────────────────────────────────────────────
+    const mid   = document.createElement('div'); mid.className = 'recruit-custom-mid';
+    const sl    = document.createElement('div'); sl.className  = 'rct-section-label'; sl.textContent = '스  탯';
+    const slist = document.createElement('div'); slist.className = 'rct-stat-list';
+    Object.entries(roll.stats).forEach(([k, v]) => {
+      const row2 = document.createElement('div'); row2.className = 'rct-stat-row';
+      const ke   = document.createElement('span'); ke.className  = 'rct-stat-key'; ke.textContent = SL[k] ?? k;
+      const ve   = document.createElement('span'); ve.className  = 'rct-stat-val'; ve.style.color = SC[k] ?? '#c8bfb0'; ve.textContent = String(v);
+      row2.append(ke, ve); slist.appendChild(row2);
     });
-    const bStat=document.createElement('button');bStat.className='recruit-reroll-btn';bStat.textContent=`스탯 재설정 (${this._rerolls.stat}회)`;
-    mid.append(sl,slist,bStat);
-    bStat.addEventListener('click',()=>{
-      if(!this._rerolls.stat){toast.style.opacity='1';toast.textContent='재설정 횟수 소진';this._delay(1500,()=>{toast.style.opacity='0';});return;}
-      this._rerolls.stat--; roll.stats=_statsBySum(roll.statSum); this._renderCustom(roll);
+    const bStat = document.createElement('button'); bStat.className = 'recruit-reroll-btn';
+    bStat.textContent = this._rerolls.stat > 0 ? `스탯 재설정 (${this._rerolls.stat}회)` : '스탯 재설정 ✕';
+    mid.append(sl, slist, bStat);
+
+    bStat.addEventListener('click', () => {
+      if (!this._rerolls.stat) { this._toastMsg(toast, '재설정 횟수 소진'); return; }
+      this._rerolls.stat--;
+      this._showRerollPopup('stat', roll, () => this._renderCustom(roll));
     });
 
-    // 우측: 능력
-    const right=document.createElement('div'); right.className='recruit-custom-right';
-    const al=document.createElement('div');al.className='rct-section-label';al.textContent='능  력';
+    // ── 우측: 능력 ──────────────────────────────────────────────
+    const right = document.createElement('div'); right.className = 'recruit-custom-right';
+    const al    = document.createElement('div'); al.className = 'rct-section-label'; al.textContent = '능  력';
     right.appendChild(al);
-    (['passive','action','enhanced','finale'] as const).forEach(type=>{
-      const id=roll[type];
-      const nm=AbilityIndex.getName(type,id)||id;
-      const ds=AbilityIndex.getDesc(type,id)||'';
-      const box=document.createElement('div');box.className='rct-ability-box';
-      const te=document.createElement('div');te.className='rct-ab-type';te.textContent=AL[type];
-      const ne=document.createElement('div');ne.className='rct-ab-name';ne.textContent=nm;
-      const de=document.createElement('div');de.className='rct-ab-desc';de.textContent=ds;
-      const be=document.createElement('button');be.className='recruit-reroll-btn';be.textContent=`재설정 (${this._rerolls[type]}회)`;
-      box.append(te,ne,de,be); right.appendChild(box);
-      be.addEventListener('click',()=>{
-        if(!this._rerolls[type]){toast.style.opacity='1';toast.textContent='재설정 횟수 소진';this._delay(1500,()=>{toast.style.opacity='0';});return;}
-        this._rerolls[type]--; roll[type]=_ab(type,roll.job,roll.cog); this._renderCustom(roll);
+    (['passive','action','enhanced','finale'] as const).forEach(type => {
+      const id = roll[type];
+      const nm = AbilityIndex.getName(type, id) || id;
+      const ds = AbilityIndex.getDesc(type, id) || '';
+      const box = document.createElement('div'); box.className = 'rct-ability-box';
+      const te  = document.createElement('div'); te.className  = 'rct-ab-type'; te.textContent = AL[type];
+      const ne  = document.createElement('div'); ne.className  = 'rct-ab-name'; ne.textContent = nm;
+      const de  = document.createElement('div'); de.className  = 'rct-ab-desc'; de.textContent = ds;
+      const be  = document.createElement('button'); be.className = 'recruit-reroll-btn';
+      be.textContent = this._rerolls[type] > 0 ? `재설정 (${this._rerolls[type]}회)` : '재설정 ✕';
+      box.append(te, ne, de, be);
+      right.appendChild(box);
+
+      be.addEventListener('click', () => {
+        if (!this._rerolls[type]) { this._toastMsg(toast, '재설정 횟수 소진'); return; }
+        this._rerolls[type]--;
+        this._showRerollPopup(type, roll, () => this._renderCustom(roll));
       });
     });
 
-    wrap.append(left,mid,right);
-    const actions=document.createElement('div'); actions.className='recruit-custom-actions';
-    const cfm=document.createElement('button');cfm.className='recruit-confirm-btn';cfm.textContent='확  정';
-    const cnl=document.createElement('button');cnl.className='recruit-cancel-btn';cnl.textContent='← 다시 고르기';
-    actions.append(toast,cfm,cnl);
-    this._el.append(wrap,actions);
+    wrap.append(left, mid, right);
 
-    cfm.addEventListener('click',()=>this._confirmHire());
-    cnl.addEventListener('click',()=>{this._rolls=_rollTriple(this._price);this._showPick();});
+    const actions = document.createElement('div'); actions.className = 'recruit-custom-actions';
+    const cfm = document.createElement('button'); cfm.className = 'recruit-confirm-btn'; cfm.textContent = '확  정';
+    const cnl = document.createElement('button'); cnl.className = 'recruit-cancel-btn';  cnl.textContent = '← 다시 고르기';
+    actions.append(toast, cfm, cnl);
+
+    this._el.append(wrap, actions);
+
+    cfm.addEventListener('click', () => this._confirmHire());
+    cnl.addEventListener('click', () => { this._rolls = _rollTriple(this._price); this._showPick(); });
+  }
+
+  // ── 재설정 비교 팝업 (JS Recruit_Popup.js 대응) ─────────────────
+  private _showRerollPopup(
+    type: 'sprite' | 'stat' | 'passive' | 'action' | 'enhanced' | 'finale',
+    roll: Roll,
+    onApply: () => void,
+  ): void {
+    const SL: Record<string,string> = {hp:'체력',health:'건강',attack:'공격',agility:'민첩',luck:'행운'};
+    const SC = CharacterManager.STAT_COLORS as Record<string,string>;
+
+    const root    = document.getElementById('game-container') ?? document.body;
+    const overlay = document.createElement('div');
+    overlay.className = 'rct-popup-overlay';
+
+    // 패널 공통 생성
+    const mkPanel = (isNext: boolean) => {
+      const p = document.createElement('div'); p.className = 'rct-popup-panel';
+      const h = document.createElement('div');
+      h.className = isNext ? 'rct-popup-header rct-popup-header--next' : 'rct-popup-header';
+      h.textContent = isNext ? '새로운  ▶' : '◀  현재';
+      const dv = document.createElement('div'); dv.className = 'rct-popup-divider';
+      p.append(h, dv);
+      return p;
+    };
+
+    const prevPanel = mkPanel(false);
+    const nextPanel = mkPanel(true);
+
+    const close = (apply: boolean, nextVal?: unknown) => {
+      if (apply) {
+        if (type === 'sprite' && typeof nextVal === 'string') roll.spriteKey = nextVal;
+        else if (type === 'stat' && nextVal && typeof nextVal === 'object') roll.stats = nextVal as Roll['stats'];
+        else if (type !== 'sprite' && type !== 'stat' && typeof nextVal === 'string') roll[type] = nextVal;
+        overlay.remove();
+        onApply();
+      } else {
+        overlay.remove();
+        onApply(); // 재렌더링 (횟수는 이미 차감됨 — 취소해도 소진)
+      }
+    };
+
+    const mkBtnRow = (onKeep: () => void, onApplyFn: () => void) => {
+      const row = document.createElement('div'); row.className = 'rct-popup-btn-row';
+      const bk  = document.createElement('button'); bk.className = 'rct-popup-btn rct-popup-btn--keep'; bk.textContent = '유  지';
+      const ba  = document.createElement('button'); ba.className = 'rct-popup-btn rct-popup-btn--apply'; ba.textContent = '적  용';
+      bk.addEventListener('click', onKeep);
+      ba.addEventListener('click', onApplyFn);
+      row.append(bk, ba);
+      return row;
+    };
+
+    if (type === 'sprite') {
+      const nextKey = `char_${String(Math.floor(Math.random() * SPRITE_COUNT)).padStart(3, '0')}`;
+      prevPanel.appendChild(this._spriteEl(roll.spriteKey, 'rct-popup-sprite'));
+      nextPanel.appendChild(this._spriteEl(nextKey, 'rct-popup-sprite'));
+      prevPanel.appendChild(mkBtnRow(() => close(false), () => close(true, roll.spriteKey)));
+      nextPanel.appendChild(mkBtnRow(() => close(false), () => close(true, nextKey)));
+
+    } else if (type === 'stat') {
+      const prevStats = { ...roll.stats };
+      const nextStats = _statsBySum(roll.statSum);
+
+      const mkStatList = (stats: Record<string, number>, showDiff: boolean) => {
+        const list = document.createElement('div'); list.className = 'rct-popup-stat-list';
+        Object.entries(stats).forEach(([k, v]) => {
+          const r  = document.createElement('div'); r.className = 'rct-popup-stat-row';
+          const ke = document.createElement('span'); ke.className = 'rct-popup-stat-key'; ke.textContent = SL[k] ?? k;
+          const ve = document.createElement('span'); ve.className = 'rct-popup-stat-val'; ve.style.color = SC[k] ?? '#c8bfb0'; ve.textContent = String(v);
+          r.append(ke, ve);
+          if (showDiff) {
+            const diff = v - (prevStats[k] ?? 0);
+            if (diff !== 0) {
+              const de = document.createElement('span'); de.className = 'rct-popup-stat-diff';
+              de.style.color = diff > 0 ? '#50e050' : '#e05050';
+              de.textContent = diff > 0 ? `▲+${diff}` : `▼${diff}`;
+              r.appendChild(de);
+            }
+          }
+          list.appendChild(r);
+        });
+        return list;
+      };
+
+      prevPanel.appendChild(mkStatList(prevStats, false));
+      nextPanel.appendChild(mkStatList(nextStats, true));
+      prevPanel.appendChild(mkBtnRow(() => close(false), () => close(true, prevStats)));
+      nextPanel.appendChild(mkBtnRow(() => close(false), () => close(true, nextStats)));
+
+    } else {
+      const abilType = type as 'passive'|'action'|'enhanced'|'finale';
+      const prevId   = roll[abilType];
+      const nextId   = _ab(abilType, roll.job, roll.cog);
+
+      const mkAbContent = (id: string) => {
+        const nm  = AbilityIndex.getName(abilType, id) || id;
+        const ds  = AbilityIndex.getDesc(abilType, id) || '';
+        const nEl = document.createElement('div'); nEl.className = 'rct-popup-ab-name'; nEl.textContent = nm;
+        const dEl = document.createElement('div'); dEl.className = 'rct-popup-ab-desc'; dEl.textContent = ds;
+        return [nEl, dEl] as const;
+      };
+
+      mkAbContent(prevId).forEach(el => prevPanel.appendChild(el));
+      mkAbContent(nextId).forEach(el => nextPanel.appendChild(el));
+      prevPanel.appendChild(mkBtnRow(() => close(false), () => close(true, prevId)));
+      nextPanel.appendChild(mkBtnRow(() => close(false), () => close(true, nextId)));
+    }
+
+    const row = document.createElement('div'); row.className = 'rct-popup-row';
+    row.append(prevPanel, nextPanel);
+    overlay.appendChild(row);
+    root.appendChild(overlay);
+  }
+
+  private _toastMsg(el: HTMLElement, msg: string): void {
+    el.textContent = msg; el.style.opacity = '1';
+    this._delay(1500, () => { if (el) el.style.opacity = '0'; });
   }
 
   private _confirmHire() {
@@ -340,6 +475,7 @@ export class Tab_Recruit {
   destroy() {
     this._timers.forEach(t=>{try{t.remove();}catch(_){}});
     this._timers=[];
+    document.querySelectorAll('.rct-popup-overlay').forEach(el => el.remove());
     this._el.remove();
   }
 }
