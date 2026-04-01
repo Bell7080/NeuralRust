@@ -280,7 +280,7 @@ export class Tab_Manage_Full {
         </div>
         ${char.overclock ? `
           <div class="mng-detail-divider"></div>
-          <div class="mng-overclock" style="color:${char.overclock.color}">[오버클럭]  ${char.overclock.label}</div>
+          <div class="mng-overclock" style="color:${char.overclock.color}">${char.overclock.label}</div>
         ` : ''}
       </div>
     `;

@@ -123,12 +123,30 @@
   width:          0;
   height:         0;
   top:            50%;
+  pointer-events: none;
+}
+.gear-side--left  .gear-rot { left: 0; }
+.gear-side--right .gear-rot { right: 0; }
+
+/* 드래그 수신 영역 (기어 보이는 절반 커버) */
+.gear-side--left .gear-drag-overlay {
+  position:       absolute;
+  left:           0;
+  top:            -340px;
+  width:          340px;
+  height:         680px;
   pointer-events: auto;
   cursor:         grab;
 }
-.gear-rot:active { cursor: grabbing; }
-.gear-side--left  .gear-rot { left: 0; }
-.gear-side--right .gear-rot { right: 0; }
+.gear-side--right .gear-drag-overlay {
+  position:       absolute;
+  left:           -340px;
+  top:            -340px;
+  width:          340px;
+  height:         680px;
+  pointer-events: auto;
+  cursor:         grab;
+}
 
 .gear-svg {
   position:         absolute;
