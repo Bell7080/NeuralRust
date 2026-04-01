@@ -340,9 +340,8 @@ function initIfEmpty(): Character[] {
         dirty = true;
       }
 
-      if ((c.mastery === undefined || c.mastery === 0) && !c._masteryMigrated) {
-        c.mastery = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * 40) : 0;
-        c._masteryMigrated = true;
+      if (c.mastery === undefined || c.mastery === 0) {
+        c.mastery = 1 + Math.floor(Math.random() * 30);
         c.pendingStats = c.mastery;
         dirty = true;
       }

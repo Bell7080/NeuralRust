@@ -758,6 +758,7 @@ export class DiveScene extends Phaser.Scene {
     this._dimEl.classList.add('visible');
     this._closeBtn.classList.add('visible');
     this._refreshTabBtns();
+    (this.sys.game.canvas as HTMLCanvasElement).style.pointerEvents = 'none';
   }
 
   private _closeTab(): void {
@@ -766,6 +767,7 @@ export class DiveScene extends Phaser.Scene {
     this._dimEl.classList.remove('visible');
     this._closeBtn.classList.remove('visible');
     this._refreshTabBtns();
+    (this.sys.game.canvas as HTMLCanvasElement).style.pointerEvents = '';
   }
 
   private _refreshTabBtns(): void {

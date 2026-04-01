@@ -77,9 +77,15 @@
   margin-left: 0.6em;
 }
 
+@keyframes cp-oc-pulse {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50%       { opacity: 0.55; filter: brightness(1.4); }
+}
+
 .cp-overclock {
   font-size: 1.01em;
   font-family: var(--font-mono);
+  animation: cp-oc-pulse 1.9s ease-in-out infinite;
 }
 
 .cp-hp-row {
