@@ -68,11 +68,6 @@ function makeGearPath(R: number, r: number, hole: number, n: number): string {
   return d;
 }
 
-// ── 소형 중앙 기어 경로 ───────────────────────────────────────────
-function makeSmallGearPath(): string {
-  return makeGearPath(50, 36, 14, 10);
-}
-
 export class AtelierHUD {
   private _el!:        HTMLElement;
   private _contentEl!: HTMLElement;
@@ -80,8 +75,6 @@ export class AtelierHUD {
   private _daySpan!:   HTMLElement;
   private _btns:       Map<TabKey, HTMLButtonElement> = new Map();
   private _cb!:        HUDCallbacks;
-  private _gearEl!:    SVGElement;
-  private _gearDeg  =  0;
 
   // 기어 드래그 상태
   private _leftRotEl!:  HTMLElement;
@@ -127,13 +120,6 @@ export class AtelierHUD {
       <!-- 탭 콘텐츠 영역 -->
       <div id="atelier-content"></div>
 
-      <!-- 중앙 기어 장식 -->
-      <div class="atelier-gear-wrap" id="atelier-gear-wrap">
-        <svg class="atelier-gear" id="atelier-gear" viewBox="-55 -55 110 110" xmlns="http://www.w3.org/2000/svg">
-          <path class="atelier-gear__path" fill-rule="evenodd"/>
-        </svg>
-      </div>
-
       <!-- 탐색 버튼 (하단 중앙) -->
       <div class="atelier-explore-area" id="atelier-explore-area">
         <div class="atelier-explore-sep"></div>
@@ -150,11 +136,6 @@ export class AtelierHUD {
     this._contentEl = hud.querySelector('#atelier-content')!;
     this._arcSpan   = hud.querySelector('#atelier-arc')!;
     this._daySpan   = hud.querySelector('#atelier-day')!;
-
-    // 소형 중앙 기어
-    const smallGear = hud.querySelector('#atelier-gear') as SVGElement;
-    smallGear.querySelector('path')!.setAttribute('d', makeSmallGearPath());
-    this._gearEl = smallGear;
 
     // 기어 DOM 참조
     this._leftRotEl  = hud.querySelector('#gear-rot-left')!;
@@ -201,10 +182,12 @@ export class AtelierHUD {
     const labels = tabs.map((t, i) =>
       `<button class="gear-label" data-key="${t.key}" style="--base:${i * GEAR_STEP}deg">${t.label}</button>`
     ).join('\n      ');
+    const vb = GEAR_R + 10;
     return `
     <div class="gear-side gear-side--${side}" id="gear-${side}">
       <div class="gear-rot" id="gear-rot-${side}" style="--rot:${initRot}deg">
-        <svg class="gear-svg" viewBox="-${GEAR_R + 10} -${GEAR_R + 10} ${(GEAR_R + 10) * 2} ${(GEAR_R + 10) * 2}" xmlns="http://www.w3.org/2000/svg">
+        <div class="gear-drag-overlay"></div>
+        <svg class="gear-svg" viewBox="-${vb} -${vb} ${vb * 2} ${vb * 2}" xmlns="http://www.w3.org/2000/svg">
           <path class="gear-path" fill-rule="evenodd" d="${path}"/>
         </svg>
         ${labels}
@@ -276,23 +259,24 @@ export class AtelierHUD {
 
   // ── 드래그 핸들러 설정 ──────────────────────────────────────
   private _setupDrag(
-    wrapEl:  HTMLElement,
+    _wrapEl: HTMLElement,
     rotEl:   HTMLElement,
     svgEl:   SVGElement,
     selAng:  number,
     tabs:    GearTab[],
   ): () => void {
-    const isLeft = selAng === 0;
+    const isLeft   = selAng === 0;
+    const dragArea = rotEl.querySelector('.gear-drag-overlay') as HTMLElement;
     let dragging = false;
     let startY   = 0;
     let startRot = 0;
 
     const onDown = (e: MouseEvent) => {
-      if ((e.target as HTMLElement).tagName === 'BUTTON') return; // let label clicks through
       dragging = true;
       startY   = e.clientY;
       startRot = isLeft ? this._leftRot : this._rightRot;
       svgEl.classList.add('dragging');
+      dragArea.style.cursor = 'grabbing';
       e.preventDefault();
     };
 
@@ -309,6 +293,7 @@ export class AtelierHUD {
       if (!dragging) return;
       dragging = false;
       svgEl.classList.remove('dragging');
+      dragArea.style.cursor = '';
       // snap to nearest tooth
       const cur    = isLeft ? this._leftRot : this._rightRot;
       const rawIdx = (selAng - cur) / GEAR_STEP;
@@ -323,12 +308,12 @@ export class AtelierHUD {
       this._updateSelection(rotEl, newRot, selAng, tabs);
     };
 
-    wrapEl.addEventListener('mousedown', onDown);
+    dragArea.addEventListener('mousedown', onDown);
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup',   onUp);
 
     return () => {
-      wrapEl.removeEventListener('mousedown', onDown);
+      dragArea.removeEventListener('mousedown', onDown);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup',   onUp);
     };
@@ -349,9 +334,6 @@ export class AtelierHUD {
     this._btns.forEach((btn, k) => {
       btn.classList.toggle('active', k === key);
     });
-    // 소형 중앙 기어 36° 회전
-    this._gearDeg += 36;
-    if (this._gearEl) this._gearEl.style.transform = `rotate(${this._gearDeg}deg)`;
   }
 
   setManageMode(on: boolean): void {
