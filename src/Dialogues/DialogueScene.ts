@@ -181,7 +181,7 @@ export class DialogueScene extends Phaser.Scene {
     for (let x = 0; x <= W; x += step) this._bgGrid.lineBetween(x, 0, x, H);
     for (let y = 0; y <= H; y += step) this._bgGrid.lineBetween(0, y, W, y);
 
-    this._bgOverlay = this.add.rectangle(0, 0, W, H, 0x000000, 0.55)
+    this._bgOverlay = this.add.rectangle(0, 0, W, H, 0x000000, 0.40)
       .setOrigin(0).setDepth(1);
 
     // 첫 배경
@@ -197,13 +197,13 @@ export class DialogueScene extends Phaser.Scene {
       }
     }
 
-    // 캐릭터 슬롯 계산
-    const BOX_H = Math.round(Math.round(W * 0.63) * (430 / 1516));
-    const BOX_Y = Math.round(H - BOX_H - H * 0.04 - 20);
-    const charFootY = BOX_Y + 40;
-    this._charH = Math.round(charFootY * 0.92);
-    this._charX = Math.round(W / 2);
-    this._charY = charFootY - Math.round(this._charH / 2);
+    // 캐릭터 슬롯 계산 — CSS 대화창 기준 (bottom:3%, min-height:17vh)
+    const dlgBottom = H * 0.03;
+    const dlgMinH   = Math.max(H * 0.17, 130);
+    const charFootY = Math.round(H - dlgBottom - dlgMinH);
+    this._charH     = Math.round(charFootY * 0.91);
+    this._charX     = Math.round(W / 2);
+    this._charY     = charFootY - Math.round(this._charH / 2);
   }
 
   private _revealPortrait(): void {
@@ -358,6 +358,11 @@ export class DialogueScene extends Phaser.Scene {
 
     const hud = document.createElement('div');
     hud.id = 'dialogue-hud';
+
+    // 비네트 레이어
+    const vignette = document.createElement('div');
+    vignette.className = 'dlg-vignette';
+    hud.appendChild(vignette);
 
     // 선택지 컨테이너 (박스보다 위 레이어에서 absolute 위치)
     const choices = document.createElement('div');
