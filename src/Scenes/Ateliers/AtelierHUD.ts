@@ -3,14 +3,14 @@
 //  경로: src/Scenes/Ateliers/AtelierHUD.ts
 //
 //  역할: #atelier-hud DOM 생성·관리
-//        DAY / ARC 표시, 사이드 버튼, 탐색 버튼, 상단 버튼
+//        DAY / ARC 표시, 기어 네비 (좌우 드래그 가능), 탐색 버튼
 // ================================================================
 
 import { SaveManager } from '../../Managers/SaveManager';
 
 export type TabKey =
   | 'explore' | 'recruit' | 'manage' | 'facility' | 'outsource'
-  | 'dredge' | 'shop' | 'storage' | 'codex' | 'memory';
+  | 'dredge' | 'shop' | 'storage' | 'codex' | 'memory' | 'party';
 
 interface HUDCallbacks {
   onTab:      (key: TabKey) => void;
@@ -18,43 +18,79 @@ interface HUDCallbacks {
   onLobby:    () => void;
 }
 
-export class AtelierHUD {
-  private _el!:      HTMLElement;
-  private _contentEl!: HTMLElement;
-  private _arcSpan!: HTMLElement;
-  private _daySpan!: HTMLElement;
-  private _btns:     Map<TabKey, HTMLButtonElement> = new Map();
-  private _cb!:      HUDCallbacks;
-  private _gearEl!:  SVGElement;
-  private _gearDeg = 0;
+interface GearTab { key: TabKey; label: string; }
 
-  // ── 기어 SVG 경로 생성 ──────────────────────────────────────────
-  private static _makeGearPath(R: number, r: number, hole: number, n: number): string {
-    const PI2 = Math.PI * 2;
-    const step = PI2 / n;
-    const halfTooth = step * 0.22;
-    let d = '';
-    for (let i = 0; i < n; i++) {
-      const base  = i * step - Math.PI / 2;
-      const ia0 = base - step * 0.5 + halfTooth;
-      const ia1 = base - halfTooth;
-      const oa0 = base - halfTooth;
-      const oa1 = base + halfTooth;
-      const ia2 = base + halfTooth;
+const LEFT_TABS: GearTab[] = [
+  { key: 'shop',    label: '상  점' },
+  { key: 'storage', label: '창  고' },
+  { key: 'codex',   label: '도  감' },
+  { key: 'memory',  label: '회  상' },
+  { key: 'party',   label: '파  티' },
+];
 
-      const px = (rad: number, a: number) => rad * Math.cos(a);
-      const py = (rad: number, a: number) => rad * Math.sin(a);
+const RIGHT_TABS: GearTab[] = [
+  { key: 'recruit',   label: '영  입' },
+  { key: 'manage',    label: '관  리' },
+  { key: 'facility',  label: '시  설' },
+  { key: 'outsource', label: '외  주' },
+  { key: 'dredge',    label: '드레지' },
+];
 
-      if (i === 0) d += `M ${px(r, ia0).toFixed(2)},${py(r, ia0).toFixed(2)} `;
-      else         d += `L ${px(r, ia0).toFixed(2)},${py(r, ia0).toFixed(2)} `;
-      d += `L ${px(r, ia1).toFixed(2)},${py(r, ia1).toFixed(2)} `;
-      d += `L ${px(R, oa0).toFixed(2)},${py(R, oa0).toFixed(2)} `;
-      d += `L ${px(R, oa1).toFixed(2)},${py(R, oa1).toFixed(2)} `;
-      d += `L ${px(r, ia2).toFixed(2)},${py(r, ia2).toFixed(2)} `;
-    }
-    d += `Z M ${hole},0 A ${hole},${hole} 0 1 0 ${-hole},0 A ${hole},${hole} 0 1 0 ${hole},0 Z`;
-    return d;
+const GEAR_N    = 5;
+const GEAR_STEP = 360 / GEAR_N;   // 72°
+const GEAR_R    = 330;             // outer tooth radius
+const GEAR_r    = 252;             // inner radius
+const GEAR_HOLE = 38;
+
+// ── 기어 경로 생성 ────────────────────────────────────────────────
+function makeGearPath(R: number, r: number, hole: number, n: number): string {
+  const PI2 = Math.PI * 2;
+  const step = PI2 / n;
+  const halfTooth = step * 0.21;
+  let d = '';
+  const px = (rad: number, a: number) => (rad * Math.cos(a)).toFixed(2);
+  const py = (rad: number, a: number) => (rad * Math.sin(a)).toFixed(2);
+  for (let i = 0; i < n; i++) {
+    const base = i * step - Math.PI / 2;
+    const ia0 = base - step * 0.5 + halfTooth;
+    const ia1 = base - halfTooth;
+    const oa0 = base - halfTooth;
+    const oa1 = base + halfTooth;
+    const ia2 = base + halfTooth;
+    if (i === 0) d += `M ${px(r, ia0)},${py(r, ia0)} `;
+    else         d += `L ${px(r, ia0)},${py(r, ia0)} `;
+    d += `L ${px(r, ia1)},${py(r, ia1)} `;
+    d += `L ${px(R, oa0)},${py(R, oa0)} `;
+    d += `L ${px(R, oa1)},${py(R, oa1)} `;
+    d += `L ${px(r, ia2)},${py(r, ia2)} `;
   }
+  d += `Z M ${hole},0 A ${hole},${hole} 0 1 0 ${-hole},0 A ${hole},${hole} 0 1 0 ${hole},0 Z`;
+  return d;
+}
+
+// ── 소형 중앙 기어 경로 ───────────────────────────────────────────
+function makeSmallGearPath(): string {
+  return makeGearPath(50, 36, 14, 10);
+}
+
+export class AtelierHUD {
+  private _el!:        HTMLElement;
+  private _contentEl!: HTMLElement;
+  private _arcSpan!:   HTMLElement;
+  private _daySpan!:   HTMLElement;
+  private _btns:       Map<TabKey, HTMLButtonElement> = new Map();
+  private _cb!:        HUDCallbacks;
+  private _gearEl!:    SVGElement;
+  private _gearDeg  =  0;
+
+  // 기어 드래그 상태
+  private _leftRotEl!:  HTMLElement;
+  private _rightRotEl!: HTMLElement;
+  private _leftRot   =  0;    // left  gear: sel-angle = 0°
+  private _rightRot  = 180;   // right gear: sel-angle = 180°
+  private _leftSvg!:   SVGElement;
+  private _rightSvg!:  SVGElement;
+  private _dragCleanups: Array<() => void> = [];
 
   constructor(cb: HUDCallbacks) {
     this._cb = cb;
@@ -66,10 +102,14 @@ export class AtelierHUD {
     document.getElementById('atelier-hud')?.remove();
 
     const { day } = SaveManager.getProgress();
-    const arc     = (SaveManager.load() as Record<string, unknown>)?.arc ?? 0;
+    const arc = (SaveManager.load() as Record<string, unknown>)?.arc ?? 0;
+
+    const gearPath  = makeGearPath(GEAR_R, GEAR_r, GEAR_HOLE, GEAR_N);
+    const leftHtml  = this._gearSideHtml('left',  LEFT_TABS,  0,   gearPath);
+    const rightHtml = this._gearSideHtml('right', RIGHT_TABS, 180, gearPath);
 
     const hud = document.createElement('div');
-    hud.id    = 'atelier-hud';
+    hud.id = 'atelier-hud';
     hud.innerHTML = `
       <!-- 상단 바 -->
       <div class="atelier-topbar">
@@ -81,22 +121,8 @@ export class AtelierHUD {
         </div>
       </div>
 
-      <!-- 좌측 사이드 네비 -->
-      <nav class="atelier-sidenav atelier-sidenav--left" id="atelier-sidenav-left">
-        <button class="atelier-side-btn" data-tab="shop">상&nbsp;&nbsp;점</button>
-        <button class="atelier-side-btn" data-tab="storage">창&nbsp;&nbsp;고</button>
-        <button class="atelier-side-btn" data-tab="codex">도&nbsp;&nbsp;감</button>
-        <button class="atelier-side-btn" data-tab="memory">회&nbsp;&nbsp;상</button>
-      </nav>
-
-      <!-- 우측 사이드 네비 -->
-      <nav class="atelier-sidenav atelier-sidenav--right" id="atelier-sidenav-right">
-        <button class="atelier-side-btn" data-tab="recruit">영&nbsp;&nbsp;입</button>
-        <button class="atelier-side-btn" data-tab="manage">관&nbsp;&nbsp;리</button>
-        <button class="atelier-side-btn" data-tab="facility">시&nbsp;&nbsp;설</button>
-        <button class="atelier-side-btn" data-tab="outsource">외&nbsp;&nbsp;주</button>
-        <button class="atelier-side-btn" data-tab="dredge">드 레 지</button>
-      </nav>
+      ${leftHtml}
+      ${rightHtml}
 
       <!-- 탭 콘텐츠 영역 -->
       <div id="atelier-content"></div>
@@ -125,40 +151,207 @@ export class AtelierHUD {
     this._arcSpan   = hud.querySelector('#atelier-arc')!;
     this._daySpan   = hud.querySelector('#atelier-day')!;
 
-    // 기어 SVG 경로 주입
-    const gearEl  = hud.querySelector('#atelier-gear') as SVGElement;
-    const pathEl  = gearEl.querySelector('path');
-    if (pathEl) pathEl.setAttribute('d', AtelierHUD._makeGearPath(50, 36, 14, 10));
-    this._gearEl  = gearEl;
+    // 소형 중앙 기어
+    const smallGear = hud.querySelector('#atelier-gear') as SVGElement;
+    smallGear.querySelector('path')!.setAttribute('d', makeSmallGearPath());
+    this._gearEl = smallGear;
 
-    // 버튼 참조 수집 + 이벤트
-    hud.querySelectorAll<HTMLButtonElement>('.atelier-side-btn, .atelier-explore-btn').forEach(btn => {
-      const key = btn.dataset.tab as TabKey;
+    // 기어 DOM 참조
+    this._leftRotEl  = hud.querySelector('#gear-rot-left')!;
+    this._rightRotEl = hud.querySelector('#gear-rot-right')!;
+    this._leftSvg    = hud.querySelector('#gear-rot-left .gear-svg')!;
+    this._rightSvg   = hud.querySelector('#gear-rot-right .gear-svg')!;
+
+    // 초기 회전 적용
+    this._leftRotEl.style.setProperty('--rot',  `${this._leftRot}deg`);
+    this._rightRotEl.style.setProperty('--rot', `${this._rightRot}deg`);
+
+    // 초기 선택 하이라이트
+    this._updateSelection(this._leftRotEl,  this._leftRot,  0,   LEFT_TABS);
+    this._updateSelection(this._rightRotEl, this._rightRot, 180, RIGHT_TABS);
+
+    // 버튼 이벤트
+    hud.querySelectorAll<HTMLButtonElement>('.gear-label').forEach(btn => {
+      const key = btn.dataset.key as TabKey;
       if (key) this._btns.set(key, btn);
-      btn.addEventListener('click', () => this._cb.onTab(key));
+      btn.addEventListener('click', () => this._onGearClick(key));
     });
+
+    const exploreBtn = hud.querySelector<HTMLButtonElement>('.atelier-explore-btn')!;
+    exploreBtn.addEventListener('click', () => this._cb.onTab('explore'));
+    this._btns.set('explore', exploreBtn);
 
     hud.querySelector('#atelier-btn-settings')!.addEventListener('click', () => this._cb.onSettings());
     hud.querySelector('#atelier-btn-lobby')!.addEventListener('click',    () => this._cb.onLobby());
+
+    // 드래그 설정
+    this._dragCleanups.push(
+      this._setupDrag(hud.querySelector('#gear-left')!,  this._leftRotEl,  this._leftSvg,  0,   LEFT_TABS),
+      this._setupDrag(hud.querySelector('#gear-right')!, this._rightRotEl, this._rightSvg, 180, RIGHT_TABS),
+    );
+  }
+
+  // ── 기어 사이드 HTML 생성 ─────────────────────────────────────
+  private _gearSideHtml(
+    side: 'left' | 'right',
+    tabs: GearTab[],
+    initRot: number,
+    path: string,
+  ): string {
+    const labels = tabs.map((t, i) =>
+      `<button class="gear-label" data-key="${t.key}" style="--base:${i * GEAR_STEP}deg">${t.label}</button>`
+    ).join('\n      ');
+    return `
+    <div class="gear-side gear-side--${side}" id="gear-${side}">
+      <div class="gear-rot" id="gear-rot-${side}" style="--rot:${initRot}deg">
+        <svg class="gear-svg" viewBox="-${GEAR_R + 10} -${GEAR_R + 10} ${(GEAR_R + 10) * 2} ${(GEAR_R + 10) * 2}" xmlns="http://www.w3.org/2000/svg">
+          <path class="gear-path" fill-rule="evenodd" d="${path}"/>
+        </svg>
+        ${labels}
+      </div>
+    </div>`;
+  }
+
+  // ── 기어 클릭 처리 ──────────────────────────────────────────
+  private _onGearClick(key: TabKey): void {
+    const isLeft  = LEFT_TABS.some(t => t.key === key);
+    const tabs    = isLeft ? LEFT_TABS  : RIGHT_TABS;
+    const rot     = isLeft ? this._leftRot  : this._rightRot;
+    const selAng  = isLeft ? 0 : 180;
+    const selKey  = this._getSelKey(rot, selAng, tabs);
+
+    if (selKey === key) {
+      this._cb.onTab(key);
+    } else {
+      this._snapToKey(key, isLeft ? 'left' : 'right');
+    }
+  }
+
+  // ── 선택 탭 계산 ─────────────────────────────────────────────
+  private _getSelKey(rot: number, selAng: number, tabs: GearTab[]): TabKey {
+    let best = 0, bestDist = Infinity;
+    tabs.forEach((_t, i) => {
+      const ang  = ((i * GEAR_STEP + rot - selAng) % 360 + 360) % 360;
+      const dist = Math.min(ang, 360 - ang);
+      if (dist < bestDist) { bestDist = dist; best = i; }
+    });
+    return tabs[best].key;
+  }
+
+  // ── 특정 탭으로 스냅 ──────────────────────────────────────────
+  private _snapToKey(key: TabKey, side: 'left' | 'right'): void {
+    const tabs   = side === 'left' ? LEFT_TABS  : RIGHT_TABS;
+    const selAng = side === 'left' ? 0 : 180;
+    const idx    = tabs.findIndex(t => t.key === key);
+    if (idx < 0) return;
+
+    const target = selAng - idx * GEAR_STEP;
+    const cur    = side === 'left' ? this._leftRot : this._rightRot;
+    let diff = ((target - cur) % 360 + 360) % 360;
+    if (diff > 180) diff -= 360;
+    const newRot = cur + diff;
+
+    if (side === 'left') {
+      this._leftRot = newRot;
+      this._leftSvg.classList.remove('dragging');
+      this._leftRotEl.style.setProperty('--rot', `${newRot}deg`);
+      this._updateSelection(this._leftRotEl, newRot, 0, LEFT_TABS);
+    } else {
+      this._rightRot = newRot;
+      this._rightSvg.classList.remove('dragging');
+      this._rightRotEl.style.setProperty('--rot', `${newRot}deg`);
+      this._updateSelection(this._rightRotEl, newRot, 180, RIGHT_TABS);
+    }
+  }
+
+  // ── 선택 하이라이트 업데이트 ─────────────────────────────────
+  private _updateSelection(
+    rotEl: HTMLElement, rot: number, selAng: number, tabs: GearTab[],
+  ): void {
+    const selKey = this._getSelKey(rot, selAng, tabs);
+    rotEl.querySelectorAll<HTMLElement>('.gear-label').forEach(el => {
+      el.classList.toggle('gear-label--sel', el.dataset.key === selKey);
+    });
+  }
+
+  // ── 드래그 핸들러 설정 ──────────────────────────────────────
+  private _setupDrag(
+    wrapEl:  HTMLElement,
+    rotEl:   HTMLElement,
+    svgEl:   SVGElement,
+    selAng:  number,
+    tabs:    GearTab[],
+  ): () => void {
+    const isLeft = selAng === 0;
+    let dragging = false;
+    let startY   = 0;
+    let startRot = 0;
+
+    const onDown = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).tagName === 'BUTTON') return; // let label clicks through
+      dragging = true;
+      startY   = e.clientY;
+      startRot = isLeft ? this._leftRot : this._rightRot;
+      svgEl.classList.add('dragging');
+      e.preventDefault();
+    };
+
+    const onMove = (e: MouseEvent) => {
+      if (!dragging) return;
+      const newRot = startRot + (e.clientY - startY) * 0.38;
+      if (isLeft) { this._leftRot  = newRot; }
+      else        { this._rightRot = newRot; }
+      rotEl.style.setProperty('--rot', `${newRot}deg`);
+      this._updateSelection(rotEl, newRot, selAng, tabs);
+    };
+
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      svgEl.classList.remove('dragging');
+      // snap to nearest tooth
+      const cur    = isLeft ? this._leftRot : this._rightRot;
+      const rawIdx = (selAng - cur) / GEAR_STEP;
+      const idx    = Math.round(rawIdx);
+      const target = selAng - idx * GEAR_STEP;
+      let diff = ((target - cur) % 360 + 360) % 360;
+      if (diff > 180) diff -= 360;
+      const newRot = cur + diff;
+      if (isLeft) { this._leftRot  = newRot; }
+      else        { this._rightRot = newRot; }
+      rotEl.style.setProperty('--rot', `${newRot}deg`);
+      this._updateSelection(rotEl, newRot, selAng, tabs);
+    };
+
+    wrapEl.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup',   onUp);
+
+    return () => {
+      wrapEl.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup',   onUp);
+    };
   }
 
   // ── 공개 API ─────────────────────────────────────────────────
-  get el():         HTMLElement { return this._el; }
-  get contentEl():  HTMLElement { return this._contentEl; }
+  get el():        HTMLElement { return this._el; }
+  get contentEl(): HTMLElement { return this._contentEl; }
 
-  show(): void  { this._el.classList.add('visible'); }
-  hide(): void  { this._el.classList.remove('visible'); }
-  destroy(): void { this._el.remove(); }
+  show(): void    { this._el.classList.add('visible'); }
+  hide(): void    { this._el.classList.remove('visible'); }
+  destroy(): void {
+    this._dragCleanups.forEach(fn => fn());
+    this._el.remove();
+  }
 
   setActiveTab(key: TabKey): void {
     this._btns.forEach((btn, k) => {
       btn.classList.toggle('active', k === key);
     });
-    // 기어 36° 회전 (360° / 10 teeth)
+    // 소형 중앙 기어 36° 회전
     this._gearDeg += 36;
-    if (this._gearEl) {
-      this._gearEl.style.transform = `rotate(${this._gearDeg}deg)`;
-    }
+    if (this._gearEl) this._gearEl.style.transform = `rotate(${this._gearDeg}deg)`;
   }
 
   setManageMode(on: boolean): void {

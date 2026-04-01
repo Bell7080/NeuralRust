@@ -248,12 +248,16 @@ export class Tab_Manage_Full {
           ${Object.entries(char.stats).map(([k,v]) => {
             const effV = (eff as unknown as Record<string,number>)[k] ?? v;
             const bonus = effV - v;
-            const bonusHtml = bonus > 0
-              ? `<span class="mng-stat-bonus mng-stat-bonus--up">▲+${bonus}</span>`
-              : bonus < 0
-              ? `<span class="mng-stat-bonus mng-stat-bonus--dn">▼${bonus}</span>`
+            const isOc = char.overclock?.statKey === k;
+            const ocColor = isOc ? (char.overclock!.color ?? '#ffaad0') : '';
+            const ocStyle = isOc ? ` style="--oc-color:${ocColor}"` : '';
+            const ocClass = isOc ? ' mng-stat-row--oc' : '';
+            const bonusHtml = isOc
+              ? `<span class="mng-stat-bonus mng-stat-bonus--oc" style="color:${ocColor}">→${effV}</span>`
+              : bonus > 0
+              ? `<span class="mng-stat-bonus mng-stat-bonus--up">+${bonus}</span>`
               : '';
-            return `<div class="mng-stat-row" data-stat-key="${k}" data-stat-eff="${effV}">
+            return `<div class="mng-stat-row${ocClass}" data-stat-key="${k}" data-stat-eff="${effV}"${ocStyle}>
               <span class="mng-stat-key">${SL[k]??k}</span>
               <span class="mng-stat-val" style="color:${SC[k]??'#c8bfb0'}">${v}${bonusHtml}${char.pendingStats>0&&['hp','health','attack','agility','luck'].includes(k)?`<button class="mng-spend-btn" data-key="${k}">+</button>`:''}
               </span>

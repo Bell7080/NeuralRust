@@ -15,6 +15,7 @@ import { Tab_Welcome }    from './Ateliers/Tab_Welcome';
 import { Tab_Explore }    from './Ateliers/Tab_Explore';
 import { Tab_Recruit }    from './Ateliers/Tab_Recruit';
 import { Tab_Manage_Full } from './Ateliers/Tab_Manage_Full';
+import { Tab_Party }   from './Ateliers/Tab_Party';
 import { Tab_Facility, Tab_Outsource, Tab_Dredge,
          Tab_Shop, Tab_Storage, Tab_Codex, Tab_Memory } from './Ateliers/Tab_Stubs';
 
@@ -29,6 +30,7 @@ const TAB_MAP = {
   explore:   Tab_Explore,
   recruit:   Tab_Recruit,
   manage:    Tab_Manage_Full,
+  party:     Tab_Party,
   facility:  Tab_Facility,
   outsource: Tab_Outsource,
   dredge:    Tab_Dredge,

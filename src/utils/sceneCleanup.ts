@@ -15,6 +15,7 @@ const SCENE_DOM_IDS = [
   'battle-hud',
   'dive-dim',
   'dive-panel',
+  'dive-root',
 ] as const;
 
 export function clearAllSceneDom(): void {
