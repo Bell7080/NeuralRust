@@ -62,7 +62,7 @@ export class Tab_Manage_Full {
   private _build() {
     this._el.innerHTML = '';
 
-    // ── 상단 필터/정렬 바 ────────────────────────────────────────
+    // ── 필터/정렬 바 (좌측 컬럼 종속) ──────────────────────────────
     const top = document.createElement('div');
     top.className = 'mng-topbar';
     top.innerHTML = `
@@ -75,7 +75,7 @@ export class Tab_Manage_Full {
       </div>
       <div class="mng-filter-group">
         <span class="mng-filter-label">Cog</span>
-        <button class="mng-cog-btn active" data-cog="all">전체</button>
+        <button class="mng-cog-btn active" data-cog="all">전</button>
         <button class="mng-cog-btn" data-cog="1">1</button>
         <button class="mng-cog-btn" data-cog="2">2</button>
         <button class="mng-cog-btn" data-cog="3">3</button>
@@ -94,18 +94,22 @@ export class Tab_Manage_Full {
       </div>
       <button class="mng-back-btn" id="mng-back">← 돌아가기</button>
     `;
-    this._el.appendChild(top);
 
     // ── 메인 레이아웃 ────────────────────────────────────────────
     const layout = document.createElement('div');
     layout.className = 'mng-layout';
 
-    const listEl   = document.createElement('div'); listEl.className   = 'mng-list';
+    // 좌측 컬럼: 필터바 + 리스트를 묶음
+    const leftCol = document.createElement('div');
+    leftCol.className = 'mng-left-col';
+    const listEl = document.createElement('div'); listEl.className = 'mng-list';
+    leftCol.append(top, listEl);
+
     const centerEl = document.createElement('div'); centerEl.className = 'mng-center';
     const rightEl  = document.createElement('div'); rightEl.className  = 'mng-right';
     centerEl.innerHTML = '';
     rightEl.innerHTML  = '';
-    layout.append(listEl, centerEl, rightEl);
+    layout.append(leftCol, centerEl, rightEl);
     this._el.appendChild(layout);
 
     this._listEl   = listEl;
