@@ -155,6 +155,7 @@ export class Tab_Recruit {
     const save=SaveManager.load() as Record<string,unknown>|null;
     const arc=typeof save?.arc==='number'?save.arc:0;
     if(arc<this._price){this._toast('Arc 부족!');return;}
+    this._scene.events.emit('recruit:custom-enter');
     const next={...save,arc:arc-this._price,recruitPrice:this._price+PRICE_STEP};
     this._price+=PRICE_STEP;
     SaveManager.save(next as unknown as Parameters<typeof SaveManager.save>[0]);
@@ -237,7 +238,6 @@ export class Tab_Recruit {
   // ── CUSTOM ─────────────────────────────────────────────────────
   private _showCustom() {
     this._clear();
-    this._scene.events.emit('recruit:custom-enter');
     this._renderCustom(this._chosen!);
   }
 
