@@ -700,8 +700,8 @@
 .mng-illus-frame {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  /* 클립이 inner 밖으로 18px 튀어나오므로 패딩으로 여유 확보 */
-  padding: 28px 22px;
+  /* 클립 여유 + 좌우 여백 15% */
+  padding: 28px 15%;
   box-sizing: border-box;
   background: rgba(5, 3, 2, 0.96);
 }

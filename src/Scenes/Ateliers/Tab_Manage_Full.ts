@@ -112,6 +112,9 @@ export class Tab_Manage_Full {
     this._centerEl = centerEl;
     this._rightEl  = rightEl;
 
+    // 초기부터 일러스트 표시
+    this._renderCenter(null as unknown as Character);
+
     // 이벤트: 필터 버튼
     top.querySelectorAll<HTMLElement>('[data-job]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -224,20 +227,11 @@ export class Tab_Manage_Full {
     this._centerEl.innerHTML = `
       <div class="mng-illus-frame">
         <div class="mng-illus-inner">
-          <!-- 1. 배경 -->
           <div class="mng-illus-bg"></div>
-
-          <!-- 2. 영상 (레이어 마스크) -->
           <div class="mng-illus-mask">
-            <video class="mng-illus-video" autoplay loop muted playsinline>
-              <source src="Games/Assets/Sprites/Video%202.mp4" type="video/mp4">
-            </video>
+            <video class="mng-illus-video" autoplay loop muted playsinline></video>
           </div>
-
-          <!-- 3. 액자 테두리 오버레이 -->
           <div class="mng-illus-border"></div>
-
-          <!-- 4. 하드웨어 클립 -->
           <div class="mng-illus-hook"></div>
           <div class="mng-illus-clip mng-illus-clip--top"></div>
           <div class="mng-illus-clip mng-illus-clip--bot"></div>
@@ -248,6 +242,13 @@ export class Tab_Manage_Full {
         </div>
       </div>
     `;
+    // src를 JS로 직접 설정 (HTML 인코딩 문제 방지)
+    const vid = this._centerEl.querySelector<HTMLVideoElement>('.mng-illus-video');
+    if (vid) {
+      vid.src = 'Games/Assets/Sprites/Video 2.mp4';
+      vid.load();
+      vid.play().catch(() => {});
+    }
   }
 
   // ── 툴팁 ────────────────────────────────────────────────────────
@@ -490,7 +491,7 @@ export class Tab_Manage_Full {
       CharacterManager.removeCharacter(char.id);
       this._chars = CharacterManager.loadAll() ?? [];
       this._selected = null;
-      this._renderCenter(char);
+      this._renderCenter(null as unknown as Character);
       this._rightEl.innerHTML  = '';
       this._applyFilter();
     });
