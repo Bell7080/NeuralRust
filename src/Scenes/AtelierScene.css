@@ -28,9 +28,11 @@
   pointer-events: none !important;
   transition: opacity 0.22s ease;
 }
-/* gear-drag-overlay는 부모 pointer-events:none이 자식에 미치지 않으므로 명시적 차단 */
+/* HTML에서 부모 pointer-events:none은 자식에 미치지 않으므로 자식도 명시적 차단 */
 #atelier-hud.manage-mode .gear-drag-overlay,
-#atelier-hud.recruit-mode .gear-drag-overlay {
+#atelier-hud.manage-mode .gear-label,
+#atelier-hud.recruit-mode .gear-drag-overlay,
+#atelier-hud.recruit-mode .gear-label {
   pointer-events: none !important;
 }
 #atelier-hud.manage-mode #atelier-content,
