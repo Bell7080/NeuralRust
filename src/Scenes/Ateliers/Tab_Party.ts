@@ -61,7 +61,7 @@ export class Tab_Party {
     const listEl   = document.createElement('div'); listEl.className   = 'mng-list';
     const centerEl = document.createElement('div'); centerEl.className = 'mng-center';
     const rightEl  = document.createElement('div'); rightEl.className  = 'mng-right';
-    centerEl.innerHTML = '<div class="mng-empty">캐릭터를 선택하십시오</div>';
+    centerEl.innerHTML = '';
     rightEl.innerHTML  = '';
     layout.append(listEl, centerEl, rightEl);
     this._el.appendChild(layout);
@@ -145,27 +145,27 @@ export class Tab_Party {
     const jobCol = char.job === 'fisher' ? '#c8a070'
       : char.job === 'diver' ? '#7ab0c8' : '#a080e0';
 
-    const hpRatio = char.maxHp > 0 ? char.currentHp / char.maxHp : 0;
+    const hpRatio    = char.maxHp > 0 ? char.currentHp / char.maxHp : 0;
     const hpBarColor = hpRatio > 0.6 ? '#306030' : hpRatio > 0.3 ? '#806020' : '#803020';
+    const masteryColor = (char.mastery || 0) > 0 ? '#e8c070' : '#555544';
 
     this._centerEl.innerHTML = `
-      <div class="mng-detail">
-        <div class="mng-detail-header">
-          <div class="mng-detail-sprite" id="mng-detail-spr"></div>
-          <div class="mng-detail-basic">
-            <div class="mng-detail-name">${char.name}</div>
-            <div class="mng-detail-job" style="color:${jobCol}" data-job="${char.job}">${char.jobLabel}</div>
-            <div class="mng-detail-cog" style="color:${cogC.css}">Cog ${char.cog}</div>
-            <div class="mng-detail-hprow">
-              <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(hpRatio*100)}%;background:${hpBarColor}"></div></div>
-              <span class="mng-detail-hptxt">HP ${char.currentHp} / ${char.maxHp}</span>
-            </div>
+      <div class="party-portrait-panel">
+        <div class="party-portrait-sprite" id="party-spr-${char.id}"></div>
+        <div class="party-portrait-footer">
+          <div class="party-portrait-name">${char.name}</div>
+          <div class="party-portrait-job" style="color:${jobCol}" data-job="${char.job}">${char.jobLabel}</div>
+          <div class="party-portrait-cog" style="color:${cogC.css}">Cog ${char.cog}</div>
+          <div class="party-portrait-mastery" style="color:${masteryColor}">숙련도  Lv.${char.mastery || 0}</div>
+          <div class="party-portrait-hprow">
+            <div class="party-portrait-hpbar"><div class="party-portrait-hpfill" style="width:${Math.round(hpRatio*100)}%;background:${hpBarColor}"></div></div>
+            <span class="party-portrait-hptxt">HP ${char.currentHp} / ${char.maxHp}</span>
           </div>
         </div>
       </div>
     `;
 
-    // 스프라이트 (canvas 텍스처 대응)
+    // 스프라이트
     if (this._scene.textures.exists(char.spriteKey)) {
       const raw = this._scene.textures.get(char.spriteKey).getSourceImage();
       const src = raw instanceof HTMLCanvasElement
@@ -175,7 +175,7 @@ export class Tab_Party {
         const img = document.createElement('img');
         img.src = src;
         img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
-        this._centerEl.querySelector('#mng-detail-spr')?.appendChild(img);
+        this._centerEl.querySelector(`#party-spr-${char.id}`)?.appendChild(img);
       }
     }
 

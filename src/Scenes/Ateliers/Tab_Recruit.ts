@@ -155,6 +155,7 @@ export class Tab_Recruit {
     const save=SaveManager.load() as Record<string,unknown>|null;
     const arc=typeof save?.arc==='number'?save.arc:0;
     if(arc<this._price){this._toast('Arc 부족!');return;}
+    this._scene.events.emit('recruit:custom-enter');
     const next={...save,arc:arc-this._price,recruitPrice:this._price+PRICE_STEP};
     this._price+=PRICE_STEP;
     SaveManager.save(next as unknown as Parameters<typeof SaveManager.save>[0]);
@@ -235,7 +236,10 @@ export class Tab_Recruit {
   }
 
   // ── CUSTOM ─────────────────────────────────────────────────────
-  private _showCustom() { this._clear(); this._renderCustom(this._chosen!); }
+  private _showCustom() {
+    this._clear();
+    this._renderCustom(this._chosen!);
+  }
 
   private _renderCustom(roll: Roll) {
     // ★ 매 렌더링 전 기존 DOM 제거 (재설정 클릭 시 중복 방지)
@@ -372,13 +376,11 @@ export class Tab_Recruit {
 
     const actions = document.createElement('div'); actions.className = 'recruit-custom-actions';
     const cfm = document.createElement('button'); cfm.className = 'recruit-confirm-btn'; cfm.textContent = '확  정';
-    const cnl = document.createElement('button'); cnl.className = 'recruit-cancel-btn';  cnl.textContent = '← 다시 고르기';
-    actions.append(toast, cfm, cnl);
+    actions.append(toast, cfm);
 
     this._el.append(wrap, actions);
 
     cfm.addEventListener('click', () => this._confirmHire());
-    cnl.addEventListener('click', () => { this._rolls = _rollTriple(this._price); this._showPick(); });
   }
 
   // ── 재설정 비교 팝업 (JS Recruit_Popup.js 대응) ─────────────────
@@ -499,6 +501,7 @@ export class Tab_Recruit {
   }
 
   private _confirmHire() {
+    this._scene.events.emit('recruit:custom-exit');
     const roll=this._chosen!;
     const skeys:Array<keyof Character['stats']>=['hp','health','attack','agility','luck'];
     const stats={} as Character['stats'];

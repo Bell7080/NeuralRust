@@ -19,18 +19,22 @@
   opacity:         1;
   pointer-events:  auto;
 }
-/* 관리 탭 진입 시 기어 + 탐색 버튼 숨김 + 콘텐츠 영역 확장 */
+/* 관리 탭 / 영입 커스텀 진입 시 기어 + 탐색 버튼 숨김 + 콘텐츠 영역 확장 */
 #atelier-hud.manage-mode .gear-side,
-#atelier-hud.manage-mode .atelier-explore-area {
+#atelier-hud.manage-mode .atelier-explore-area,
+#atelier-hud.recruit-mode .gear-side,
+#atelier-hud.recruit-mode .atelier-explore-area {
   opacity:    0;
   pointer-events: none !important;
   transition: opacity 0.22s ease;
 }
 /* gear-drag-overlay는 부모 pointer-events:none이 자식에 미치지 않으므로 명시적 차단 */
-#atelier-hud.manage-mode .gear-drag-overlay {
+#atelier-hud.manage-mode .gear-drag-overlay,
+#atelier-hud.recruit-mode .gear-drag-overlay {
   pointer-events: none !important;
 }
-#atelier-hud.manage-mode #atelier-content {
+#atelier-hud.manage-mode #atelier-content,
+#atelier-hud.recruit-mode #atelier-content {
   left:   0;
   right:  0;
   bottom: 0;
@@ -683,8 +687,28 @@
 }
 /* 빈 상태 메시지는 그리드 전체 폭 사용 */
 .mng-list > .mng-empty { grid-column: 1 / -1; }
-.mng-center { flex: 1; overflow-y: auto; padding: 1.2%; border-right: 1px solid rgba(30,16,8,0.7); }
-.mng-right  { width: 22%; overflow-y: auto; padding: 1%; }
+.mng-center {
+  width: 26%; flex-shrink: 0; overflow: hidden;
+  border-right: 1px solid rgba(30,16,8,0.7);
+  position: relative;
+}
+.mng-right  { flex: 1; overflow-y: auto; padding: 1%; }
+
+/* 일러스트 예약 영역 */
+.mng-illus-placeholder {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(42,26,10,0.18);
+  font-family: var(--font-mono); font-size: clamp(10px, 1.1vw, 16px);
+  letter-spacing: 0.15em;
+  writing-mode: vertical-rl; text-orientation: mixed;
+  user-select: none; pointer-events: none;
+}
+
+/* 우측 병합 패널 */
+.mng-right-detail {
+  display: flex; flex-direction: column; gap: 0.5em; padding: 0.5em;
+}
 
 /* 카드 — 세로 초상화형 (JS 참고) */
 .mng-card {
@@ -792,6 +816,44 @@
 }
 .mng-dismiss-btn:hover { color: #cc3030; border-color: #aa2020; }
 .mng-empty { font-family: var(--font-mono); font-size: clamp(10px, 1.1vw, 17px); color: #3a2010; text-align: center; margin-top: 2em; }
+
+/* ================================================================
+   Tab_Party — 초상화 패널
+   ================================================================ */
+
+.party-tab-panel { flex-direction: column; justify-content: flex-start; align-items: stretch; padding: 0; }
+.party-panel     { flex-direction: column; justify-content: flex-start; align-items: stretch; padding: 0; }
+
+/* 초상화 패널 (center 컬럼) */
+.party-portrait-panel {
+  display: flex; flex-direction: column; height: 100%;
+  background: rgba(8,5,3,0.96);
+  border-right: 1px solid rgba(30,16,8,0.7);
+}
+.party-portrait-sprite {
+  flex: 1; min-height: 0;
+  overflow: hidden;
+  background: rgba(14,9,5,0.9);
+  display: flex; align-items: center; justify-content: center;
+  border-bottom: 1px solid rgba(42,26,10,0.5);
+}
+.party-portrait-sprite img {
+  width: 100%; height: 100%;
+  object-fit: contain; image-rendering: pixelated;
+}
+.party-portrait-footer {
+  flex-shrink: 0; padding: 0.7em 0.8em 0.6em;
+  display: flex; flex-direction: column; gap: 0.25em;
+  background: rgba(10,7,4,0.97);
+}
+.party-portrait-name    { font-family: var(--font-display); font-size: clamp(16px, 1.82vw, 26px); color: #e8c080; }
+.party-portrait-job     { font-family: var(--font-mono); font-size: clamp(11px, 1.1vw, 16px); }
+.party-portrait-cog     { font-family: var(--font-mono); font-size: clamp(11px, 1.1vw, 16px); font-weight: bold; }
+.party-portrait-mastery { font-family: var(--font-mono); font-size: clamp(9px, 0.98vw, 14px); }
+.party-portrait-hprow   { display: flex; flex-direction: column; gap: 0.15em; margin-top: 0.2em; }
+.party-portrait-hpbar   { width: 100%; height: 4px; background: rgba(20,10,6,1); }
+.party-portrait-hpfill  { height: 100%; transition: width 0.3s; }
+.party-portrait-hptxt   { font-family: var(--font-mono); font-size: clamp(8px, 0.85vw, 12px); color: #4a3018; }
 
 /* ================================================================
    AtelierScene — 스텁 탭 공통 CSS (시설/외주/드레지/상점/창고/도감/회상)

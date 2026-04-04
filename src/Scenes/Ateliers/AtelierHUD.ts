@@ -340,6 +340,10 @@ export class AtelierHUD {
     this._el.classList.toggle('manage-mode', on);
   }
 
+  setRecruitMode(on: boolean): void {
+    this._el.classList.toggle('recruit-mode', on);
+  }
+
   updateArc(arc: number): void {
     if (this._arcSpan) this._arcSpan.textContent = String(arc);
   }
