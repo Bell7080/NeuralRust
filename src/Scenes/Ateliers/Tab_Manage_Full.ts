@@ -103,7 +103,7 @@ export class Tab_Manage_Full {
     const listEl   = document.createElement('div'); listEl.className   = 'mng-list';
     const centerEl = document.createElement('div'); centerEl.className = 'mng-center';
     const rightEl  = document.createElement('div'); rightEl.className  = 'mng-right';
-    centerEl.innerHTML = '<div class="mng-illus-placeholder">일러스트</div>';
+    centerEl.innerHTML = '';
     rightEl.innerHTML  = '';
     layout.append(listEl, centerEl, rightEl);
     this._el.appendChild(layout);
@@ -220,8 +220,34 @@ export class Tab_Manage_Full {
   }
 
   private _renderCenter(_char: Character) {
-    // 중앙 패널: 일러스트 예약 공간 (추후 고퀄리티 일러스트 삽입 예정)
-    this._centerEl.innerHTML = '<div class="mng-illus-placeholder">일러스트</div>';
+    // 중앙 패널: 영상 일러스트 액자 (캔버스 스트레처 바 스타일)
+    this._centerEl.innerHTML = `
+      <div class="mng-illus-frame">
+        <div class="mng-illus-inner">
+          <!-- 1. 배경 -->
+          <div class="mng-illus-bg"></div>
+
+          <!-- 2. 영상 (레이어 마스크) -->
+          <div class="mng-illus-mask">
+            <video class="mng-illus-video" autoplay loop muted playsinline>
+              <source src="Games/Assets/Sprites/Video%202.mp4" type="video/mp4">
+            </video>
+          </div>
+
+          <!-- 3. 액자 테두리 오버레이 -->
+          <div class="mng-illus-border"></div>
+
+          <!-- 4. 하드웨어 클립 -->
+          <div class="mng-illus-hook"></div>
+          <div class="mng-illus-clip mng-illus-clip--top"></div>
+          <div class="mng-illus-clip mng-illus-clip--bot"></div>
+          <div class="mng-illus-clip mng-illus-clip--left-a"></div>
+          <div class="mng-illus-clip mng-illus-clip--left-b"></div>
+          <div class="mng-illus-clip mng-illus-clip--right-a"></div>
+          <div class="mng-illus-clip mng-illus-clip--right-b"></div>
+        </div>
+      </div>
+    `;
   }
 
   // ── 툴팁 ────────────────────────────────────────────────────────
@@ -464,7 +490,7 @@ export class Tab_Manage_Full {
       CharacterManager.removeCharacter(char.id);
       this._chars = CharacterManager.loadAll() ?? [];
       this._selected = null;
-      this._centerEl.innerHTML = '<div class="mng-illus-placeholder">일러스트</div>';
+      this._renderCenter(char);
       this._rightEl.innerHTML  = '';
       this._applyFilter();
     });
