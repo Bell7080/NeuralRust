@@ -282,7 +282,7 @@ export class AtelierHUD {
 
     const onMove = (e: MouseEvent) => {
       if (!dragging) return;
-      const newRot = startRot + (e.clientY - startY) * 0.38;
+      const newRot = startRot - (e.clientY - startY) * 0.38;
       if (isLeft) { this._leftRot  = newRot; }
       else        { this._rightRot = newRot; }
       rotEl.style.setProperty('--rot', `${newRot}deg`);

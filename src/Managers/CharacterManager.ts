@@ -342,10 +342,12 @@ function initIfEmpty(): Character[] {
 
       if (c.mastery === undefined || c.mastery === 0) {
         c.mastery = 1 + Math.floor(Math.random() * 30);
+        dirty = true;
+      }
+      if (!c.pendingStats) {          // 0 또는 undefined → mastery 포인트 부여
         c.pendingStats = c.mastery;
         dirty = true;
       }
-      if (c.pendingStats === undefined) { c.pendingStats = 0; dirty = true; }
 
       if (!c._hpMigrated && c.stats?.hp != null) {
         const expected5  = c.stats.hp * 5;
