@@ -112,9 +112,6 @@ export class Tab_Manage_Full {
     this._centerEl = centerEl;
     this._rightEl  = rightEl;
 
-    // 초기부터 일러스트 표시
-    this._renderCenter(null as unknown as Character);
-
     // 이벤트: 필터 버튼
     top.querySelectorAll<HTMLElement>('[data-job]').forEach(btn => {
       btn.addEventListener('click', () => {

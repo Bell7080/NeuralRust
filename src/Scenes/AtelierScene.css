@@ -688,7 +688,7 @@
 /* 빈 상태 메시지는 그리드 전체 폭 사용 */
 .mng-list > .mng-empty { grid-column: 1 / -1; }
 .mng-center {
-  width: 26%; flex-shrink: 0; overflow: hidden;
+  width: 34%; flex-shrink: 0; overflow: hidden;
   border-right: 1px solid rgba(30,16,8,0.7);
   position: relative;
 }
