@@ -103,7 +103,7 @@ export class Tab_Manage_Full {
     const listEl   = document.createElement('div'); listEl.className   = 'mng-list';
     const centerEl = document.createElement('div'); centerEl.className = 'mng-center';
     const rightEl  = document.createElement('div'); rightEl.className  = 'mng-right';
-    centerEl.innerHTML = '<div class="mng-empty">캐릭터를 선택하십시오</div>';
+    centerEl.innerHTML = '<div class="mng-illus-placeholder">일러스트</div>';
     rightEl.innerHTML  = '';
     layout.append(listEl, centerEl, rightEl);
     this._el.appendChild(layout);
@@ -219,109 +219,9 @@ export class Tab_Manage_Full {
     this._renderRight(char);
   }
 
-  private _renderCenter(char: Character) {
-    const cogC   = getCogColor(char.cog);
-    const jobCol = char.job === 'fisher' ? '#c8a070'
-      : char.job === 'diver' ? '#7ab0c8' : '#a080e0';
-    const SC = CharacterManager.STAT_COLORS as Record<string,string>;
-    const SL: Record<string,string> = { hp:'체력', health:'건강', attack:'공격', agility:'민첩', luck:'행운' };
-    const AL: Record<string,string> = { passive:'패시브', action:'행동', enhanced:'강화', finale:'피날레' };
-
-    const eff = CharacterManager.getEffectiveStats(char);
-
-    this._centerEl.innerHTML = `
-      <div class="mng-detail">
-        <div class="mng-detail-header">
-          <div class="mng-detail-sprite" id="mng-detail-spr"></div>
-          <div class="mng-detail-basic">
-            <div class="mng-detail-name">${char.name}</div>
-            <div class="mng-detail-job" style="color:${jobCol}" data-job="${char.job}">${char.jobLabel}</div>
-            <div class="mng-detail-cog" style="color:${cogC.css}">Cog ${char.cog}</div>
-            <div class="mng-detail-hprow">
-              <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(char.maxHp>0?char.currentHp/char.maxHp*100:0)}%;background:${char.currentHp/char.maxHp>0.6?'#306030':char.currentHp/char.maxHp>0.3?'#806020':'#803020'}"></div></div>
-              <span class="mng-detail-hptxt">HP ${char.currentHp} / ${char.maxHp}</span>
-            </div>
-          </div>
-        </div>
-        <div class="mng-detail-divider"></div>
-        <div class="mng-detail-stats">
-          ${Object.entries(char.stats).map(([k,v]) => {
-            const effV = (eff as unknown as Record<string,number>)[k] ?? v;
-            const bonus = effV - v;
-            const isOc = char.overclock?.statKey === k;
-            const ocColor = isOc ? (char.overclock!.color ?? '#ffaad0') : '';
-            const ocStyle = isOc ? ` style="--oc-color:${ocColor}"` : '';
-            const ocClass = isOc ? ' mng-stat-row--oc' : '';
-            const bonusHtml = isOc
-              ? `<span class="mng-stat-bonus mng-stat-bonus--oc" style="color:${ocColor}">→${effV}</span>`
-              : bonus > 0
-              ? `<span class="mng-stat-bonus mng-stat-bonus--up">+${bonus}</span>`
-              : '';
-            return `<div class="mng-stat-row${ocClass}" data-stat-key="${k}" data-stat-eff="${effV}"${ocStyle}>
-              <span class="mng-stat-key">${SL[k]??k}</span>
-              <span class="mng-stat-val" style="color:${SC[k]??'#c8bfb0'}">${v}${bonusHtml}${char.pendingStats>0&&['hp','health','attack','agility','luck'].includes(k)?`<button class="mng-spend-btn" data-key="${k}">+</button>`:''}
-              </span>
-            </div>`;
-          }).join('')}
-          ${char.pendingStats > 0 ? `<div class="mng-pending">미배분 스탯 포인트: <strong>${char.pendingStats}</strong></div>` : ''}
-        </div>
-        <div class="mng-detail-divider"></div>
-        <div class="mng-detail-abilities">
-          ${(['passive','action','enhanced','finale'] as const).map(type => {
-            const id = char[type as keyof typeof char] as string;
-            const nm = AbilityIndex.getName(type, id) || id;
-            const ds = AbilityIndex.getDesc(type, id) || '';
-            return `<div class="mng-ab-row" data-ab-type="${type}" data-ab-id="${id}">
-              <span class="mng-ab-type">${AL[type]}</span>
-              <span class="mng-ab-name">${nm}</span>
-              ${ds ? `<span class="mng-ab-desc">${ds}</span>` : ''}
-            </div>`;
-          }).join('')}
-        </div>
-        ${char.overclock ? `
-          <div class="mng-detail-divider"></div>
-          <div class="mng-overclock" style="color:${char.overclock.color}">${char.overclock.label}</div>
-        ` : ''}
-      </div>
-    `;
-
-    // 스프라이트 (canvas 텍스처 대응)
-    if (this._scene.textures.exists(char.spriteKey)) {
-      const raw = this._scene.textures.get(char.spriteKey).getSourceImage();
-      const src = raw instanceof HTMLCanvasElement
-        ? raw.toDataURL()
-        : (raw as HTMLImageElement).src;
-      if (src) {
-        const img = document.createElement('img');
-        img.src = src;
-        img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
-        this._centerEl.querySelector('#mng-detail-spr')?.appendChild(img);
-      }
-    }
-
-    // 툴팁 바인딩
-    this._bindTooltips(char, eff as unknown as Record<string,number>);
-
-    // 스탯 지출 버튼
-    this._centerEl.querySelectorAll<HTMLButtonElement>('.mng-spend-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const key = btn.dataset.key as keyof Character['stats'];
-        if (!char.pendingStats) return;
-        const chars = CharacterManager.loadAll() ?? [];
-        const target = chars.find(c => c.id === char.id);
-        if (!target) return;
-        target.stats[key] = (target.stats[key] ?? 0) + 1;
-        target.pendingStats--;
-        target.statSum = (Object.values(target.stats) as number[]).reduce((a,b) => a+b, 0);
-        if (key === 'hp') { target.maxHp = target.stats.hp * 5; }
-        CharacterManager.saveAll(chars);
-        this._chars = chars;
-        this._selected = target;
-        this._applyFilter();
-        this._renderCenter(target);
-        this._renderRight(target);
-      });
-    });
+  private _renderCenter(_char: Character) {
+    // 중앙 패널: 일러스트 예약 공간 (추후 고퀄리티 일러스트 삽입 예정)
+    this._centerEl.innerHTML = '<div class="mng-illus-placeholder">일러스트</div>';
   }
 
   // ── 툴팁 ────────────────────────────────────────────────────────
@@ -357,7 +257,7 @@ export class Tab_Manage_Full {
 
   private _bindTooltips(char: Character, eff: Record<string,number>): void {
     // 직업 툴팁
-    const jobEl = this._centerEl.querySelector<HTMLElement>('[data-job]');
+    const jobEl = this._rightEl.querySelector<HTMLElement>('[data-job]');
     if (jobEl) {
       jobEl.style.cursor = 'help';
       jobEl.addEventListener('mouseenter', e => {
@@ -369,7 +269,7 @@ export class Tab_Manage_Full {
     }
 
     // 스탯 행 툴팁
-    this._centerEl.querySelectorAll<HTMLElement>('.mng-stat-row[data-stat-key]').forEach(row => {
+    this._rightEl.querySelectorAll<HTMLElement>('.mng-stat-row[data-stat-key]').forEach(row => {
       const key = row.dataset.statKey as StatKey;
       const effV = Number(row.dataset.statEff ?? 0);
       row.style.cursor = 'help';
@@ -382,7 +282,7 @@ export class Tab_Manage_Full {
     });
 
     // 능력 행 툴팁
-    this._centerEl.querySelectorAll<HTMLElement>('.mng-ab-row[data-ab-id]').forEach(row => {
+    this._rightEl.querySelectorAll<HTMLElement>('.mng-ab-row[data-ab-id]').forEach(row => {
       const type = row.dataset.abType as 'passive'|'action'|'enhanced'|'finale';
       const id   = row.dataset.abId!;
       const desc = AbilityIndex.getDesc(type, id);
@@ -402,24 +302,125 @@ export class Tab_Manage_Full {
     const arc  = typeof save?.arc === 'number' ? save.arc : 0;
     const healCost = Math.max(1, Math.floor((char.maxHp - char.currentHp) / 10));
 
+    const cogC   = getCogColor(char.cog);
+    const jobCol = char.job === 'fisher' ? '#c8a070' : char.job === 'diver' ? '#7ab0c8' : '#a080e0';
+    const SC = CharacterManager.STAT_COLORS as Record<string,string>;
+    const SL: Record<string,string> = { hp:'체력', health:'건강', attack:'공격', agility:'민첩', luck:'행운' };
+    const AL: Record<string,string> = { passive:'패시브', action:'행동', enhanced:'강화', finale:'피날레' };
+
+    const eff = CharacterManager.getEffectiveStats(char);
+
     this._rightEl.innerHTML = `
-      <div class="mng-right-inner">
+      <div class="mng-right-detail">
+        <!-- 스프라이트 + 기본 정보 -->
+        <div class="mng-detail-header">
+          <div class="mng-detail-sprite" id="mng-detail-spr"></div>
+          <div class="mng-detail-basic">
+            <div class="mng-detail-name">${char.name}</div>
+            <div class="mng-detail-job" style="color:${jobCol}" data-job="${char.job}">${char.jobLabel}</div>
+            <div class="mng-detail-cog" style="color:${cogC.css}">Cog ${char.cog}</div>
+            <div class="mng-detail-hprow">
+              <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(char.maxHp>0?char.currentHp/char.maxHp*100:0)}%;background:${char.currentHp/char.maxHp>0.6?'#306030':char.currentHp/char.maxHp>0.3?'#806020':'#803020'}"></div></div>
+              <span class="mng-detail-hptxt">HP ${char.currentHp} / ${char.maxHp}</span>
+            </div>
+          </div>
+        </div>
+        <div class="mng-detail-divider"></div>
+
+        <!-- 스탯 -->
+        <div class="mng-detail-stats">
+          ${Object.entries(char.stats).map(([k,v]) => {
+            const effV = (eff as unknown as Record<string,number>)[k] ?? v;
+            const bonus = effV - v;
+            const isOc = char.overclock?.statKey === k;
+            const ocColor = isOc ? (char.overclock!.color ?? '#ffaad0') : '';
+            const ocStyle = isOc ? ` style="--oc-color:${ocColor}"` : '';
+            const ocClass = isOc ? ' mng-stat-row--oc' : '';
+            const bonusHtml = isOc
+              ? `<span class="mng-stat-bonus mng-stat-bonus--oc" style="color:${ocColor}">→${effV}</span>`
+              : bonus > 0
+              ? `<span class="mng-stat-bonus mng-stat-bonus--up">+${bonus}</span>`
+              : '';
+            return `<div class="mng-stat-row${ocClass}" data-stat-key="${k}" data-stat-eff="${effV}"${ocStyle}>
+              <span class="mng-stat-key">${SL[k]??k}</span>
+              <span class="mng-stat-val" style="color:${SC[k]??'#c8bfb0'}">${v}${bonusHtml}${char.pendingStats>0&&['hp','health','attack','agility','luck'].includes(k)?`<button class="mng-spend-btn" data-key="${k}">+</button>`:''}
+              </span>
+            </div>`;
+          }).join('')}
+          ${char.pendingStats > 0 ? `<div class="mng-pending">미배분 스탯 포인트: <strong>${char.pendingStats}</strong></div>` : ''}
+        </div>
+        <div class="mng-detail-divider"></div>
+
+        <!-- 능력 -->
+        <div class="mng-detail-abilities">
+          ${(['passive','action','enhanced','finale'] as const).map(type => {
+            const id = char[type as keyof typeof char] as string;
+            const nm = AbilityIndex.getName(type, id) || id;
+            const ds = AbilityIndex.getDesc(type, id) || '';
+            return `<div class="mng-ab-row" data-ab-type="${type}" data-ab-id="${id}">
+              <span class="mng-ab-type">${AL[type]}</span>
+              <span class="mng-ab-name">${nm}</span>
+              ${ds ? `<span class="mng-ab-desc">${ds}</span>` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+        ${char.overclock ? `
+          <div class="mng-detail-divider"></div>
+          <div class="mng-overclock" style="color:${char.overclock.color}">${char.overclock.label}</div>
+        ` : ''}
+        <div class="mng-detail-divider"></div>
+
+        <!-- 행동 -->
         <div class="mng-right-label">행  동</div>
-        <div class="mng-right-divider"></div>
         <div class="mng-right-arcrow">보유 Arc: <strong>${arc}</strong></div>
         <button class="mng-action-btn" id="mng-heal"
           ${char.currentHp >= char.maxHp ? 'disabled' : ''}>
           회복 (${healCost} Arc)<br><small>최대 HP로 회복</small>
         </button>
-        <div class="mng-right-divider"></div>
-        <div class="mng-right-mastery">숙련도: ${char.mastery}</div>
-        <div class="mng-right-divider"></div>
+        <div class="mng-right-mastery" style="margin-top:0.3em">숙련도: ${char.mastery}</div>
+        <div class="mng-detail-divider"></div>
         <button class="mng-action-btn" id="mng-profile">프  로  필</button>
-        <div class="mng-right-divider"></div>
+        <div class="mng-detail-divider"></div>
         <button class="mng-dismiss-btn" id="mng-dismiss">해  고</button>
         <div class="mng-toast" style="opacity:0;transition:opacity 0.3s;text-align:center;color:#e87040;margin-top:0.5em;font-size:0.85em"></div>
       </div>
     `;
+
+    // 스프라이트
+    if (this._scene.textures.exists(char.spriteKey)) {
+      const raw = this._scene.textures.get(char.spriteKey).getSourceImage();
+      const src = raw instanceof HTMLCanvasElement ? raw.toDataURL() : (raw as HTMLImageElement).src;
+      if (src) {
+        const img = document.createElement('img');
+        img.src = src;
+        img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
+        this._rightEl.querySelector('#mng-detail-spr')?.appendChild(img);
+      }
+    }
+
+    // 툴팁 바인딩 (rightEl로 변경)
+    this._bindTooltips(char, eff as unknown as Record<string,number>);
+
+    // 스탯 지출 버튼
+    this._rightEl.querySelectorAll<HTMLButtonElement>('.mng-spend-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.key as keyof Character['stats'];
+        if (!char.pendingStats) return;
+        const chars = CharacterManager.loadAll() ?? [];
+        const target = chars.find(c => c.id === char.id);
+        if (!target) return;
+        target.stats[key] = (target.stats[key] ?? 0) + 1;
+        target.pendingStats--;
+        target.statSum = (Object.values(target.stats) as number[]).reduce((a,b) => a+b, 0);
+        if (key === 'hp') { target.maxHp = target.stats.hp * 5; }
+        CharacterManager.saveAll(chars);
+        this._chars = chars;
+        this._selected = target;
+        this._applyFilter();
+        this._renderCenter(target);
+        this._renderRight(target);
+      });
+    });
 
     this._rightEl.querySelector('#mng-heal')?.addEventListener('click', () => {
       if (arc < healCost) { this._showRightToast('Arc 부족'); return; }
@@ -463,7 +464,7 @@ export class Tab_Manage_Full {
       CharacterManager.removeCharacter(char.id);
       this._chars = CharacterManager.loadAll() ?? [];
       this._selected = null;
-      this._centerEl.innerHTML = '<div class="mng-empty">캐릭터를 선택하십시오</div>';
+      this._centerEl.innerHTML = '<div class="mng-illus-placeholder">일러스트</div>';
       this._rightEl.innerHTML  = '';
       this._applyFilter();
     });

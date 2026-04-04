@@ -133,6 +133,13 @@ export class AtelierScene extends Phaser.Scene {
     this.events.on('arcUpdated', (newArc: number) => {
       this._hud.updateArc(newArc);
     }, this);
+
+    this.events.on('recruit:custom-enter', () => {
+      this._hud.setRecruitMode(true);
+    }, this);
+    this.events.on('recruit:custom-exit', () => {
+      this._hud.setRecruitMode(false);
+    }, this);
   }
 
   // ── 웰컴 팝업 ────────────────────────────────────────────────
