@@ -228,22 +228,12 @@ export class Tab_Manage_Full {
     this._centerEl.innerHTML = `
       <div class="mng-illus-frame">
         <div class="mng-illus-inner">
-          <div class="mng-illus-bg"></div>
           <div class="mng-illus-mask">
             <video class="mng-illus-video" autoplay loop muted playsinline></video>
           </div>
-          <div class="mng-illus-border"></div>
-          <div class="mng-illus-hook"></div>
-          <div class="mng-illus-clip mng-illus-clip--top"></div>
-          <div class="mng-illus-clip mng-illus-clip--bot"></div>
-          <div class="mng-illus-clip mng-illus-clip--left-a"></div>
-          <div class="mng-illus-clip mng-illus-clip--left-b"></div>
-          <div class="mng-illus-clip mng-illus-clip--right-a"></div>
-          <div class="mng-illus-clip mng-illus-clip--right-b"></div>
         </div>
       </div>
     `;
-    // src를 JS로 직접 설정 (HTML 인코딩 문제 방지)
     const vid = this._centerEl.querySelector<HTMLVideoElement>('.mng-illus-video');
     if (vid) {
       vid.src = 'Games/Assets/Sprites/Video 2.mp4';
