@@ -131,12 +131,12 @@
   color:          rgba(200, 200, 176, 0.65);
 }
 
-/* ── 전투 로그 (우측) ────────────────────────────────────────── */
+/* ── 전투 로그 (중간 우측) ───────────────────────────────────── */
 .battle-log {
   position:     absolute;
   right:        1%;
-  top:          clamp(36px, 3vh, 55px);
-  bottom:       clamp(104px, 9vh, 169px);
+  top:          37%;
+  bottom:       39%;
   width:        clamp(208px, 23.4vw, 364px);
   overflow-y:   auto;
   display:      flex;
@@ -311,8 +311,9 @@
   display:         flex;
   flex-direction:  column;
   align-items:     center;
-  justify-content: space-between;
-  padding:         6vh 2% 2%;
+  justify-content: center;
+  gap:             6vh;
+  padding:         4vh 2%;
   pointer-events:  none;
 }
 

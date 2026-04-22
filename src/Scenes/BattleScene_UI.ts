@@ -39,7 +39,7 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
   //  적 영역 (상단 30%)  — Phaser
   // ════════════════════════════════════════════════════════════
   protected _buildEnemyArea(W: number, H: number): void {
-    const areaY = H * 0.06, areaH = H * 0.30;
+    const areaY = H * 0.06, areaH = H * 0.31;
     const count = this._enemies.length;
     if (!count) return;
 
@@ -100,18 +100,18 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
   //  아군 영역  — Phaser
   // ════════════════════════════════════════════════════════════
   protected _buildAllyArea(W: number, H: number): void {
-    const areaY = H * 0.55, areaH = H * 0.36;
+    const areaY = H * 0.61, areaH = H * 0.30;
     const count = this._allies.length;
     if (!count) return;
 
-    const availW = W * 0.74;
+    const availW = W;
     const unitW  = Math.min(availW * 0.14, areaH * 0.55);
     const gap    = Math.max(W * 0.01, (availW * 0.90 - unitW * count) / (count + 1));
     const totalW = count * unitW + (count - 1) * gap;
-    const startX = availW / 2 - totalW / 2 + unitW / 2;
+    const startX = W / 2 - totalW / 2 + unitW / 2;
 
     this.add.graphics().lineStyle(1, 0x1e1008, 0.6)
-      .lineBetween(W * 0.02, areaY, W * 0.74, areaY);
+      .lineBetween(W * 0.02, areaY, W * 0.98, areaY);
 
     this._allies.forEach((ally, i) => {
       const cx = startX + i * (unitW + gap);
