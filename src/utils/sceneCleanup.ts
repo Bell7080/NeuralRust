@@ -18,8 +18,18 @@ const SCENE_DOM_IDS = [
   'dive-root',
 ] as const;
 
+// 클래스 기반 떠돌이 DOM (툴팁/팝업 등)
+const SCENE_DOM_CLASSES = [
+  'mng-tooltip',
+  'rct-popup-overlay',
+  'battle-log',
+] as const;
+
 export function clearAllSceneDom(): void {
   SCENE_DOM_IDS.forEach(id => {
     document.getElementById(id)?.remove();
+  });
+  SCENE_DOM_CLASSES.forEach(cls => {
+    document.querySelectorAll('.' + cls).forEach(el => el.remove());
   });
 }

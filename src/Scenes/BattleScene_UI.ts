@@ -135,11 +135,14 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
     shape.lineStyle(2, cogC.phaser, 0.85);
     shape.fillCircle(cx, cy, rad);
     shape.strokeCircle(cx, cy, rad);
+    shape.setDepth(1);
 
     let spriteImg: Phaser.GameObjects.Image | null = null;
     if (this.textures.exists(ally.spriteKey)) {
       spriteImg = this.add.image(cx, cy, ally.spriteKey)
-        .setDisplaySize(rad * 1.5, rad * 1.5).setAlpha(0.9);
+        .setDisplaySize(rad * 1.7, rad * 1.7)
+        .setAlpha(1)
+        .setDepth(2);
     }
 
     const nameTxt = this.add.text(cx, cy + rad + Math.round(size * 0.04), ally.name, {
@@ -193,6 +196,7 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
         shape.lineStyle(3, 0xc8a070, 1);
         shape.fillCircle(cx, cy, rad);
         shape.strokeCircle(cx, cy, rad);
+        spriteImg?.setDepth(2);
         skillHit.setInteractive({ useHandCursor: true });
       }
     };

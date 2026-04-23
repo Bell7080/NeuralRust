@@ -391,51 +391,72 @@
 }
 
 .battle-setup__slot {
-  width:          clamp(52px, 7.15vw, 104px);
-  aspect-ratio:   1;
+  width:          clamp(72px, 9.4vw, 136px);
+  aspect-ratio:   0.78;
   background:     rgba(8, 6, 7, 0.7);
   border:         1px solid rgba(30, 16, 8, 0.35);
   display:        flex;
   flex-direction: column;
-  align-items:    center;
-  justify-content:center;
+  align-items:    stretch;
+  justify-content:flex-start;
   cursor:         default;
   position:       relative;
-  transition:     border-color 0.1s;
+  transition:     border-color 0.1s, background 0.1s;
+  overflow:       hidden;
 }
 
 .battle-setup__slot.filled {
   cursor:       pointer;
   border-width: 2px;
+  background:   rgba(14, 10, 8, 0.95);
   /* border-color set inline via cog color */
+}
+
+.battle-setup__slot.filled:hover {
+  background:   rgba(30, 18, 10, 0.95);
 }
 
 .battle-setup__slot-num {
   position:    absolute;
-  top:         4%;
-  left:        6%;
+  top:         3%;
+  left:        5%;
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(8px, 0.72vw, 12px);
-  color:       #1e1008;
+  font-size:   clamp(8px, 0.78vw, 12px);
+  color:       #4a2a10;
+  z-index:     2;
+}
+
+.battle-setup__slot.filled .battle-setup__slot-num {
+  color:       #c8a070;
 }
 
 .battle-setup__slot-plus {
-  font-size:  clamp(18px, 1.82vw, 29px);
-  color:      #1e1008;
-  font-family:var(--font-display, monospace);
+  font-size:   clamp(20px, 2.2vw, 36px);
+  color:       #1e1008;
+  font-family: var(--font-display, monospace);
+  align-self:  center;
+  margin:      auto;
 }
 
 .battle-setup__slot-name {
   font-family:  var(--font-display, monospace);
-  font-size:    clamp(8px, 0.72vw, 10px);
+  font-size:    clamp(9px, 0.85vw, 13px);
   color:        #c8bfb0;
   text-align:   center;
   word-break:   keep-all;
-  padding:      0 4%;
+  padding:      0.25em 4% 0.35em;
+  line-height:  1.15;
+  background:   rgba(4, 2, 2, 0.6);
+  border-top:   1px solid rgba(30, 16, 8, 0.35);
+  flex-shrink:  0;
 }
 
 .battle-setup__slot-sprite {
-  width:        65%;
-  aspect-ratio: 1;
+  width:        100%;
+  flex:         1;
+  min-height:   0;
   object-fit:   contain;
+  image-rendering: pixelated;
+  padding:      2% 2% 0;
+  box-sizing:   border-box;
 }
