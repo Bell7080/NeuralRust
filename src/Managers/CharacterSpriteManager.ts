@@ -7,9 +7,9 @@
 // ================================================================
 
 const PORTRAITS: Record<string, { key: string; png: string; mp4: string }> = {
-  diver:    { key: 'portrait_diver',    png: 'Games/Assets/Sprites/Character_Noa_001.png', mp4: 'Games/Assets/Sprites/Character_Noa_001.mp4' },
-  fisher:   { key: 'portrait_fisher',   png: 'Games/Assets/Sprites/Character_Noa_002.png', mp4: 'Games/Assets/Sprites/Character_Noa_002.mp4' },
-  helmsman: { key: 'portrait_helmsman', png: 'Games/Assets/Sprites/Character_Noa_003.png', mp4: 'Games/Assets/Sprites/Character_Noa_003.mp4' },
+  diver:    { key: 'portrait_diver',    png: 'Games/Assets/Sprites/Character_001.png', mp4: 'Games/Assets/Sprites/Character_001.mp4' },
+  fisher:   { key: 'portrait_fisher',   png: 'Games/Assets/Sprites/Character_002.png', mp4: 'Games/Assets/Sprites/Character_002.mp4' },
+  helmsman: { key: 'portrait_helmsman', png: 'Games/Assets/Sprites/Character_003.png', mp4: 'Games/Assets/Sprites/Character_003.mp4' },
 };
 
 const FALLBACK_KEY = 'portrait_diver';
