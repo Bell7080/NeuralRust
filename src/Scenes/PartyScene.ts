@@ -17,6 +17,7 @@ import {
 import { AbilityIndex }     from '../Data/AbilityIndex';
 import { getStatTooltipDynamic, getJobTooltip } from '../Data/Data_Tooltips';
 import { clearAllSceneDom } from '../utils/sceneCleanup';
+import { CharacterSpriteManager } from '../Managers/CharacterSpriteManager';
 import type { Character, StatKey } from '../types';
 import './Ateliers/CharProfile.css';
 import './PartyScene.css';
@@ -253,9 +254,12 @@ export class PartyScene extends Phaser.Scene {
       <div class="ps-overclock" style="color:${char.overclock.color}">[오버클럭] ${char.overclock.label}</div>
     ` : '';
 
+    const videoPath = CharacterSpriteManager.getVideoPath(char.job);
     this._centerEl.innerHTML = `
       <div class="ps-portrait-wrap">
-        <div class="ps-portrait" id="ps-portrait-${char.id}"></div>
+        <div class="ps-portrait" id="ps-portrait-${char.id}">
+          ${videoPath ? `<video class="ps-portrait-video" src="${videoPath}" autoplay loop muted playsinline></video>` : ''}
+        </div>
       </div>
       <div class="ps-info">
         <div class="ps-name">${char.name}</div>
@@ -273,7 +277,10 @@ export class PartyScene extends Phaser.Scene {
         <div class="ps-abilities">${abilitiesHtml}</div>
       </div>
     `;
-    this._attachSprite(this._centerEl.querySelector(`#ps-portrait-${char.id}`)!, char.spriteKey);
+    // 비디오가 없을 때만 정적 PNG 표시
+    if (!videoPath) {
+      this._attachSprite(this._centerEl.querySelector(`#ps-portrait-${char.id}`)!, char.spriteKey);
+    }
 
     // 툴팁 바인딩
     const jobEl = this._centerEl.querySelector<HTMLElement>('[data-job]');

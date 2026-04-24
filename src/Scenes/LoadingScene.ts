@@ -84,9 +84,6 @@ export class LoadingScene extends Phaser.Scene {
       callback: () => { dot.setText(dots[count % 3]); count++; },
     });
 
-    // ── 스프라이트 시트 등록 ──────────────────────────────
-    CharacterSpriteManager.extractToTextures(this);
-
     // ── 다음 씬으로 ───────────────────────────────────────
     this.time.delayedCall(1200, () => this._goNext());
   }

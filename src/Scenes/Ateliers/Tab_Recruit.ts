@@ -5,12 +5,13 @@
 // ================================================================
 
 import { CharacterManager, calcCog, getCogColor } from '../../Managers/CharacterManager';
+import { CharacterSpriteManager } from '../../Managers/CharacterSpriteManager';
 import { AbilityIndex } from '../../Data/AbilityIndex';
 import { SaveManager }  from '../../Managers/SaveManager';
 import type { Character, JobId } from '../../types/index';
 
 const BASE_PRICE = 5, PRICE_STEP = 5, MAX_REROLL = 3;
-const SLOT_TICK_MS = 55, SLOT_TICKS = 30, SPRITE_COUNT = 72;
+const SLOT_TICK_MS = 55, SLOT_TICKS = 30;
 const JOBS: JobId[] = ['fisher', 'diver', 'helmsman'];
 const JOB_LABEL: Record<string,string> = { fisher:'낚시꾼', diver:'잠수부', helmsman:'조타수' };
 
@@ -51,7 +52,7 @@ function _rollOne(price: number): Roll {
   return { name:_pick(names), job, cog, statSum, stats:_statsBySum(statSum),
     passive:_ab('passive',job,cog), action:_ab('action',job,cog),
     enhanced:_ab('enhanced',job,cog), finale:_ab('finale',job,cog),
-    spriteKey:`char_${String(Math.floor(Math.random()*SPRITE_COUNT)).padStart(3,'0')}` };
+    spriteKey: CharacterSpriteManager.getPortraitKey(job) };
 }
 function _rollTriple(price: number): [Roll,Roll,Roll] {
   const rolls=[_rollOne(price),_rollOne(price),_rollOne(price)];
@@ -434,11 +435,12 @@ export class Tab_Recruit {
     };
 
     if (type === 'sprite') {
-      const nextKey = `char_${String(Math.floor(Math.random() * SPRITE_COUNT)).padStart(3, '0')}`;
+      const altJobs = (['fisher', 'diver', 'helmsman'] as JobId[]).filter(j => j !== roll.job);
+      const nextKey = CharacterSpriteManager.getPortraitKey(altJobs[Math.floor(Math.random() * altJobs.length)]);
       prevPanel.appendChild(this._spriteEl(roll.spriteKey, 'rct-popup-sprite'));
       nextPanel.appendChild(this._spriteEl(nextKey, 'rct-popup-sprite'));
-      bindPanel(prevPanel, () => close(false));           // 현재 = 유지 (변경 없음)
-      bindPanel(nextPanel, () => close(true, nextKey));   // 새로운 = 적용
+      bindPanel(prevPanel, () => close(false));
+      bindPanel(nextPanel, () => close(true, nextKey));
 
     } else if (type === 'stat') {
       const prevStats = { ...roll.stats };

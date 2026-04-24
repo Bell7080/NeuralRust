@@ -61,7 +61,7 @@ export interface AllyUnitObjs {
   gaugeBg:      Phaser.GameObjects.Graphics;
   gaugeFg:      Phaser.GameObjects.Graphics;
   gaugeTxt:     Phaser.GameObjects.Text;
-  skillHit:     Phaser.GameObjects.Arc;
+  skillHit:     Phaser.GameObjects.Rectangle;
   refreshHp:    () => void;
   refreshGauge: () => void;
   destroyAll:   () => void;

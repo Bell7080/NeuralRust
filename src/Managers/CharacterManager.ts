@@ -17,6 +17,7 @@ import { CHARACTER_NAMES }        from '../Data/Data_CharacterNames';
 import { JOB_DATA }               from '../Data/Data_Jobs';
 import { AbilityIndex }           from '../Data/AbilityIndex';
 import { OVERCLOCK_POOL }         from '../Data/Data_Overclock';
+import { CharacterSpriteManager } from './CharacterSpriteManager';
 
 // ── 스탯 색상 ────────────────────────────────────────────────────
 export const STAT_COLORS: Record<keyof CharacterStats, string> = {
@@ -85,36 +86,8 @@ function _getAbilityPool(type: AbilityType, job: string, cog: number): string[] 
 // ── 유틸 ─────────────────────────────────────────────────────────
 function _pick<T>(a: T[]): T { return a[Math.floor(Math.random() * a.length)]; }
 
-const SPRITE_COUNT = 72;
-const GONE_KEY     = 'nr_gone_sprites';
-
-function loadGoneSprites(): Set<string> {
-  try { return new Set<string>(JSON.parse(localStorage.getItem(GONE_KEY) || '[]') as string[]); }
-  catch { return new Set<string>(); }
-}
-function addGoneSprite(spriteKey: string): void {
-  const s = loadGoneSprites(); s.add(spriteKey);
-  localStorage.setItem(GONE_KEY, JSON.stringify([...s]));
-}
-function clearGoneSprites(): void { localStorage.removeItem(GONE_KEY); }
-
-function _uniqueSpriteKey(extraExclude?: string[]): string {
-  const used    = new Set((loadAll() || []).map(c => c.spriteKey).filter(Boolean));
-  const gone    = loadGoneSprites();
-  const exclude = new Set([...used, ...gone, ...(extraExclude || [])]);
-  const available: string[] = [];
-  for (let i = 0; i < SPRITE_COUNT; i++) {
-    const k = `char_${String(i).padStart(3, '0')}`;
-    if (!exclude.has(k)) available.push(k);
-  }
-  if (available.length) return available[Math.floor(Math.random() * available.length)];
-  const fallback: string[] = [];
-  for (let i = 0; i < SPRITE_COUNT; i++) {
-    const k = `char_${String(i).padStart(3, '0')}`;
-    if (!gone.has(k)) fallback.push(k);
-  }
-  if (fallback.length) return fallback[Math.floor(Math.random() * fallback.length)];
-  return `char_${String(Math.floor(Math.random() * SPRITE_COUNT)).padStart(3, '0')}`;
+function _jobSpriteKey(job: string): string {
+  return CharacterSpriteManager.getPortraitKey(job);
 }
 
 // ── 스탯 생성 ────────────────────────────────────────────────────
@@ -235,7 +208,7 @@ export function createCharacter(job: JobId): Character {
     currentHp:    stats.hp * 5,
     maxHp:        stats.hp * 5,
     status:       'alive',
-    spriteKey:    _uniqueSpriteKey(),
+    spriteKey:    _jobSpriteKey(job),
   };
 }
 
@@ -260,7 +233,7 @@ export function createCharacterOfCog(job: JobId, cog: number): Character {
     currentHp:    stats.hp * 5,
     maxHp:        stats.hp * 5,
     status:       'alive',
-    spriteKey:    _uniqueSpriteKey(),
+    spriteKey:    _jobSpriteKey(job),
   };
 }
 
@@ -288,7 +261,7 @@ function updateCharacter(updated: Character): void {
 
 // ── 전투 사망 처리 ───────────────────────────────────────────────
 function killCharacter(char: Character, { day, cog, round, killedBy }: { day: number; cog: number; round: number; killedBy: string }): void {
-  recordDeath(char.spriteKey, { death: 0, day, cog, round, killedBy });
+  recordDeath(char.id, { death: 0, day, cog, round, killedBy });
   char.status    = 'dead_chip';
   char.currentHp = 0;
   updateCharacter(char);
@@ -302,9 +275,10 @@ function initIfEmpty(): Character[] {
     let dirty = false;
 
     ex.forEach(c => {
-      const idx = parseInt((c.spriteKey || '').replace('char_', ''), 10);
-      if (!c.spriteKey || isNaN(idx) || idx >= SPRITE_COUNT)
-        { c.spriteKey = _uniqueSpriteKey(); dirty = true; }
+      if (!c.spriteKey || !c.spriteKey.startsWith('portrait_')) {
+        c.spriteKey = CharacterSpriteManager.getPortraitKey(c.job);
+        dirty = true;
+      }
 
       if (!c.status) { c.status = 'alive'; dirty = true; }
 
@@ -461,7 +435,6 @@ export const CharacterManager = {
   loadSquad, saveSquad,
   saveParty, loadParty,
   getRecordChip, updateRecordChip, recordDeath, recordFirstDay,
-  loadGoneSprites, addGoneSprite, clearGoneSprites,
   calcCog, getCogColor, COG_COLORS,
   JOB_LABEL,
   STAT_COLORS, STAT_LABEL_MAP,

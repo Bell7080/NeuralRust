@@ -124,33 +124,34 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
     ally: AllyInstance, cx: number, cy: number, size: number, posIdx: number
   ): AllyUnitObjs {
     const cogC = CharacterManager.getCogColor(ally.cog);
-    const rad  = size * 0.38;
+    const halfW = size * 0.38;
+    const halfH = halfW * 1.35;   // 초상화 세로 비율 (약 3:4)
 
-    this.add.text(cx, cy - rad - Math.round(size * 0.16), `${posIdx + 1}`, {
+    this.add.text(cx, cy - halfH - Math.round(size * 0.05), `${posIdx + 1}`, {
       fontSize: this._fs(9), color: '#2a1a0a', fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 1);
 
     const shape = this.add.graphics();
     shape.fillStyle(0x0a1a2a, 1);
     shape.lineStyle(2, cogC.phaser, 0.85);
-    shape.fillCircle(cx, cy, rad);
-    shape.strokeCircle(cx, cy, rad);
+    shape.fillRect(cx - halfW, cy - halfH, halfW * 2, halfH * 2);
+    shape.strokeRect(cx - halfW, cy - halfH, halfW * 2, halfH * 2);
     shape.setDepth(1);
 
     let spriteImg: Phaser.GameObjects.Image | null = null;
     if (this.textures.exists(ally.spriteKey)) {
       spriteImg = this.add.image(cx, cy, ally.spriteKey)
-        .setDisplaySize(rad * 1.7, rad * 1.7)
+        .setDisplaySize(halfW * 2, halfH * 2)
         .setAlpha(1)
         .setDepth(2);
     }
 
-    const nameTxt = this.add.text(cx, cy + rad + Math.round(size * 0.04), ally.name, {
+    const nameTxt = this.add.text(cx, cy + halfH + Math.round(size * 0.04), ally.name, {
       fontSize: this._fs(10), color: '#c8bfb0', fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 0);
 
-    const barW     = size * 0.95, barH = Math.max(5, Math.round(size * 0.09));
-    const hpBarY   = cy + rad + parseInt(this._fs(14)) + Math.round(size * 0.06);
+    const barW      = size * 0.95, barH = Math.max(5, Math.round(size * 0.09));
+    const hpBarY    = cy + halfH + parseInt(this._fs(14)) + Math.round(size * 0.06);
     const gaugeBarY = hpBarY + barH + Math.round(size * 0.03);
 
     const hpBg    = this.add.graphics();
@@ -169,7 +170,7 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
       fontSize: this._fs(8), color: '#4a5870', fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 0);
 
-    const skillHit = this.add.circle(cx, cy, rad, 0x000000, 0)
+    const skillHit = this.add.rectangle(cx, cy, halfW * 2, halfH * 2, 0x000000, 0)
       .setInteractive({ useHandCursor: false });
 
     const refreshHp = () => {
@@ -194,8 +195,8 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
         shape.clear();
         shape.fillStyle(0x0a2a3a, 1);
         shape.lineStyle(3, 0xc8a070, 1);
-        shape.fillCircle(cx, cy, rad);
-        shape.strokeCircle(cx, cy, rad);
+        shape.fillRect(cx - halfW, cy - halfH, halfW * 2, halfH * 2);
+        shape.strokeRect(cx - halfW, cy - halfH, halfW * 2, halfH * 2);
         spriteImg?.setDepth(2);
         skillHit.setInteractive({ useHandCursor: true });
       }
@@ -207,7 +208,7 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
     };
     refreshHp(); refreshGauge();
     return { ally, shape, spriteImg, nameTxt, hpBg, hpFg, hpTxt, gaugeBg, gaugeFg, gaugeTxt,
-             skillHit, refreshHp, refreshGauge, destroyAll, cx, cy, rad };
+             skillHit, refreshHp, refreshGauge, destroyAll, cx, cy, rad: halfW };
   }
 
   // ════════════════════════════════════════════════════════════
