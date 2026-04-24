@@ -35,8 +35,6 @@ const RIGHT_TABS: GearTab[] = [
   { key: 'dredge',    label: '드레지' },
 ];
 
-const GEAR_N    = 5;
-const GEAR_STEP = 360 / GEAR_N;   // 72°
 const GEAR_R    = 330;             // outer tooth radius
 const GEAR_r    = 252;             // inner radius
 const GEAR_HOLE = 38;
@@ -96,9 +94,11 @@ export class AtelierHUD {
     const { day } = SaveManager.getProgress();
     const arc = (SaveManager.load() as Record<string, unknown>)?.arc ?? 0;
 
-    const gearPath  = makeGearPath(GEAR_R, GEAR_r, GEAR_HOLE, GEAR_N);
-    const leftHtml  = this._gearSideHtml('left',  LEFT_TABS,  0,   gearPath);
-    const rightHtml = this._gearSideHtml('right', RIGHT_TABS, 180, gearPath);
+    // 각 사이드별 톱니 수 = 탭 * 2 (탭 톱니 + 장식 톱니 교차)
+    const leftGearPath  = makeGearPath(GEAR_R, GEAR_r, GEAR_HOLE, LEFT_TABS.length  * 2);
+    const rightGearPath = makeGearPath(GEAR_R, GEAR_r, GEAR_HOLE, RIGHT_TABS.length * 2);
+    const leftHtml  = this._gearSideHtml('left',  LEFT_TABS,  0,   leftGearPath);
+    const rightHtml = this._gearSideHtml('right', RIGHT_TABS, 180, rightGearPath);
 
     const hud = document.createElement('div');
     hud.id = 'atelier-hud';
@@ -284,7 +284,7 @@ export class AtelierHUD {
 
     const onMove = (e: MouseEvent) => {
       if (!dragging) return;
-      const newRot = startRot - (e.clientY - startY) * 0.38;
+      const newRot = startRot + (e.clientY - startY) * 0.38;
       if (isLeft) { this._leftRot  = newRot; }
       else        { this._rightRot = newRot; }
       rotEl.style.setProperty('--rot', `${newRot}deg`);

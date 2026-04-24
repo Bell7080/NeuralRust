@@ -16,7 +16,6 @@ import {
 } from '../Managers/CharacterManager';
 import { AbilityIndex }     from '../Data/AbilityIndex';
 import { getStatTooltipDynamic, getJobTooltip } from '../Data/Data_Tooltips';
-import { CharProfile }      from './Ateliers/CharProfile';
 import { clearAllSceneDom } from '../utils/sceneCleanup';
 import type { Character, StatKey } from '../types';
 import './Ateliers/CharProfile.css';
@@ -170,20 +169,19 @@ export class PartyScene extends Phaser.Scene {
       `;
       this._attachSprite(card.querySelector(`#ps-spr-${char.id}`)!, char.spriteKey);
 
-      // 단일 클릭: 선택 (중앙 프로필 갱신) + 파티 토글
-      // 더블 클릭: 상세 프로필 팝업
+      // 단일 클릭: 선택 (중앙 프로필 갱신)
+      // 더블 클릭: 파티 토글
       let clickTimer: ReturnType<typeof setTimeout> | null = null;
       card.addEventListener('click', () => {
         if (clickTimer) {
           clearTimeout(clickTimer);
           clickTimer = null;
-          CharProfile.open(char, { scene: this });
+          this._togglePartyMember(char);
           return;
         }
         clickTimer = setTimeout(() => {
           clickTimer = null;
           this._selectChar(char);
-          this._togglePartyMember(char);
         }, 220);
       });
 
