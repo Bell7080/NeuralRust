@@ -16,6 +16,7 @@ const SCENE_DOM_IDS = [
   'dive-dim',
   'dive-panel',
   'dive-root',
+  'party-scene',
 ] as const;
 
 // 클래스 기반 떠돌이 DOM (툴팁/팝업 등)

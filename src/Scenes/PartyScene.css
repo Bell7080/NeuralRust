@@ -1,0 +1,397 @@
+/* ================================================================
+   PartyScene.css — 탐사 파티 편성 씬
+   경로: src/Scenes/PartyScene.css
+================================================================ */
+
+.party-scene {
+  position:       absolute;
+  inset:          0;
+  display:        flex;
+  flex-direction: column;
+  pointer-events: auto;
+  z-index:        5;
+  color:          #c8bfb0;
+  font-family:    var(--font-mono, monospace);
+}
+
+/* ── 헤더 ───────────────────────────────────────────────────────── */
+.party-scene__header {
+  flex:            0 0 auto;
+  display:         flex;
+  align-items:     center;
+  padding:         1.1vh 2%;
+  background:      rgba(8, 5, 3, 0.92);
+  border-bottom:   1px solid rgba(42, 26, 10, 0.8);
+  min-height:      5.5vh;
+}
+
+.party-scene__back {
+  font-family:    var(--font-mono, monospace);
+  font-size:      clamp(11px, 1.04vw, 15px);
+  color:          #5a3a18;
+  background:     none;
+  border:         1px solid rgba(42, 26, 10, 0.5);
+  padding:        0.4em 1.1em;
+  cursor:         pointer;
+  transition:     color 0.12s, border-color 0.12s;
+  letter-spacing: 0.05em;
+}
+.party-scene__back:hover {
+  color:        #c8a070;
+  border-color: rgba(160, 80, 24, 0.7);
+}
+
+.party-scene__title-wrap {
+  flex:       1;
+  text-align: center;
+}
+
+.party-scene__title {
+  font-family:    var(--font-display, monospace);
+  font-size:      clamp(18px, 2.08vw, 30px);
+  color:          #6b4020;
+  letter-spacing: 0.32em;
+}
+.party-scene__subtitle {
+  font-family:    var(--font-mono, monospace);
+  font-size:      clamp(8px, 0.78vw, 11px);
+  color:          #2a1508;
+  letter-spacing: 0.4em;
+  margin-top:     0.15em;
+}
+.party-scene__header-spacer { width: 8em; }
+
+/* ── 본문 3컬럼 레이아웃 ─────────────────────────────────────────── */
+.party-scene__body {
+  flex:     1;
+  display:  flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.party-scene__list {
+  width:          42%;
+  display:        grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: max-content;
+  gap:            6px;
+  padding:        1%;
+  overflow-y:     auto;
+  align-content:  start;
+  background:     rgba(6, 4, 3, 0.55);
+  border-right:   1px solid rgba(30, 16, 8, 0.7);
+}
+
+.party-scene__center {
+  width:          32%;
+  display:        flex;
+  flex-direction: column;
+  overflow-y:     auto;
+  background:     rgba(8, 5, 3, 0.7);
+  border-right:   1px solid rgba(30, 16, 8, 0.7);
+}
+
+.party-scene__right {
+  width:          26%;
+  display:        flex;
+  flex-direction: column;
+  padding:        1.2em 1em;
+  gap:            0.7em;
+  background:     rgba(6, 4, 3, 0.88);
+  min-width:      0;
+}
+
+.party-scene__empty {
+  grid-column: 1 / -1;
+  text-align:  center;
+  color:       #3a2010;
+  font-size:   clamp(12px, 1.1vw, 16px);
+  padding:     4em 0;
+}
+
+/* ── 좌측: 캐릭터 카드 ───────────────────────────────────────────── */
+.party-scene__card {
+  background:     rgba(10, 7, 4, 0.95);
+  border:         1px solid rgba(42, 26, 10, 0.5);
+  display:        flex;
+  flex-direction: column;
+  cursor:         pointer;
+  transition:     border-color 0.12s, background 0.12s;
+  overflow:       hidden;
+  position:       relative;
+}
+.party-scene__card:hover {
+  border-color: rgba(122, 64, 24, 0.7);
+  background:   rgba(18, 13, 7, 1);
+}
+.party-scene__card.selected {
+  border-color: var(--card-cog, rgba(122, 64, 24, 0.9));
+  box-shadow:   inset 0 0 10px rgba(90, 36, 8, 0.25);
+}
+.party-scene__card.in-party {
+  background:   rgba(26, 42, 26, 0.95);
+  border-color: rgba(96, 192, 96, 0.75);
+  border-width: 2px;
+}
+
+.party-scene__card-mark {
+  position:    absolute;
+  top:         3px;
+  right:       5px;
+  font-size:   clamp(11px, 1.04vw, 15px);
+  color:       #60c060;
+  opacity:     0;
+  pointer-events: none;
+  z-index:     2;
+  transition:  opacity 0.1s;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+}
+.party-scene__card.in-party .party-scene__card-mark { opacity: 1; }
+
+.party-scene__card-sprite {
+  width:        100%;
+  aspect-ratio: 1;
+  overflow:     hidden;
+  background:   rgba(14, 9, 5, 0.8);
+}
+.party-scene__card-sprite img {
+  width: 100%; height: 100%;
+  object-fit: contain; image-rendering: pixelated;
+}
+
+.party-scene__card-info {
+  padding: 0.3em 0.4em;
+  display: flex; flex-direction: column; gap: 0.12em;
+  background: rgba(4, 2, 2, 0.5);
+}
+.party-scene__card-name {
+  font-family:  var(--font-display, monospace);
+  font-size:    clamp(10px, 0.98vw, 14px);
+  color:        #e8c080;
+  overflow:     hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.party-scene__card-cog {
+  font-family: var(--font-mono, monospace);
+  font-size:   clamp(8px, 0.78vw, 11px);
+  font-weight: 700;
+}
+.party-scene__card-hpbar {
+  width:  100%;
+  height: 3px;
+  background: rgba(20, 10, 6, 1);
+  margin-top: 0.2em;
+}
+.party-scene__card-hpbar > div {
+  height: 100%; transition: width 0.2s;
+}
+
+/* ── 중앙: 선택 캐릭터 상세 프로필 ──────────────────────────────── */
+.ps-portrait-wrap {
+  flex:           0 0 auto;
+  width:          100%;
+  aspect-ratio:   0.9;
+  max-height:     50%;
+  padding:        8% 10%;
+  box-sizing:     border-box;
+  border-bottom:  1px solid rgba(42, 26, 10, 0.5);
+  display:        flex;
+  align-items:    center;
+  justify-content:center;
+}
+.ps-portrait {
+  width:  100%;
+  height: 100%;
+  background: rgba(14, 9, 5, 0.85);
+  border: 1px solid rgba(42, 26, 10, 0.7);
+  overflow: hidden;
+}
+.ps-portrait img {
+  width: 100%; height: 100%;
+  object-fit: contain; image-rendering: pixelated;
+}
+
+.ps-info {
+  padding: 0.9em 1.1em 1.4em;
+  display: flex; flex-direction: column; gap: 0.32em;
+}
+.ps-name {
+  font-family: var(--font-display, monospace);
+  font-size:   clamp(16px, 1.69vw, 24px);
+  color:       #e8c080;
+  letter-spacing: 0.05em;
+}
+.ps-job  { font-size: clamp(11px, 1.04vw, 16px); }
+.ps-cog  { font-size: clamp(11px, 1.04vw, 16px); font-weight: 700; }
+.ps-mastery { font-size: clamp(9px, 0.91vw, 13px); }
+
+.ps-hp-row {
+  display: flex; flex-direction: column; gap: 0.15em; margin-top: 0.2em;
+}
+.ps-hp-bar {
+  width: 100%; height: 4px; background: rgba(20, 10, 6, 1);
+}
+.ps-hp-fill { height: 100%; transition: width 0.2s; }
+.ps-hp-txt {
+  font-size: clamp(9px, 0.85vw, 13px); color: #4a3018;
+}
+
+@keyframes ps-oc-pulse {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50%      { opacity: 0.55; filter: brightness(1.4); }
+}
+.ps-overclock {
+  font-size:  clamp(10px, 0.98vw, 14px);
+  animation:  ps-oc-pulse 1.9s ease-in-out infinite;
+  letter-spacing: 0.05em;
+}
+
+.ps-detail-divider {
+  width: 100%; height: 1px;
+  background: rgba(42, 26, 10, 0.6);
+  margin: 0.4em 0 0.3em;
+}
+
+.ps-stats, .ps-abilities {
+  display: flex; flex-direction: column; gap: 0.2em;
+}
+.ps-stat-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.18em 0; border-bottom: 1px solid rgba(24, 16, 8, 0.9);
+  font-size: clamp(10px, 0.98vw, 14px);
+}
+.ps-stat-row:last-child { border-bottom: none; }
+.ps-stat-row:hover { background: rgba(24, 16, 8, 0.7); }
+.ps-stat-key { color: #5a3a18; }
+.ps-stat-val {
+  font-weight: 700; display: flex; align-items: center; gap: 0.4em;
+}
+.ps-stat-bonus       { font-size: 0.8em; }
+.ps-stat-bonus.up    { color: #80c080; }
+.ps-stat-bonus.dn    { color: #c06060; }
+
+.ps-ab-row {
+  display: flex; flex-wrap: wrap; gap: 0.3em; align-items: baseline;
+  padding: 0.25em 0; border-bottom: 1px solid rgba(24, 16, 8, 0.7);
+}
+.ps-ab-row:last-child { border-bottom: none; }
+.ps-ab-type {
+  font-size: clamp(8px, 0.78vw, 11px);
+  color: #3a2010; min-width: 4em; letter-spacing: 0.1em;
+}
+.ps-ab-name {
+  font-family: var(--font-display, monospace);
+  font-size: clamp(11px, 1.04vw, 15px); color: #c8a070;
+}
+.ps-ab-desc {
+  width: 100%; font-size: clamp(8px, 0.85vw, 12px);
+  color: #4a2a10; margin-left: 4em; line-height: 1.4;
+}
+
+/* ── 우측: 편성 슬롯 + 출발 ───────────────────────────────────── */
+.party-scene__slots-label {
+  font-size:      clamp(10px, 0.98vw, 14px);
+  color:          #7a5028;
+  letter-spacing: 0.15em;
+  text-align:     center;
+  padding-bottom: 0.3em;
+  border-bottom:  1px solid rgba(42, 26, 10, 0.5);
+}
+
+.party-scene__slots {
+  display:    grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:        6px;
+  padding:    0.3em 0;
+}
+
+.party-scene__slot {
+  aspect-ratio: 0.82;
+  background:   rgba(8, 5, 3, 0.7);
+  border:       1px solid rgba(30, 16, 8, 0.5);
+  display:        flex;
+  flex-direction: column;
+  align-items:    stretch;
+  justify-content:flex-start;
+  position:       relative;
+  overflow:       hidden;
+  transition:     border-color 0.12s, background 0.12s;
+}
+.party-scene__slot.filled {
+  cursor:       pointer;
+  border:       2px solid var(--slot-cog, rgba(122, 64, 24, 0.8));
+  background:   rgba(14, 10, 8, 0.95);
+}
+.party-scene__slot.filled:hover {
+  background:   rgba(30, 18, 10, 0.95);
+}
+.party-scene__slot-num {
+  position: absolute; top: 3%; left: 5%;
+  font-size: clamp(8px, 0.78vw, 12px);
+  color: #4a2a10; z-index: 2;
+}
+.party-scene__slot.filled .party-scene__slot-num { color: #c8a070; }
+.party-scene__slot-plus {
+  font-family: var(--font-display, monospace);
+  font-size:  clamp(22px, 2.2vw, 34px);
+  color:      #1e1008;
+  margin:     auto;
+  align-self: center;
+}
+.party-scene__slot-sprite {
+  width: 100%; flex: 1; min-height: 0;
+  padding: 3% 3% 0; box-sizing: border-box;
+}
+.party-scene__slot-sprite img {
+  width: 100%; height: 100%;
+  object-fit: contain; image-rendering: pixelated;
+}
+.party-scene__slot-name {
+  font-family: var(--font-display, monospace);
+  font-size:   clamp(8px, 0.78vw, 11px);
+  color:       #c8bfb0;
+  text-align:  center;
+  padding:     0.25em 4% 0.35em;
+  line-height: 1.1;
+  background:  rgba(4, 2, 2, 0.6);
+  border-top:  1px solid rgba(30, 16, 8, 0.5);
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow:    hidden;
+  text-overflow: ellipsis;
+}
+
+.party-scene__divider {
+  height: 1px; background: rgba(42, 26, 10, 0.5); margin: 0.2em 0;
+}
+
+.party-scene__cost {
+  font-size:  clamp(10px, 0.98vw, 14px);
+  color:      #5a3a18;
+  text-align: center;
+  padding:    0.3em 0;
+}
+.party-scene__cost strong { color: #c8a070; }
+
+.party-scene__depart {
+  font-family:    var(--font-display, monospace);
+  font-size:      clamp(18px, 1.95vw, 28px);
+  color:          #2a1a0a;
+  background:     rgba(10, 8, 7, 0.9);
+  border:         1px solid rgba(30, 16, 8, 0.5);
+  padding:        0.7em 1em;
+  cursor:         not-allowed;
+  letter-spacing: 0.2em;
+  transition:     background 0.12s, border-color 0.12s, color 0.12s;
+  margin-top:     auto;
+}
+.party-scene__depart.active {
+  color:        #c8a070;
+  background:   rgba(30, 16, 8, 1);
+  border:       2px solid rgba(160, 80, 24, 0.9);
+  cursor:       pointer;
+}
+.party-scene__depart.active:hover {
+  background:   rgba(42, 26, 8, 1);
+  border-color: rgba(200, 160, 112, 1);
+  color:        #e8d090;
+}

@@ -10,7 +10,7 @@ import { SaveManager } from '../../Managers/SaveManager';
 
 export type TabKey =
   | 'explore' | 'recruit' | 'manage' | 'facility' | 'outsource'
-  | 'dredge' | 'shop' | 'storage' | 'codex' | 'memory' | 'party';
+  | 'dredge' | 'shop' | 'storage' | 'codex' | 'memory';
 
 interface HUDCallbacks {
   onTab:      (key: TabKey) => void;
@@ -25,7 +25,6 @@ const LEFT_TABS: GearTab[] = [
   { key: 'storage', label: '창  고' },
   { key: 'codex',   label: '도  감' },
   { key: 'memory',  label: '회  상' },
-  { key: 'party',   label: '파  티' },
 ];
 
 const RIGHT_TABS: GearTab[] = [
@@ -179,8 +178,9 @@ export class AtelierHUD {
     initRot: number,
     path: string,
   ): string {
+    const step = 360 / tabs.length;
     const labels = tabs.map((t, i) =>
-      `<button class="gear-label" data-key="${t.key}" style="--base:${i * GEAR_STEP}deg">${t.label}</button>`
+      `<button class="gear-label" data-key="${t.key}" style="--base:${i * step}deg">${t.label}</button>`
     ).join('\n      ');
     const vb = GEAR_R + 10;
     return `
@@ -212,9 +212,10 @@ export class AtelierHUD {
 
   // ── 선택 탭 계산 ─────────────────────────────────────────────
   private _getSelKey(rot: number, selAng: number, tabs: GearTab[]): TabKey {
+    const step = 360 / tabs.length;
     let best = 0, bestDist = Infinity;
     tabs.forEach((_t, i) => {
-      const ang  = ((i * GEAR_STEP + rot - selAng) % 360 + 360) % 360;
+      const ang  = ((i * step + rot - selAng) % 360 + 360) % 360;
       const dist = Math.min(ang, 360 - ang);
       if (dist < bestDist) { bestDist = dist; best = i; }
     });
@@ -228,7 +229,8 @@ export class AtelierHUD {
     const idx    = tabs.findIndex(t => t.key === key);
     if (idx < 0) return;
 
-    const target = selAng - idx * GEAR_STEP;
+    const step   = 360 / tabs.length;
+    const target = selAng - idx * step;
     const cur    = side === 'left' ? this._leftRot : this._rightRot;
     let diff = ((target - cur) % 360 + 360) % 360;
     if (diff > 180) diff -= 360;
@@ -294,11 +296,12 @@ export class AtelierHUD {
       dragging = false;
       svgEl.classList.remove('dragging');
       dragArea.style.cursor = '';
-      // snap to nearest tooth
+      // snap to nearest tab slot
+      const step   = 360 / tabs.length;
       const cur    = isLeft ? this._leftRot : this._rightRot;
-      const rawIdx = (selAng - cur) / GEAR_STEP;
-      const idx    = Math.round(rawIdx);
-      const target = selAng - idx * GEAR_STEP;
+      const rawIdx = (selAng - cur) / step;
+      const idx    = ((Math.round(rawIdx) % tabs.length) + tabs.length) % tabs.length;
+      const target = selAng - idx * step;
       let diff = ((target - cur) % 360 + 360) % 360;
       if (diff > 180) diff -= 360;
       const newRot = cur + diff;
