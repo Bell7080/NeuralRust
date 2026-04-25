@@ -3,8 +3,8 @@
 //  경로: src/Scenes/BattleScene_Setup.ts
 //
 //  역할: Phase 1 — 전투 편성
-//        UI(편성 패널·슬롯·진행 버튼) → CSS DOM 오버레이
-//        게임 비주얼(적 박스·HP 바) → Phaser 3
+//        3열 레이아웃: 좌(캐릭터 그리드) | 중(진행+슬롯) | 우(정보 패널)
+//        단일 클릭 → 우측 정보 표시 / 더블클릭 → 배치 추가/제거
 //
 //  상속: abstract BattleSceneSetup extends Phaser.Scene
 //        → BattleScene_Battle → BattleScene
@@ -15,6 +15,7 @@ import type { Character } from '../types';
 import { CharacterManager }        from '../Managers/CharacterManager';
 import { CharacterSpriteManager }  from '../Managers/CharacterSpriteManager';
 import { FontManager }             from '../Managers/FontManager';
+import { AbilityIndex }            from '../Data/AbilityIndex';
 
 // ── 공유 런타임 타입 (하위 클래스에서 import) ────────────────────
 
@@ -109,21 +110,28 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
   protected _sceneHits:   Phaser.GameObjects.Rectangle[] = [];
 
   // ── DOM refs ─────────────────────────────────────────────────
-  protected _setupEl!:    HTMLDivElement;
-  private   _goBtn!:      HTMLButtonElement;
-  private   _goSub!:      HTMLSpanElement;
-  private   _slotsRow!:   HTMLDivElement;
-  private   _cardEls:     Array<{
-    el:      HTMLDivElement;
-    mark:    HTMLSpanElement;
-    charId:  string;
+  protected _setupEl!:     HTMLDivElement;
+  private _setupPanelEl!:  HTMLDivElement;
+  private _setupInfoEl!:   HTMLDivElement;
+  private _goBtn!:         HTMLButtonElement;
+  private _goSub!:         HTMLSpanElement;
+  private _slotsRow!:      HTMLDivElement;
+  private _cardEls: Array<{
+    el:     HTMLDivElement;
+    mark:   HTMLSpanElement;
+    charId: string;
   }> = [];
   private _slotEls: Array<{
-    el:      HTMLDivElement;
-    sprite:  HTMLImageElement;
-    info:    HTMLDivElement;
-    plus:    HTMLSpanElement;
+    el:     HTMLDivElement;
+    sprite: HTMLImageElement;
+    info:   HTMLDivElement;
+    plus:   HTMLSpanElement;
   }> = [];
+
+  // ── 클릭 상태 ────────────────────────────────────────────────
+  private _selectedChar:  Character | null = null;
+  private _lastClickMs  = 0;
+  private _lastClickId  = '';
 
   // ── 폰트 헬퍼 ───────────────────────────────────────────────
   protected _fs(base: number): string {
@@ -139,13 +147,14 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
   protected _buildSetupUI(): void {
     const canvas = this.sys.game.canvas;
 
-    /* ── 루트 오버레이 ─────────────────────────────────────── */
+    /* ── 루트 (3열 그리드) ─────────────────────────────────── */
     const root = document.createElement('div');
     root.id = 'battle-setup';
 
-    /* ── 좌측 패널 ─────────────────────────────────────────── */
+    /* ── 좌측 패널 (캐릭터 그리드) ─────────────────────────── */
     const panel = document.createElement('div');
     panel.className = 'battle-setup__panel';
+    this._setupPanelEl = panel;
 
     const title = document.createElement('div');
     title.className = 'battle-setup__title';
@@ -153,7 +162,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
 
     const sub = document.createElement('div');
     sub.className = 'battle-setup__sub';
-    sub.textContent = '클릭으로 배치 / 제거';
+    sub.textContent = '클릭: 정보  ·  더블클릭: 배치';
 
     const grid = document.createElement('div');
     grid.className = 'battle-setup__grid';
@@ -168,18 +177,15 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       card.className = 'battle-setup__card';
       card.style.setProperty('--card-cog-color', cogC.css);
 
-      // 편성 마크 (선택 시 가운데 표시)
       const mark = document.createElement('span');
       mark.className = 'battle-setup__card-mark';
       mark.textContent = '▶';
 
-      // 스프라이트 (배경)
       const spriteEl = document.createElement('img');
       spriteEl.className = 'battle-setup__card-sprite';
       const _cardSrc = CharacterSpriteManager.getDomSrc(char.spriteKey);
       if (_cardSrc) { spriteEl.src = _cardSrc; } else { spriteEl.style.opacity = '0'; }
 
-      // 통일 정보 양식 (이름/직업/Cog·합계/HP바/HP수치)
       const info = document.createElement('div');
       info.className = 'battle-setup__card-info';
       info.innerHTML = `
@@ -191,10 +197,24 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       `;
 
       card.append(mark, spriteEl, info);
+
+      // 단일 클릭 → 정보 표시 / 더블클릭 → 배치 토글
       card.addEventListener('click', () => {
-        this._combatParty.includes(char.id)
-          ? this._removeFromCombat(char.id)
-          : this._addToCombat(char.id);
+        const now = Date.now();
+        if (this._lastClickId === char.id && now - this._lastClickMs < 350) {
+          this._lastClickMs = 0;
+          this._lastClickId = '';
+          this._combatParty.includes(char.id)
+            ? this._removeFromCombat(char.id)
+            : this._addToCombat(char.id);
+        } else {
+          this._lastClickMs = now;
+          this._lastClickId = char.id;
+          this._selectedChar = char;
+          this._cardEls.forEach(c => c.el.classList.remove('info-selected'));
+          card.classList.add('info-selected');
+          this._refreshInfoPanel();
+        }
       });
 
       grid.appendChild(card);
@@ -203,11 +223,10 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
 
     panel.append(title, sub, grid);
 
-    /* ── 우측 영역 (진행 버튼 + 슬롯) ─────────────────────── */
-    const right = document.createElement('div');
-    right.className = 'battle-setup__right';
+    /* ── 중앙 영역 (진행 버튼 + 배치 슬롯) ─────────────────── */
+    const center = document.createElement('div');
+    center.className = 'battle-setup__center';
 
-    // 진행 버튼
     const goWrap = document.createElement('div');
     goWrap.className = 'battle-setup__go-wrap';
 
@@ -229,7 +248,6 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
 
     goWrap.append(goBtn, goSub);
 
-    // 배치 슬롯
     const slotsWrap = document.createElement('div');
     slotsWrap.className = 'battle-setup__slots-wrap';
 
@@ -272,11 +290,87 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     }
 
     slotsWrap.append(slotsLabel, slotsRow);
-    right.append(goWrap, slotsWrap);
-    root.append(panel, right);
+    center.append(goWrap, slotsWrap);
 
+    /* ── 우측 정보 패널 ─────────────────────────────────────── */
+    const infoPanel = document.createElement('div');
+    infoPanel.className = 'battle-setup__info-panel';
+    this._setupInfoEl = infoPanel;
+
+    const infoEmpty = document.createElement('div');
+    infoEmpty.className = 'bs-info-empty';
+    infoEmpty.textContent = '캐릭터를 클릭하면\n정보가 표시됩니다';
+    infoPanel.appendChild(infoEmpty);
+
+    root.append(panel, center, infoPanel);
     canvas.parentElement?.appendChild(root);
     this._setupEl = root;
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  우측 정보 패널 렌더
+  // ════════════════════════════════════════════════════════════
+  private _refreshInfoPanel(): void {
+    const char = this._selectedChar;
+    if (!char) return;
+
+    const cogC    = CharacterManager.getCogColor(char.cog);
+    const jobCol  = char.job === 'fisher' ? '#c8a070' : char.job === 'diver' ? '#7ab0c8' : '#a080e0';
+    const hpPct   = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
+    const hpCol   = hpPct > 0.6 ? '#306030' : hpPct > 0.3 ? '#806020' : '#803020';
+    const inParty = this._combatParty.includes(char.id);
+    const eff     = CharacterManager.getEffectiveStats(char) as unknown as Record<string, number>;
+    const SC      = CharacterManager.STAT_COLORS as Record<string, string>;
+    const SL      = CharacterManager.STAT_LABEL_MAP as Record<string, string>;
+    const src     = CharacterSpriteManager.getDomSrc(char.spriteKey);
+
+    const statRows = Object.entries(char.stats).map(([k, v]) => {
+      const effV  = eff[k] ?? v;
+      const bonus = effV - v;
+      return `<div class="bs-info-stat-row">
+        <span class="bs-info-stat-key">${SL[k] ?? k}</span>
+        <span class="bs-info-stat-val" style="color:${SC[k] ?? '#c8bfb0'}">${effV}${bonus > 0 ? `<span style="color:#80c870;font-size:0.8em"> +${bonus}</span>` : ''}</span>
+      </div>`;
+    }).join('');
+
+    const abilRows = (['passive', 'action', 'enhanced', 'finale'] as const).map(type => {
+      const id = char[type];
+      const nm = id ? (AbilityIndex.getName(type, id) || id) : '—';
+      const typeLabel: Record<string, string> = { passive: 'PASSIVE', action: 'ACTION', enhanced: 'ENHANCED', finale: 'FINALE' };
+      const typeColor = type === 'passive' ? '#a0d080' : type === 'action' ? '#c8a060' : type === 'enhanced' ? '#80b8e0' : '#e08080';
+      return `<div class="bs-info-abil-cell">
+        <div class="bs-info-abil-type">${typeLabel[type]}</div>
+        <div class="bs-info-abil-name" style="color:${typeColor}">${nm}</div>
+      </div>`;
+    }).join('');
+
+    this._setupInfoEl.innerHTML = `
+      <div class="bs-info-portrait-wrap">
+        ${src ? `<img class="bs-info-portrait" src="${src}">` : ''}
+        <div class="bs-info-portrait-overlay">
+          <div class="bs-info-name">${char.name}</div>
+          <div class="bs-info-job" style="color:${jobCol}">${char.jobLabel}</div>
+          <div class="bs-info-cog" style="color:${cogC.css}">Cog ${char.cog} · 합계 ${char.statSum}</div>
+          <div class="bs-info-hpbar"><div class="bs-info-hpfill" style="width:${Math.round(hpPct * 100)}%;background:${hpCol}"></div></div>
+          <div class="bs-info-hptxt">${char.currentHp} / ${char.maxHp}</div>
+        </div>
+      </div>
+      <div class="bs-info-body">
+        <div class="bs-info-stats">${statRows}</div>
+        <div class="bs-info-abils">${abilRows}</div>
+        <button class="bs-info-toggle-btn${inParty ? ' in-party' : ''}">
+          ${inParty ? '▶ 배치 제거' : '+ 배치 추가'}
+        </button>
+      </div>
+    `;
+
+    this._setupInfoEl.querySelector<HTMLButtonElement>('.bs-info-toggle-btn')
+      ?.addEventListener('click', () => {
+        this._combatParty.includes(char.id)
+          ? this._removeFromCombat(char.id)
+          : this._addToCombat(char.id);
+        this._refreshInfoPanel();
+      });
   }
 
   // ════════════════════════════════════════════════════════════
@@ -349,21 +443,24 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       ? `${this._combatParty.length}명 편성  —  진행 버튼으로 시작`
       : '1명 이상 배치 후 시작';
     this._goSub.classList.toggle('has-party', has);
+
+    // ── 정보 패널 배치 버튼 상태 갱신 ────────────────────────
+    if (this._selectedChar) this._refreshInfoPanel();
   }
 
   // ── 편성 패널 슬라이드 아웃 후 콜백 ──────────────────────────
   protected _slideOutSetup(onDone: () => void): void {
-    const el = this._setupEl;
     let done = false;
     const finish = () => {
       if (done) return;
       done = true;
-      el.style.display = 'none';
+      this._setupEl.style.display = 'none';
       onDone();
     };
-    el.classList.add('slide-out');
-    el.addEventListener('transitionend', finish, { once: true });
-    // fallback: transitionend 미발화 시 400ms 후 강제 실행
-    this.time.delayedCall(420, finish);
+    this._setupPanelEl.classList.add('slide-out-left');
+    this._setupInfoEl.classList.add('slide-out-right');
+    this._setupPanelEl.addEventListener('transitionend', finish, { once: true });
+    // fallback: 500ms 후 강제 실행
+    this.time.delayedCall(500, finish);
   }
 }

@@ -171,22 +171,14 @@
 #battle-setup {
   position:        absolute;
   inset:           0;
-  display:         flex;
+  display:         grid;
+  grid-template-columns: 24% 1fr 24%;
   pointer-events:  none;
-  transition:      transform 0.32s cubic-bezier(0.55, 0, 1, 0.45),
-                   opacity   0.32s ease;
   z-index:         10;
-}
-
-#battle-setup.slide-out {
-  transform: translateX(-28%);
-  opacity:   0;
-  pointer-events: none;
 }
 
 /* ── 좌측 패널 ─────────────────────────────────────────────────── */
 .battle-setup__panel {
-  width:            24%;
   height:           100%;
   background:       rgba(8, 6, 8, 0.94);
   border-right:     1px solid rgba(42, 26, 10, 0.8);
@@ -195,6 +187,12 @@
   padding:          0 0.5%;
   overflow-y:       auto;
   pointer-events:   auto;
+  transition:       transform 0.42s cubic-bezier(0.55, 0, 1, 0.45),
+                    opacity   0.42s ease;
+}
+.battle-setup__panel.slide-out-left {
+  transform:        translateX(-100%);
+  opacity:          0;
 }
 
 .battle-setup__title {
@@ -335,15 +333,14 @@
   transition:    width 0.1s;
 }
 
-/* ── 우측 영역 (진행 버튼 + 배치 슬롯) ─────────────────────────── */
-.battle-setup__right {
-  flex:            1;
+/* ── 중앙 영역 (진행 버튼 + 배치 슬롯, 투명) ───────────────────── */
+.battle-setup__center {
   display:         flex;
   flex-direction:  column;
   align-items:     center;
-  justify-content: center;
-  gap:             6vh;
-  padding:         4vh 2%;
+  justify-content: flex-end;
+  gap:             3vh;
+  padding:         0 2% 5vh;
   pointer-events:  none;
 }
 
@@ -524,4 +521,191 @@
   object-fit:      cover;
   object-position: center 15%;
   z-index:         1;
+}
+
+/* ── 카드 info-selected (단일 클릭으로 선택) ───────────────────── */
+.battle-setup__card.info-selected {
+  border-color: rgba(200, 160, 80, 0.9) !important;
+  border-width: 2px;
+}
+
+/* ── 우측 정보 패널 ─────────────────────────────────────────────── */
+.battle-setup__info-panel {
+  height:           100%;
+  background:       rgba(8, 6, 8, 0.94);
+  border-left:      1px solid rgba(42, 26, 10, 0.8);
+  display:          flex;
+  flex-direction:   column;
+  overflow-y:       auto;
+  pointer-events:   auto;
+  transition:       transform 0.42s cubic-bezier(0.55, 0, 1, 0.45),
+                    opacity   0.42s ease;
+}
+.battle-setup__info-panel::-webkit-scrollbar { width: 3px; }
+.battle-setup__info-panel::-webkit-scrollbar-thumb { background: rgba(80,50,20,0.5); }
+
+.battle-setup__info-panel.slide-out-right {
+  transform:        translateX(100%);
+  opacity:          0;
+}
+
+.bs-info-empty {
+  flex:            1;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  font-family:     var(--font-mono, monospace);
+  font-size:       clamp(10px, 1.04vw, 14px);
+  color:           #2a1508;
+  text-align:      center;
+  white-space:     pre-line;
+  padding:         2em;
+}
+
+/* 초상화 */
+.bs-info-portrait-wrap {
+  position:        relative;
+  width:           100%;
+  aspect-ratio:    0.82;
+  overflow:        hidden;
+  flex-shrink:     0;
+}
+.bs-info-portrait-wrap::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 55%;
+  background: linear-gradient(to top, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.6) 45%, transparent);
+  pointer-events: none;
+  z-index: 2;
+}
+.bs-info-portrait {
+  position:        absolute;
+  inset:           0;
+  width:           100%;
+  height:          100%;
+  object-fit:      cover;
+  object-position: center 10%;
+  z-index:         1;
+}
+.bs-info-portrait-overlay {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  z-index:  3;
+  padding:  0 8% 6%;
+  display:  flex; flex-direction: column; gap: 2px;
+}
+.bs-info-name {
+  font-family:  var(--font-display, monospace);
+  font-size:    clamp(14px, 1.56vw, 22px);
+  color:        #f0e0c0;
+  text-shadow:  0 1px 4px rgba(0,0,0,0.95);
+  line-height:  1.1;
+}
+.bs-info-job {
+  font-family:  var(--font-mono, monospace);
+  font-size:    clamp(9px, 0.98vw, 13px);
+  text-shadow:  0 1px 3px rgba(0,0,0,0.9);
+}
+.bs-info-cog {
+  font-family:  var(--font-mono, monospace);
+  font-size:    clamp(9px, 0.98vw, 13px);
+  font-weight:  700;
+  text-shadow:  0 1px 3px rgba(0,0,0,0.9);
+}
+.bs-info-hpbar {
+  width:         100%;
+  height:        3px;
+  background:    rgba(26, 16, 8, 0.8);
+  margin-top:    4px;
+  overflow:      hidden;
+}
+.bs-info-hpfill { height: 100%; }
+.bs-info-hptxt {
+  font-family:   var(--font-mono, monospace);
+  font-size:     clamp(8px, 0.85vw, 11px);
+  color:         #c8a070;
+  text-shadow:   0 1px 2px rgba(0,0,0,0.9);
+}
+
+/* 바디 (스탯 + 능력 + 버튼) */
+.bs-info-body {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.4em;
+  padding:        0.5em 0.6em;
+}
+
+.bs-info-stats {
+  background:    rgba(6, 8, 16, 0.85);
+  border:        1px solid rgba(42, 26, 8, 0.7);
+}
+.bs-info-stat-row {
+  display:       flex;
+  align-items:   center;
+  padding:       0.12em 0.5em;
+  border-bottom: 1px solid rgba(30, 18, 6, 0.4);
+}
+.bs-info-stat-row:last-child { border-bottom: none; }
+.bs-info-stat-key {
+  flex:          1;
+  font-family:   var(--font-mono, monospace);
+  font-size:     clamp(9px, 1.0vw, 13px);
+  color:         rgba(200, 191, 176, 0.8);
+}
+.bs-info-stat-val {
+  font-family:   var(--font-mono, monospace);
+  font-size:     clamp(10px, 1.1vw, 14px);
+}
+
+.bs-info-abils {
+  display:       grid;
+  grid-template-columns: 1fr 1fr;
+  gap:           3px;
+}
+.bs-info-abil-cell {
+  background:    rgba(6, 12, 26, 0.9);
+  border:        1px solid rgba(42, 26, 8, 0.6);
+  padding:       0.25em 0.3em;
+  display:       flex;
+  flex-direction:column;
+  gap:           2px;
+}
+.bs-info-abil-type {
+  font-family:   var(--font-mono, monospace);
+  font-size:     clamp(7px, 0.72vw, 9px);
+  color:         #3a2808;
+}
+.bs-info-abil-name {
+  font-family:   var(--font-mono, monospace);
+  font-size:     clamp(8px, 0.85vw, 11px);
+  word-break:    keep-all;
+  text-align:    center;
+}
+
+.bs-info-toggle-btn {
+  width:         100%;
+  padding:       0.7em 0;
+  font-family:   var(--font-display, monospace);
+  font-size:     clamp(11px, 1.17vw, 16px);
+  letter-spacing:0.1em;
+  color:         #c8a070;
+  background:    rgba(30, 16, 8, 1);
+  border:        1px solid rgba(160, 80, 24, 0.8);
+  cursor:        pointer;
+  transition:    background 0.12s, border-color 0.12s, color 0.12s;
+  margin-top:    0.2em;
+}
+.bs-info-toggle-btn:hover {
+  background:    rgba(50, 28, 8, 1);
+  border-color:  rgba(200, 160, 112, 1);
+  color:         #e8d090;
+}
+.bs-info-toggle-btn.in-party {
+  color:         #c06050;
+  border-color:  rgba(160, 60, 40, 0.8);
+  background:    rgba(24, 10, 8, 1);
+}
+.bs-info-toggle-btn.in-party:hover {
+  background:    rgba(40, 16, 10, 1);
+  border-color:  rgba(220, 80, 60, 1);
+  color:         #e08070;
 }
