@@ -322,7 +322,6 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     const eff     = CharacterManager.getEffectiveStats(char) as unknown as Record<string, number>;
     const SC      = CharacterManager.STAT_COLORS as Record<string, string>;
     const SL      = CharacterManager.STAT_LABEL_MAP as Record<string, string>;
-    const src     = CharacterSpriteManager.getDomSrc(char.spriteKey);
 
     const statRows = Object.entries(char.stats).map(([k, v]) => {
       const effV  = eff[k] ?? v;
@@ -346,7 +345,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
 
     this._setupInfoEl.innerHTML = `
       <div class="bs-info-portrait-wrap">
-        ${src ? `<img class="bs-info-portrait" src="${src}">` : ''}
+        <video class="bs-info-portrait-video" autoplay loop muted playsinline></video>
         <div class="bs-info-portrait-overlay">
           <div class="bs-info-name">${char.name}</div>
           <div class="bs-info-job" style="color:${jobCol}">${char.jobLabel}</div>
@@ -363,6 +362,13 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
         </button>
       </div>
     `;
+
+    // 2D 라이브 비디오 소스 설정
+    const vid = this._setupInfoEl.querySelector<HTMLVideoElement>('.bs-info-portrait-video');
+    if (vid) {
+      const videoPath = CharacterSpriteManager.getVideoPath(char.job);
+      if (videoPath) { vid.src = videoPath; vid.load(); vid.play().catch(() => {}); }
+    }
 
     this._setupInfoEl.querySelector<HTMLButtonElement>('.bs-info-toggle-btn')
       ?.addEventListener('click', () => {

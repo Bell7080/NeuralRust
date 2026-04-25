@@ -578,7 +578,7 @@
   pointer-events: none;
   z-index: 2;
 }
-.bs-info-portrait {
+.bs-info-portrait-video {
   position:        absolute;
   inset:           0;
   width:           100%;
@@ -591,37 +591,37 @@
   position: absolute; left: 0; right: 0; bottom: 0;
   z-index:  3;
   padding:  0 8% 6%;
-  display:  flex; flex-direction: column; gap: 2px;
+  display:  flex; flex-direction: column; gap: 3px;
 }
 .bs-info-name {
   font-family:  var(--font-display, monospace);
-  font-size:    clamp(14px, 1.56vw, 22px);
+  font-size:    clamp(22px, 2.6vw, 38px);
   color:        #f0e0c0;
   text-shadow:  0 1px 4px rgba(0,0,0,0.95);
   line-height:  1.1;
 }
 .bs-info-job {
   font-family:  var(--font-mono, monospace);
-  font-size:    clamp(9px, 0.98vw, 13px);
+  font-size:    clamp(13px, 1.43vw, 20px);
   text-shadow:  0 1px 3px rgba(0,0,0,0.9);
 }
 .bs-info-cog {
   font-family:  var(--font-mono, monospace);
-  font-size:    clamp(9px, 0.98vw, 13px);
+  font-size:    clamp(13px, 1.43vw, 20px);
   font-weight:  700;
   text-shadow:  0 1px 3px rgba(0,0,0,0.9);
 }
 .bs-info-hpbar {
   width:         100%;
-  height:        3px;
+  height:        4px;
   background:    rgba(26, 16, 8, 0.8);
-  margin-top:    4px;
+  margin-top:    6px;
   overflow:      hidden;
 }
 .bs-info-hpfill { height: 100%; }
 .bs-info-hptxt {
   font-family:   var(--font-mono, monospace);
-  font-size:     clamp(8px, 0.85vw, 11px);
+  font-size:     clamp(10px, 1.04vw, 14px);
   color:         #c8a070;
   text-shadow:   0 1px 2px rgba(0,0,0,0.9);
 }
