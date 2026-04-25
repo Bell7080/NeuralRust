@@ -6,7 +6,8 @@
 //        인벤토리 / 잠수정 / 상점 / 파티 / 일지
 // ================================================================
 
-import { CharacterManager } from '../../Managers/CharacterManager';
+import { CharacterManager }       from '../../Managers/CharacterManager';
+import { CharacterSpriteManager } from '../../Managers/CharacterSpriteManager';
 import { AbilityIndex }     from '../../Data/AbilityIndex';
 import type { Character }   from '../../types';
 
@@ -281,17 +282,12 @@ export function renderParty(
 
   const renderCenter = (char: Character) => {
     centerEl.innerHTML = '';
-    if (char.spriteKey && scene.textures.exists(char.spriteKey)) {
-      const raw = scene.textures.get(char.spriteKey).getSourceImage();
-      const src = raw instanceof HTMLCanvasElement ? raw.toDataURL() : (raw as HTMLImageElement).src;
-      if (src) {
-        const img = document.createElement('img');
-        img.src = src;
-        img.className = 'party-center__sprite';
-        centerEl.appendChild(img);
-      } else {
-        centerEl.innerHTML = `<div style="color:#2a1a0a;font-size:2em;font-family:monospace">?</div>`;
-      }
+    const _diveSrc = char.spriteKey ? CharacterSpriteManager.getDomSrc(char.spriteKey) : '';
+    if (_diveSrc) {
+      const img = document.createElement('img');
+      img.src = _diveSrc;
+      img.className = 'party-center__sprite';
+      centerEl.appendChild(img);
     } else {
       centerEl.innerHTML = `<div style="color:#2a1a0a;font-size:2em;font-family:monospace">?</div>`;
     }

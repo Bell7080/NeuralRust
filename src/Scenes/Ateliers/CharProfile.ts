@@ -14,6 +14,7 @@ import type { Character, StatKey } from '../../types';
 import {
   CharacterManager, getCogColor, STAT_COLORS, STAT_LABEL_MAP,
 } from '../../Managers/CharacterManager';
+import { CharacterSpriteManager } from '../../Managers/CharacterSpriteManager';
 import { AbilityIndex } from '../../Data/AbilityIndex';
 import { getStatTooltipDynamic } from '../../Data/Data_Tooltips';
 
@@ -101,18 +102,12 @@ function _fillModal(
   const portraitBox = document.createElement('div');
   portraitBox.className = 'cp-portrait-box';
 
-  // Phaser 씬에서 스프라이트 로드 (canvas 텍스처 대응)
-  if (opts.scene?.textures.exists(char.spriteKey)) {
-    const raw = opts.scene.textures.get(char.spriteKey).getSourceImage();
-    const src = raw instanceof HTMLCanvasElement
-      ? raw.toDataURL()
-      : (raw as HTMLImageElement).src;
-    if (src) {
-      const img = document.createElement('img');
-      img.src = src;
-      img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
-      portraitBox.appendChild(img);
-    }
+  const _cpSrc = CharacterSpriteManager.getDomSrc(char.spriteKey);
+  if (_cpSrc) {
+    const img = document.createElement('img');
+    img.src = _cpSrc;
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain';
+    portraitBox.appendChild(img);
   }
 
   const infoDiv = document.createElement('div');

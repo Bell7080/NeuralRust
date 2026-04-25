@@ -4,7 +4,8 @@
 //  Layout: [좌 목록] [중 상세] [우 행동]
 // ================================================================
 
-import { CharacterManager, getCogColor } from '../../Managers/CharacterManager';
+import { CharacterManager, getCogColor }  from '../../Managers/CharacterManager';
+import { CharacterSpriteManager }         from '../../Managers/CharacterSpriteManager';
 import { AbilityIndex } from '../../Data/AbilityIndex';
 import { SaveManager }  from '../../Managers/SaveManager';
 import { CharProfile }  from './CharProfile';
@@ -194,18 +195,12 @@ export class Tab_Manage_Full {
         </div>
       `;
 
-      // 스프라이트 (canvas 텍스처 대응)
-      if (this._scene.textures.exists(char.spriteKey)) {
-        const raw = this._scene.textures.get(char.spriteKey).getSourceImage();
-        const src = raw instanceof HTMLCanvasElement
-          ? raw.toDataURL()
-          : (raw as HTMLImageElement).src;
-        if (src) {
-          const img = document.createElement('img');
-          img.src = src;
-          img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
-          card.querySelector(`#mng-spr-${char.id}`)?.appendChild(img);
-        }
+      const _mngCardSrc = CharacterSpriteManager.getDomSrc(char.spriteKey);
+      if (_mngCardSrc) {
+        const img = document.createElement('img');
+        img.src = _mngCardSrc;
+        img.style.cssText = 'width:100%;height:100%;object-fit:contain';
+        card.querySelector(`#mng-spr-${char.id}`)?.appendChild(img);
       }
 
       card.addEventListener('click', () => this._selectChar(char));
@@ -404,16 +399,12 @@ export class Tab_Manage_Full {
       </div>
     `;
 
-    // 스프라이트
-    if (this._scene.textures.exists(char.spriteKey)) {
-      const raw = this._scene.textures.get(char.spriteKey).getSourceImage();
-      const src = raw instanceof HTMLCanvasElement ? raw.toDataURL() : (raw as HTMLImageElement).src;
-      if (src) {
-        const img = document.createElement('img');
-        img.src = src;
-        img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
-        this._rightEl.querySelector('#mng-detail-spr')?.appendChild(img);
-      }
+    const _mngDetailSrc = CharacterSpriteManager.getDomSrc(char.spriteKey);
+    if (_mngDetailSrc) {
+      const img = document.createElement('img');
+      img.src = _mngDetailSrc;
+      img.style.cssText = 'width:100%;height:100%;object-fit:contain';
+      this._rightEl.querySelector('#mng-detail-spr')?.appendChild(img);
     }
 
     // 툴팁 바인딩 (rightEl로 변경)

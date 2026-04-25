@@ -30,8 +30,19 @@ function getVideoPath(job: string): string {
   return PORTRAITS[job]?.mp4 ?? '';
 }
 
+function getPngPath(spriteKey: string): string {
+  const entry = Object.values(PORTRAITS).find(p => p.key === spriteKey);
+  return entry?.png ?? '';
+}
+
+// DOM <img> 용 — Phaser 텍스처 대신 직접 파일 경로 반환
+function getDomSrc(spriteKey: string): string {
+  return getPngPath(spriteKey);
+}
+
 export const CharacterSpriteManager = {
   preload,
   getPortraitKey,
   getVideoPath,
+  getDomSrc,
 };

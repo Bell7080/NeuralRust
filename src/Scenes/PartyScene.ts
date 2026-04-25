@@ -191,13 +191,11 @@ export class PartyScene extends Phaser.Scene {
   }
 
   private _attachSprite(host: Element, spriteKey: string): void {
-    if (!this.textures.exists(spriteKey)) return;
-    const raw = this.textures.get(spriteKey).getSourceImage();
-    const src = raw instanceof HTMLCanvasElement ? raw.toDataURL() : (raw as HTMLImageElement).src;
+    const src = CharacterSpriteManager.getDomSrc(spriteKey);
     if (!src) return;
     const img = document.createElement('img');
     img.src = src;
-    img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated';
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain';
     host.appendChild(img);
   }
 
