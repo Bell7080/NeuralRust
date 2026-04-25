@@ -198,7 +198,9 @@
 .ps-portrait-wrap {
   flex:           0 0 auto;
   width:          100%;
-  aspect-ratio:   1.39;
+  aspect-ratio:   1.04;
+  max-height:     clamp(240px, 41vh, 520px);
+  overflow:       hidden;
   padding:        0;
   position:       relative;
   display:        block;
