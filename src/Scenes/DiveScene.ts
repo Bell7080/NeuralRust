@@ -69,7 +69,7 @@ const TAB_LABELS: Record<TabId, string> = {
   party:     '파티 관리',
   journal:   '탐사 일지',
 };
-const WIDE_TABS = new Set<TabId>(['submarine', 'shop']);
+const WIDE_TABS = new Set<TabId>(['submarine', 'shop', 'party']);
 
 // ================================================================
 //  DiveScene
@@ -759,6 +759,8 @@ export class DiveScene extends Phaser.Scene {
     this._closeBtn.classList.add('visible');
     this._refreshTabBtns();
     (this.sys.game.canvas as HTMLCanvasElement).style.pointerEvents = 'none';
+    this._slots.forEach(s => s.hitArea.disableInteractive());
+    this._leverHit?.disableInteractive();
   }
 
   private _closeTab(): void {
@@ -768,6 +770,15 @@ export class DiveScene extends Phaser.Scene {
     this._closeBtn.classList.remove('visible');
     this._refreshTabBtns();
     (this.sys.game.canvas as HTMLCanvasElement).style.pointerEvents = '';
+    // Restore Phaser interactivity based on game phase
+    if (this._phase === 'stopped') {
+      this._slots.forEach(s => {
+        if (s.targetCard) s.hitArea.setInteractive({ useHandCursor: true });
+      });
+      if (this._deepCoin > 0) this._leverHit?.setInteractive({ useHandCursor: true });
+    } else if (this._phase === 'idle') {
+      this._leverHit?.setInteractive({ useHandCursor: true });
+    }
   }
 
   private _refreshTabBtns(): void {
