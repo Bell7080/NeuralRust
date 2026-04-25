@@ -328,9 +328,8 @@ export class Tab_Manage_Full {
 
     this._rightEl.innerHTML = `
       <div class="mng-right-detail">
-        <!-- 스프라이트 + 기본 정보 -->
+        <!-- 기본 정보 -->
         <div class="mng-detail-header">
-          <div class="mng-detail-sprite" id="mng-detail-spr"></div>
           <div class="mng-detail-basic">
             <div class="mng-detail-name">${char.name}</div>
             <div class="mng-detail-job" style="color:${jobCol}" data-job="${char.job}">${char.jobLabel}</div>
@@ -401,14 +400,6 @@ export class Tab_Manage_Full {
         <div class="mng-toast" style="opacity:0;transition:opacity 0.3s;text-align:center;color:#e87040;margin-top:0.5em;font-size:0.85em"></div>
       </div>
     `;
-
-    const _mngDetailSrc = CharacterSpriteManager.getDomSrc(char.spriteKey);
-    if (_mngDetailSrc) {
-      const img = document.createElement('img');
-      img.src = _mngDetailSrc;
-      img.style.cssText = 'width:100%;height:100%;object-fit:contain';
-      this._rightEl.querySelector('#mng-detail-spr')?.appendChild(img);
-    }
 
     // 툴팁 바인딩 (rightEl로 변경)
     this._bindTooltips(char, eff as unknown as Record<string,number>);
