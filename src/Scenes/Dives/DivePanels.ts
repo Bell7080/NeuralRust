@@ -324,15 +324,16 @@ export function renderParty(
       </div>`;
     }).join('');
 
+    const jobCol = char.job === 'fisher' ? '#c8a070' : char.job === 'diver' ? '#7ab0c8' : '#a080e0';
     rightEl.innerHTML = `
       <div class="party-name-txt">${char.name}</div>
-      <div class="party-info-row">Cog ${char.cog} &nbsp;|&nbsp; ${char.jobLabel}</div>
-      <div class="party-info-row">숙련도 Lv.${char.mastery ?? 0}</div>
+      <div class="party-job-txt" style="color:${jobCol}">${char.jobLabel}</div>
+      <div class="party-cog-txt" style="color:${cogC.css}">Cog ${char.cog} &nbsp;·&nbsp; 합계 ${char.statSum}</div>
+      <div class="party-mastery-txt">숙련도 Lv.${char.mastery ?? 0}</div>
       <div class="party-hp-bar-wrap">
         <div class="party-hp-bar-fill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div>
         <span class="party-hp-bar-txt">HP &nbsp;${char.currentHp} / ${char.maxHp}</span>
       </div>
-      <div class="party-cog-bar" style="color:${cogC.css}">◈ &nbsp;Cog &nbsp;${char.cog} &nbsp;◈</div>
       <div class="party-stat-block">${statRows}</div>
       <div class="party-abil-row">${abilRows}</div>
     `;
