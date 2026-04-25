@@ -282,15 +282,19 @@ export function renderParty(
 
   const renderCenter = (char: Character) => {
     centerEl.innerHTML = '';
-    const _diveSrc = char.spriteKey ? CharacterSpriteManager.getDomSrc(char.spriteKey) : '';
-    if (_diveSrc) {
-      const img = document.createElement('img');
-      img.src = _diveSrc;
-      img.className = 'party-center__sprite';
-      centerEl.appendChild(img);
-    } else {
-      centerEl.innerHTML = `<div style="color:#2a1a0a;font-size:2em;font-family:monospace">?</div>`;
+    const vid = document.createElement('video');
+    vid.className = 'party-center__video';
+    vid.autoplay = true;
+    vid.loop = true;
+    vid.muted = true;
+    (vid as HTMLVideoElement & { playsInline: boolean }).playsInline = true;
+    const videoPath = CharacterSpriteManager.getVideoPath(char.job);
+    if (videoPath) {
+      vid.src = videoPath;
+      vid.load();
+      vid.play().catch(() => {});
     }
+    centerEl.appendChild(vid);
   };
 
   const renderRight = (char: Character) => {
@@ -337,18 +341,31 @@ export function renderParty(
   const renderCards = () => {
     listEl.innerHTML = '';
     chars.forEach(char => {
-      const cogC  = CharacterManager.getCogColor(char.cog);
-      const hpPct = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
-      const hpCol = hpPct > 0.6 ? '#306030' : hpPct > 0.3 ? '#806020' : '#803020';
-      const isSel = char.id === selId;
+      const cogC   = CharacterManager.getCogColor(char.cog);
+      const hpPct  = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
+      const hpCol  = hpPct > 0.6 ? '#306030' : hpPct > 0.3 ? '#806020' : '#803020';
+      const jobCol = char.job === 'fisher' ? '#c8a070' : char.job === 'diver' ? '#7ab0c8' : '#a080e0';
+      const isSel  = char.id === selId;
 
       const card = document.createElement('div');
       card.className = `party-card${isSel ? ' selected' : ''}`;
-      card.innerHTML = `
-        <div class="party-card__cog" style="color:${cogC.css}">C${char.cog}</div>
+
+      const spriteEl = document.createElement('img');
+      spriteEl.className = 'party-card__sprite';
+      const _src = CharacterSpriteManager.getDomSrc(char.spriteKey);
+      if (_src) { spriteEl.src = _src; } else { spriteEl.style.opacity = '0'; }
+
+      const info = document.createElement('div');
+      info.className = 'party-card__info';
+      info.innerHTML = `
         <div class="party-card__name">${char.name}</div>
+        <div class="party-card__job" style="color:${jobCol}">${char.jobLabel}</div>
+        <div class="party-card__cog" style="color:${cogC.css}">Cog ${char.cog} · 합계 ${char.statSum}</div>
         <div class="party-card__hp"><div class="party-card__hp-fill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
+        <div class="party-card__hptxt">${char.currentHp} / ${char.maxHp}</div>
       `;
+
+      card.append(spriteEl, info);
       card.addEventListener('click', () => {
         selId = char.id;
         renderCards();
