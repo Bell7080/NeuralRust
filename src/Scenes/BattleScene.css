@@ -227,15 +227,20 @@
   background:     rgba(12, 9, 6, 0.95);
   border:         1px solid var(--card-cog-color, rgba(80,60,30,0.4));
   border-radius:  1px;
-  display:        flex;
-  flex-direction: column;
-  align-items:    center;
-  justify-content:space-between;
-  padding:        4% 3% 3%;
   cursor:         pointer;
   position:       relative;
   transition:     background 0.1s, border-color 0.1s;
   overflow:       hidden;
+}
+/* 카드 하단 텍스트 가시성용 그라데이션 */
+.battle-setup__card::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 60%;
+  background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0));
+  pointer-events: none;
+  z-index: 2;
 }
 
 .battle-setup__card:hover {
@@ -256,6 +261,8 @@
   font-family:  var(--font-mono, monospace);
   font-size:    clamp(8px, 0.78vw, 12px);
   font-weight:  700;
+  z-index:      3;
+  text-shadow:  0 0 3px rgba(0,0,0,0.9);
   /* color set inline via style */
 }
 
@@ -269,6 +276,8 @@
   opacity:    0;
   pointer-events: none;
   transition: opacity 0.1s;
+  z-index:    4;
+  text-shadow: 0 0 6px rgba(0,0,0,0.9);
 }
 
 .battle-setup__card.selected .battle-setup__card-mark {
@@ -276,28 +285,41 @@
 }
 
 .battle-setup__card-sprite {
-  width:            72%;
-  aspect-ratio:     3/4;
+  position:         absolute;
+  inset:            0;
+  width:            100%;
+  height:           100%;
   object-fit:       cover;
   object-position:  center 15%;
-  opacity:          0.9;
+  opacity:          1;
+  z-index:          1;
 }
 
 .battle-setup__card-name {
+  position:     absolute;
+  left:         5%;
+  right:        5%;
+  bottom:       18%;
   font-family:  var(--font-display, monospace);
   font-size:    clamp(8px, 0.85vw, 13px);
-  color:        #c8bfb0;
+  color:        #f0e0c0;
   text-align:   center;
   word-break:   keep-all;
   line-height:  1.2;
+  z-index:      3;
+  text-shadow:  0 1px 3px rgba(0,0,0,0.95);
 }
 
 .battle-setup__card-hp {
-  width:         82%;
+  position:      absolute;
+  left:          9%;
+  right:         9%;
+  bottom:        7%;
   height:        clamp(3px, 0.5vh, 5px);
   background:    rgba(26, 16, 8, 0.8);
   border-radius: 1px;
   overflow:      hidden;
+  z-index:       3;
 }
 
 .battle-setup__card-hp-fill {
@@ -396,14 +418,19 @@
   aspect-ratio:   0.78;
   background:     rgba(8, 6, 7, 0.7);
   border:         1px solid rgba(30, 16, 8, 0.35);
-  display:        flex;
-  flex-direction: column;
-  align-items:    stretch;
-  justify-content:flex-start;
   cursor:         default;
   position:       relative;
   transition:     border-color 0.1s, background 0.1s;
   overflow:       hidden;
+}
+.battle-setup__slot.filled::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 50%;
+  background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0));
+  pointer-events: none;
+  z-index: 2;
 }
 
 .battle-setup__slot.filled {
@@ -424,7 +451,8 @@
   font-family: var(--font-mono, monospace);
   font-size:   clamp(8px, 0.78vw, 12px);
   color:       #4a2a10;
-  z-index:     2;
+  z-index:     4;
+  text-shadow: 0 0 3px rgba(0,0,0,0.9);
 }
 
 .battle-setup__slot.filled .battle-setup__slot-num {
@@ -432,32 +460,36 @@
 }
 
 .battle-setup__slot-plus {
+  position:    absolute;
+  top:         50%;
+  left:        50%;
+  transform:   translate(-50%, -50%);
   font-size:   clamp(20px, 2.2vw, 36px);
   color:       #1e1008;
   font-family: var(--font-display, monospace);
-  align-self:  center;
-  margin:      auto;
 }
 
 .battle-setup__slot-name {
+  position:     absolute;
+  left:         5%;
+  right:        5%;
+  bottom:       4%;
   font-family:  var(--font-display, monospace);
   font-size:    clamp(9px, 0.85vw, 13px);
-  color:        #c8bfb0;
+  color:        #f0e0c0;
   text-align:   center;
   word-break:   keep-all;
-  padding:      0.25em 4% 0.35em;
   line-height:  1.15;
-  background:   rgba(4, 2, 2, 0.6);
-  border-top:   1px solid rgba(30, 16, 8, 0.35);
-  flex-shrink:  0;
+  z-index:      3;
+  text-shadow:  0 1px 3px rgba(0,0,0,0.95);
 }
 
 .battle-setup__slot-sprite {
+  position:        absolute;
+  inset:           0;
   width:           100%;
-  flex:            1;
-  min-height:      0;
+  height:          100%;
   object-fit:      cover;
   object-position: center 15%;
-  padding:         2% 2% 0;
-  box-sizing:      border-box;
+  z-index:         1;
 }

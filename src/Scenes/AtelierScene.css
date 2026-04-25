@@ -796,24 +796,31 @@
 
 /* 카드 — 세로 초상화형 (JS 참고) */
 .mng-card {
-  display: flex; flex-direction: column; gap: 0; padding: 0; box-sizing: border-box;
+  position: relative; aspect-ratio: 0.78;
   background: rgba(10,7,4,0.95); border: 1px solid rgba(42,26,10,0.4);
   cursor: pointer; transition: border-color 0.12s, background 0.12s;
   overflow: hidden;
 }
-.mng-card:hover    { border-color: rgba(122,64,24,0.6); background: rgba(18,13,7,0.98); }
-.mng-card.selected { border-color: var(--card-cog,rgba(122,64,24,0.9)); background: rgba(18,13,7,1); box-shadow: inset 0 0 10px rgba(90,36,8,0.2); }
-/* 스프라이트: 카드 상단 꽉 채움 */
-.mng-card-sprite   { width: 100%; aspect-ratio: 1; flex-shrink: 0; overflow: hidden; background: rgba(14,9,5,0.8); }
+.mng-card::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 55%;
+  background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0));
+  pointer-events: none; z-index: 2;
+}
+.mng-card:hover    { border-color: rgba(122,64,24,0.6); }
+.mng-card.selected { border-color: var(--card-cog,rgba(122,64,24,0.9)); box-shadow: inset 0 0 10px rgba(90,36,8,0.2); }
+/* 스프라이트: 카드 전체 꽉 채움 */
+.mng-card-sprite   { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; background: rgba(14,9,5,0.8); z-index: 1; }
 .mng-card-sprite img { width: 100%; height: 100%; object-fit: cover; object-position: center 15%; }
-/* 카드 하단 정보 */
-.mng-card-info     { padding: 0.3em 0.4em; display: flex; flex-direction: column; gap: 0.15em; }
-.mng-card-name     { font-family: var(--font-display); font-size: clamp(10px, 1.1vw, 16px); color: #e8c080; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mng-card-job      { font-family: var(--font-mono); font-size: clamp(8px, 0.85vw, 12px); }
-.mng-card-cog      { font-family: var(--font-mono); font-size: clamp(8px, 0.85vw, 12px); }
+/* 카드 정보 — 일러스트 위에 오버레이 */
+.mng-card-info     { position: absolute; left: 0; right: 0; bottom: 0; padding: 0.5em 0.5em 0.45em; display: flex; flex-direction: column; gap: 0.15em; z-index: 3; }
+.mng-card-name     { font-family: var(--font-display); font-size: clamp(10px, 1.1vw, 16px); color: #f0d090; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,0.95); }
+.mng-card-job      { font-family: var(--font-mono); font-size: clamp(8px, 0.85vw, 12px); text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
+.mng-card-cog      { font-family: var(--font-mono); font-size: clamp(8px, 0.85vw, 12px); text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
 .mng-card-hpbar    { width: 100%; height: 2px; background: rgba(20,10,6,1); margin-top: 0.15em; }
 .mng-card-hpfill   { height: 100%; transition: width 0.3s; }
-.mng-card-hptxt    { font-family: var(--font-mono); font-size: clamp(6px, 0.72vw, 10px); color: #3a2010; }
+.mng-card-hptxt    { font-family: var(--font-mono); font-size: clamp(6px, 0.72vw, 10px); color: #c8a070; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
 
 /* 상세 */
 .mng-detail        { display: flex; flex-direction: column; gap: 0.8em; padding: 0.5em; }

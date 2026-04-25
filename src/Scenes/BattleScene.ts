@@ -9,6 +9,7 @@
 // ================================================================
 
 import { CharacterManager } from '../Managers/CharacterManager';
+import { CharacterSpriteManager } from '../Managers/CharacterSpriteManager';
 import { FontManager }      from '../Managers/FontManager';
 import { InputManager }     from '../Managers/InputManager';
 import { SaveManager }      from '../Managers/SaveManager';
@@ -19,6 +20,10 @@ import type { BattleInitData, EnemyInstance } from './BattleScene_Setup';
 
 export class BattleScene extends BattleSceneBattle {
   constructor() { super({ key: 'BattleScene' }); }
+
+  preload(): void {
+    CharacterSpriteManager.preload(this);
+  }
 
   // ────────────────────────────────────────────────────────────
   init(data: BattleInitData): void {

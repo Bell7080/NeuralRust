@@ -218,7 +218,7 @@ export class Tab_Manage_Full {
     this._renderRight(char);
   }
 
-  private _renderCenter(_char: Character) {
+  private _renderCenter(char: Character) {
     // 중앙 패널: 영상 일러스트 액자 (캔버스 스트레처 바 스타일)
     this._centerEl.innerHTML = `
       <div class="mng-illus-frame">
@@ -231,9 +231,12 @@ export class Tab_Manage_Full {
     `;
     const vid = this._centerEl.querySelector<HTMLVideoElement>('.mng-illus-video');
     if (vid) {
-      vid.src = 'Games/Assets/Sprites/Video 2.mp4';
-      vid.load();
-      vid.play().catch(() => {});
+      const videoPath = CharacterSpriteManager.getVideoPath(char.job);
+      if (videoPath) {
+        vid.src = videoPath;
+        vid.load();
+        vid.play().catch(() => {});
+      }
     }
   }
 
