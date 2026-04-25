@@ -276,10 +276,11 @@
 }
 
 .battle-setup__card-sprite {
-  width:       72%;
-  aspect-ratio:1;
-  object-fit:  contain;
-  opacity:     0.85;
+  width:            72%;
+  aspect-ratio:     3/4;
+  object-fit:       cover;
+  object-position:  center 15%;
+  opacity:          0.9;
 }
 
 .battle-setup__card-name {
@@ -452,11 +453,11 @@
 }
 
 .battle-setup__slot-sprite {
-  width:        100%;
-  flex:         1;
-  min-height:   0;
-  object-fit:   contain;
-  image-rendering: pixelated;
-  padding:      2% 2% 0;
-  box-sizing:   border-box;
+  width:           100%;
+  flex:            1;
+  min-height:      0;
+  object-fit:      cover;
+  object-position: center 15%;
+  padding:         2% 2% 0;
+  box-sizing:      border-box;
 }

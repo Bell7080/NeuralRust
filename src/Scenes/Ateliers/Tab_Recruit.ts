@@ -116,7 +116,7 @@ export class Tab_Recruit {
     if (src) {
       const img = document.createElement('img');
       img.src = src;
-      img.style.cssText = 'width:100%;height:100%;object-fit:contain';
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;object-position:center 15%';
       w.appendChild(img);
     } else { w.textContent = '?'; w.style.color = '#3d2010'; }
     return w;

@@ -408,10 +408,10 @@
 }
 .atelier-card__sprite canvas,
 .atelier-card__sprite img {
-  width:            100%;
-  height:           100%;
-  object-fit:       contain;
-  image-rendering:  pixelated;
+  width:           100%;
+  height:          100%;
+  object-fit:      cover;
+  object-position: center 15%;
 }
 
 /* ================================================================
@@ -533,7 +533,7 @@
 }
 .rct-custom-job    { font-family: var(--font-display); font-size: clamp(14px, 1.43vw, 21px); text-align: center; }
 .rct-custom-sprite { width: 80%; aspect-ratio: 1; overflow: hidden; background: rgba(26,16,8,0.6); margin: 0 auto; }
-.rct-custom-sprite-img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.rct-custom-sprite-img { width: 100%; height: 100%; object-fit: cover; object-position: center 15%; }
 .rct-custom-name   { font-family: var(--font-display); font-size: clamp(16px, 1.56vw, 23px); color: #e8c080; text-align: center; }
 /* ── 이름 인라인 편집 필드 ─────────────────────────────────── */
 .rct-custom-name-field {
@@ -627,7 +627,7 @@
   overflow: hidden; background: rgba(20,12,6,0.8);
   border: 1px solid rgba(42,26,10,0.4);
 }
-.rct-popup-sprite img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.rct-popup-sprite img { width: 100%; height: 100%; object-fit: cover; object-position: center 15%; }
 /* 스탯 팝업 */
 .rct-popup-stat-list { display: flex; flex-direction: column; gap: 0.3em; }
 .rct-popup-stat-row  { display: flex; justify-content: space-between; align-items: center; gap: 0.4em; }
@@ -805,7 +805,7 @@
 .mng-card.selected { border-color: var(--card-cog,rgba(122,64,24,0.9)); background: rgba(18,13,7,1); box-shadow: inset 0 0 10px rgba(90,36,8,0.2); }
 /* 스프라이트: 카드 상단 꽉 채움 */
 .mng-card-sprite   { width: 100%; aspect-ratio: 1; flex-shrink: 0; overflow: hidden; background: rgba(14,9,5,0.8); }
-.mng-card-sprite img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.mng-card-sprite img { width: 100%; height: 100%; object-fit: cover; object-position: center 15%; }
 /* 카드 하단 정보 */
 .mng-card-info     { padding: 0.3em 0.4em; display: flex; flex-direction: column; gap: 0.15em; }
 .mng-card-name     { font-family: var(--font-display); font-size: clamp(10px, 1.1vw, 16px); color: #e8c080; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -923,7 +923,7 @@
 }
 .party-portrait-sprite img {
   width: 100%; height: 100%;
-  object-fit: contain; image-rendering: pixelated;
+  object-fit: cover; object-position: center 15%;
 }
 .party-portrait-footer {
   flex-shrink: 0; padding: 0.7em 0.8em 0.6em;

@@ -156,7 +156,7 @@
 }
 .party-scene__card-sprite img {
   width: 100%; height: 100%;
-  object-fit: contain; image-rendering: pixelated;
+  object-fit: cover; object-position: center 15%;
 }
 
 .party-scene__card-info {
@@ -208,7 +208,7 @@
 .ps-portrait img,
 .ps-portrait-video {
   width: 100%; height: 100%;
-  object-fit: contain;
+  object-fit: cover; object-position: center 10%;
   display: block;
 }
 
@@ -345,7 +345,7 @@
 }
 .party-scene__slot-sprite img {
   width: 100%; height: 100%;
-  object-fit: contain; image-rendering: pixelated;
+  object-fit: cover; object-position: center 15%;
 }
 .party-scene__slot-name {
   font-family: var(--font-display, monospace);

@@ -139,11 +139,27 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
     shape.setDepth(1);
 
     let spriteImg: Phaser.GameObjects.Image | null = null;
+    let maskGfx:   Phaser.GameObjects.Graphics | null = null;
     if (this.textures.exists(ally.spriteKey)) {
-      spriteImg = this.add.image(cx, cy, ally.spriteKey)
-        .setDisplaySize(halfW * 2, halfH * 2)
+      const frame    = this.textures.get(ally.spriteKey).get();
+      const imgW     = frame.realWidth  || frame.width  || halfW * 2;
+      const imgH     = frame.realHeight || frame.height || halfH * 2;
+      const coverScale  = Math.max((halfW * 2) / imgW, (halfH * 2) / imgH);
+      const sW       = imgW * coverScale;
+      const sH       = imgH * coverScale;
+      // object-position: center 15% — 상단 15% 여백만 잘리도록 이미지 아래로 이동
+      const yOverflow   = Math.max(0, sH - halfH * 2);
+      const portraitCy  = cy + yOverflow * 0.35;
+
+      maskGfx = this.make.graphics({ x: 0, y: 0 });
+      maskGfx.fillStyle(0xffffff);
+      maskGfx.fillRect(cx - halfW, cy - halfH, halfW * 2, halfH * 2);
+
+      spriteImg = this.add.image(cx, portraitCy, ally.spriteKey)
+        .setDisplaySize(sW, sH)
         .setAlpha(1)
-        .setDepth(2);
+        .setDepth(2)
+        .setMask(maskGfx.createGeometryMask());
     }
 
     const nameTxt = this.add.text(cx, cy + halfH + Math.round(size * 0.04), ally.name, {
@@ -202,7 +218,7 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
       }
     };
     const destroyAll = () => {
-      ([shape, spriteImg, nameTxt, hpBg, hpFg, hpTxt,
+      ([shape, spriteImg, maskGfx, nameTxt, hpBg, hpFg, hpTxt,
         gaugeBg, gaugeFg, gaugeTxt, skillHit] as Array<{ active?: boolean; destroy(): void } | null>)
         .forEach(o => { try { if (o && o.active !== false) o.destroy(); } catch (_) {} });
     };

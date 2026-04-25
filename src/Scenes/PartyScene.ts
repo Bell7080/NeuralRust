@@ -195,7 +195,7 @@ export class PartyScene extends Phaser.Scene {
     if (!src) return;
     const img = document.createElement('img');
     img.src = src;
-    img.style.cssText = 'width:100%;height:100%;object-fit:contain';
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;object-position:center 15%';
     host.appendChild(img);
   }
 

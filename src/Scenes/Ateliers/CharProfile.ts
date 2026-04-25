@@ -106,7 +106,7 @@ function _fillModal(
   if (_cpSrc) {
     const img = document.createElement('img');
     img.src = _cpSrc;
-    img.style.cssText = 'width:100%;height:100%;object-fit:contain';
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;object-position:center 15%';
     portraitBox.appendChild(img);
   }
 

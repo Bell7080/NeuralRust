@@ -199,7 +199,7 @@ export class Tab_Manage_Full {
       if (_mngCardSrc) {
         const img = document.createElement('img');
         img.src = _mngCardSrc;
-        img.style.cssText = 'width:100%;height:100%;object-fit:contain';
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;object-position:center 15%';
         card.querySelector(`#mng-spr-${char.id}`)?.appendChild(img);
       }
 
