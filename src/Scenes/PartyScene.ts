@@ -159,13 +159,16 @@ export class PartyScene extends Phaser.Scene {
       if (this._selected?.id === char.id) card.classList.add('selected');
       card.style.setProperty('--card-cog', cogC.css);
 
+      const jobCol = char.job === 'fisher' ? '#c8a070' : char.job === 'diver' ? '#7ab0c8' : '#a080e0';
       card.innerHTML = `
         <div class="party-scene__card-mark">✓</div>
         <div class="party-scene__card-sprite" id="ps-spr-${char.id}"></div>
         <div class="party-scene__card-info">
           <div class="party-scene__card-name">${char.name}</div>
-          <div class="party-scene__card-cog" style="color:${cogC.css}">C${char.cog}</div>
+          <div class="party-scene__card-job" style="color:${jobCol}">${char.jobLabel}</div>
+          <div class="party-scene__card-cog" style="color:${cogC.css}">Cog ${char.cog} · 합계 ${char.statSum}</div>
           <div class="party-scene__card-hpbar"><div style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
+          <div class="party-scene__card-hptxt">${char.currentHp} / ${char.maxHp}</div>
         </div>
       `;
       this._attachSprite(card.querySelector(`#ps-spr-${char.id}`)!, char.spriteKey);
@@ -326,13 +329,22 @@ export class PartyScene extends Phaser.Scene {
       const slot  = document.createElement('div');
       slot.className = 'party-scene__slot';
       if (char) {
-        const cogC = getCogColor(char.cog);
+        const cogC   = getCogColor(char.cog);
+        const jobCol = char.job === 'fisher' ? '#c8a070' : char.job === 'diver' ? '#7ab0c8' : '#a080e0';
+        const hpPct  = char.maxHp > 0 ? char.currentHp / char.maxHp : 0;
+        const hpCol  = hpPct > 0.6 ? '#306030' : hpPct > 0.3 ? '#806020' : '#803020';
         slot.classList.add('filled');
         slot.style.setProperty('--slot-cog', cogC.css);
         slot.innerHTML = `
           <span class="party-scene__slot-num">${i + 1}</span>
           <div class="party-scene__slot-sprite" id="ps-slotspr-${i}"></div>
-          <div class="party-scene__slot-name">${char.name}</div>
+          <div class="party-scene__slot-info">
+            <div class="party-scene__slot-name">${char.name}</div>
+            <div class="party-scene__slot-job" style="color:${jobCol}">${char.jobLabel}</div>
+            <div class="party-scene__slot-cog" style="color:${cogC.css}">Cog ${char.cog} · 합계 ${char.statSum}</div>
+            <div class="party-scene__slot-hpbar"><div style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
+            <div class="party-scene__slot-hptxt">${char.currentHp} / ${char.maxHp}</div>
+          </div>
         `;
         this._attachSprite(slot.querySelector(`#ps-slotspr-${i}`)!, char.spriteKey);
         slot.addEventListener('click', () => this._togglePartyMember(char));

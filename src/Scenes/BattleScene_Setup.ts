@@ -116,13 +116,12 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
   private   _cardEls:     Array<{
     el:      HTMLDivElement;
     mark:    HTMLSpanElement;
-    hpFill:  HTMLDivElement;
     charId:  string;
   }> = [];
   private _slotEls: Array<{
     el:      HTMLDivElement;
     sprite:  HTMLImageElement;
-    nameTxt: HTMLSpanElement;
+    info:    HTMLDivElement;
     plus:    HTMLSpanElement;
   }> = [];
 
@@ -160,46 +159,38 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     grid.className = 'battle-setup__grid';
 
     this._partyChars.forEach(char => {
-      const cogC  = CharacterManager.getCogColor(char.cog);
-      const hpPct = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
-      const hpCol = hpPct > 0.6 ? '#306030' : hpPct > 0.3 ? '#806020' : '#803020';
+      const cogC   = CharacterManager.getCogColor(char.cog);
+      const hpPct  = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
+      const hpCol  = hpPct > 0.6 ? '#306030' : hpPct > 0.3 ? '#806020' : '#803020';
+      const jobCol = char.job === 'fisher' ? '#c8a070' : char.job === 'diver' ? '#7ab0c8' : '#a080e0';
 
       const card = document.createElement('div');
       card.className = 'battle-setup__card';
       card.style.setProperty('--card-cog-color', cogC.css);
 
-      // Cog 뱃지
-      const cogBadge = document.createElement('span');
-      cogBadge.className = 'battle-setup__card-cog';
-      cogBadge.style.color = cogC.css;
-      cogBadge.textContent = `C${char.cog}`;
-
-      // 편성 마크
+      // 편성 마크 (선택 시 가운데 표시)
       const mark = document.createElement('span');
       mark.className = 'battle-setup__card-mark';
       mark.textContent = '▶';
 
-      // 스프라이트
+      // 스프라이트 (배경)
       const spriteEl = document.createElement('img');
       spriteEl.className = 'battle-setup__card-sprite';
       const _cardSrc = CharacterSpriteManager.getDomSrc(char.spriteKey);
       if (_cardSrc) { spriteEl.src = _cardSrc; } else { spriteEl.style.opacity = '0'; }
 
-      // 이름
-      const nameEl = document.createElement('span');
-      nameEl.className = 'battle-setup__card-name';
-      nameEl.textContent = char.name;
+      // 통일 정보 양식 (이름/직업/Cog·합계/HP바/HP수치)
+      const info = document.createElement('div');
+      info.className = 'battle-setup__card-info';
+      info.innerHTML = `
+        <div class="battle-setup__card-name">${char.name}</div>
+        <div class="battle-setup__card-job" style="color:${jobCol}">${char.jobLabel}</div>
+        <div class="battle-setup__card-cog" style="color:${cogC.css}">Cog ${char.cog} · 합계 ${char.statSum}</div>
+        <div class="battle-setup__card-hp"><div class="battle-setup__card-hp-fill" style="width:${Math.round(hpPct * 100)}%;background:${hpCol}"></div></div>
+        <div class="battle-setup__card-hptxt">${char.currentHp} / ${char.maxHp}</div>
+      `;
 
-      // HP 바
-      const hpWrap = document.createElement('div');
-      hpWrap.className = 'battle-setup__card-hp';
-      const hpFill = document.createElement('div');
-      hpFill.className = 'battle-setup__card-hp-fill';
-      hpFill.style.width = `${Math.round(hpPct * 100)}%`;
-      hpFill.style.background = hpCol;
-      hpWrap.appendChild(hpFill);
-
-      card.append(cogBadge, mark, spriteEl, nameEl, hpWrap);
+      card.append(mark, spriteEl, info);
       card.addEventListener('click', () => {
         this._combatParty.includes(char.id)
           ? this._removeFromCombat(char.id)
@@ -207,7 +198,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       });
 
       grid.appendChild(card);
-      this._cardEls.push({ el: card, mark, hpFill, charId: char.id });
+      this._cardEls.push({ el: card, mark, charId: char.id });
     });
 
     panel.append(title, sub, grid);
@@ -263,21 +254,21 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       plus.className = 'battle-setup__slot-plus';
       plus.textContent = '+';
 
-      const nameEl = document.createElement('span');
-      nameEl.className = 'battle-setup__slot-name';
-      nameEl.style.display = 'none';
-
       const spriteEl = document.createElement('img');
       spriteEl.className = 'battle-setup__slot-sprite';
       spriteEl.style.display = 'none';
 
-      slot.append(numEl, plus, spriteEl, nameEl);
+      const info = document.createElement('div');
+      info.className = 'battle-setup__slot-info';
+      info.style.display = 'none';
+
+      slot.append(numEl, plus, spriteEl, info);
       slot.addEventListener('click', () => {
         if (this._combatParty[i]) this._removeFromCombatBySlot(i);
       });
 
       slotsRow.appendChild(slot);
-      this._slotEls.push({ el: slot, sprite: spriteEl, nameTxt: nameEl, plus });
+      this._slotEls.push({ el: slot, sprite: spriteEl, info, plus });
     }
 
     slotsWrap.append(slotsLabel, slotsRow);
@@ -330,15 +321,24 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       slot.el.style.borderColor = cogC ? cogC.css : '';
 
       if (char) {
-        slot.plus.style.display   = 'none';
-        slot.nameTxt.style.display = 'block';
-        slot.nameTxt.textContent   = char.name;
+        const jobCol = char.job === 'fisher' ? '#c8a070' : char.job === 'diver' ? '#7ab0c8' : '#a080e0';
+        const hpPct  = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
+        const hpCol  = hpPct > 0.6 ? '#306030' : hpPct > 0.3 ? '#806020' : '#803020';
+        slot.plus.style.display = 'none';
+        slot.info.style.display = 'flex';
+        slot.info.innerHTML = `
+          <div class="battle-setup__slot-name">${char.name}</div>
+          <div class="battle-setup__slot-job" style="color:${jobCol}">${char.jobLabel}</div>
+          <div class="battle-setup__slot-cog" style="color:${cogC?.css}">Cog ${char.cog} · 합계 ${char.statSum}</div>
+          <div class="battle-setup__slot-hp"><div class="battle-setup__slot-hp-fill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
+          <div class="battle-setup__slot-hptxt">${char.currentHp} / ${char.maxHp}</div>
+        `;
         const _slotSrc = CharacterSpriteManager.getDomSrc(char.spriteKey);
         if (_slotSrc) { slot.sprite.src = _slotSrc; slot.sprite.style.display = 'block'; }
       } else {
-        slot.plus.style.display    = 'block';
-        slot.nameTxt.style.display = 'none';
-        slot.sprite.style.display  = 'none';
+        slot.plus.style.display = 'block';
+        slot.info.style.display = 'none';
+        slot.sprite.style.display = 'none';
       }
     });
 
