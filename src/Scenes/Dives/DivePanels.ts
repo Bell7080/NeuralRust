@@ -300,42 +300,55 @@ export function renderParty(
   const renderRight = (char: Character) => {
     const cogC  = CharacterManager.getCogColor(char.cog);
     const SC    = CharacterManager.STAT_COLORS as Record<string, string>;
-    const SL    = CharacterManager.STAT_LABEL_MAP as Record<string, string>;
     const eff   = CharacterManager.getEffectiveStats(char);
     const hpPct = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
     const hpCol = hpPct > 0.6 ? '#306030' : hpPct > 0.3 ? '#806020' : '#803020';
-
-    const abilRows = (['passive','action','enhanced','finale'] as const).map(type => {
-      const id = char[type];
-      const nm = id ? (AbilityIndex.getName(type, id) || id) : '—';
-      const typeLabel: Record<string, string> = { passive:'PASSIVE', action:'ACTION', enhanced:'ENHANCED', finale:'FINALE' };
-      return `<div class="party-abil-cell">
-        <div class="party-abil-type">${typeLabel[type]}</div>
-        <div class="party-abil-name" style="color:${type==='passive'?'#a0d080':type==='action'?'#c8a060':type==='enhanced'?'#80b8e0':'#e08080'}">${nm}</div>
-      </div>`;
-    }).join('');
+    const SL: Record<string, string> = { hp:'체력', health:'건강', attack:'공격', agility:'민첩', luck:'행운' };
+    const AL: Record<string, string> = { passive:'패시브', action:'행동', enhanced:'강화', finale:'피날레' };
 
     const statRows = Object.entries(char.stats).map(([k, v]) => {
       const effV  = (eff as unknown as Record<string, number>)[k] ?? v;
       const bonus = effV - v;
-      return `<div class="party-stat-row">
-        <span class="party-stat-key">${SL[k] ?? k}</span>
-        <span class="party-stat-val" style="color:${SC[k]??'#c8bfb0'}">${effV}${bonus > 0 ? `<span style="color:#80c870;font-size:0.8em"> +${bonus}</span>` : ''}</span>
+      const bHtml = bonus > 0 ? `<span class="mng-stat-bonus mng-stat-bonus--up">+${bonus}</span>` : '';
+      return `<div class="mng-stat-row">
+        <span class="mng-stat-key">${SL[k] ?? k}</span>
+        <span class="mng-stat-val" style="color:${SC[k]??'#c8bfb0'}">${v}${bHtml}</span>
+      </div>`;
+    }).join('');
+
+    const abilRows = (['passive','action','enhanced','finale'] as const).map(type => {
+      const id = char[type];
+      const nm = id ? (AbilityIndex.getName(type, id) || id) : '—';
+      const ds = id ? (AbilityIndex.getDesc(type, id) || '') : '';
+      return `<div class="mng-ab-row">
+        <span class="mng-ab-type">${AL[type]}</span>
+        <span class="mng-ab-name">${nm}</span>
+        ${ds ? `<span class="mng-ab-desc">${ds}</span>` : ''}
       </div>`;
     }).join('');
 
     const jobCol = char.job === 'fisher' ? '#c8a070' : char.job === 'diver' ? '#7ab0c8' : '#a080e0';
     rightEl.innerHTML = `
-      <div class="party-name-txt">${char.name}</div>
-      <div class="party-job-txt" style="color:${jobCol}">${char.jobLabel}</div>
-      <div class="party-cog-txt" style="color:${cogC.css}">Cog ${char.cog} &nbsp;·&nbsp; 합계 ${char.statSum}</div>
-      <div class="party-mastery-txt">숙련도 Lv.${char.mastery ?? 0}</div>
-      <div class="party-hp-bar-wrap">
-        <div class="party-hp-bar-fill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div>
-        <span class="party-hp-bar-txt">HP &nbsp;${char.currentHp} / ${char.maxHp}</span>
+      <div class="mng-right-detail">
+        <div class="mng-detail-header">
+          <div class="mng-detail-basic">
+            <div class="mng-detail-name">${char.name}</div>
+            <div class="mng-detail-job" style="color:${jobCol}">${char.jobLabel}</div>
+            <div class="mng-detail-cog" style="color:${cogC.css}">Cog ${char.cog}  ·  합계 ${char.statSum}</div>
+            <div class="mng-detail-hprow">
+              <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
+              <span class="mng-detail-hptxt">HP ${char.currentHp} / ${char.maxHp}</span>
+            </div>
+          </div>
+        </div>
+        <div class="mng-detail-divider"></div>
+        <div class="mng-detail-stats">${statRows}</div>
+        <div class="mng-detail-divider"></div>
+        <div class="mng-detail-abilities">${abilRows}</div>
+        ${char.overclock ? `<div class="mng-detail-divider"></div><div class="mng-overclock" style="color:${char.overclock.color}">${char.overclock.label}</div>` : ''}
+        <div class="mng-detail-divider"></div>
+        <div class="mng-right-mastery">숙련도: ${char.mastery ?? 0}</div>
       </div>
-      <div class="party-stat-block">${statRows}</div>
-      <div class="party-abil-row">${abilRows}</div>
     `;
   };
 

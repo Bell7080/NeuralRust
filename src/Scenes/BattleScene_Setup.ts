@@ -130,6 +130,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
 
   // ── 클릭 상태 ────────────────────────────────────────────────
   private _selectedChar:  Character | null = null;
+  protected _selectedEnemy: EnemyInstance | null = null;
   private _lastClickMs  = 0;
   private _lastClickId  = '';
 
@@ -162,7 +163,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
 
     const sub = document.createElement('div');
     sub.className = 'battle-setup__sub';
-    sub.textContent = '클릭: 정보  ·  더블클릭: 배치';
+    sub.textContent = '클릭: 정보  ·  더블클릭: 배치/해제';
 
     const grid = document.createElement('div');
     grid.className = 'battle-setup__grid';
@@ -211,6 +212,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
           this._lastClickMs = now;
           this._lastClickId = char.id;
           this._selectedChar = char;
+          this._selectedEnemy = null;
           this._cardEls.forEach(c => c.el.classList.remove('info-selected'));
           card.classList.add('info-selected');
           this._refreshInfoPanel();
@@ -282,7 +284,26 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
 
       slot.append(numEl, plus, spriteEl, info);
       slot.addEventListener('click', () => {
-        if (this._combatParty[i]) this._removeFromCombatBySlot(i);
+        const charId = this._combatParty[i];
+        if (!charId) return;
+        const char = this._partyChars.find(c => c.id === charId);
+        if (!char) return;
+        const now = Date.now();
+        const slotKey = `__slot_${i}`;
+        if (this._lastClickId === slotKey && now - this._lastClickMs < 350) {
+          this._lastClickMs = 0;
+          this._lastClickId = '';
+          this._removeFromCombatBySlot(i);
+        } else {
+          this._lastClickMs = now;
+          this._lastClickId = slotKey;
+          this._selectedChar = char;
+          this._selectedEnemy = null;
+          this._cardEls.forEach(c => c.el.classList.remove('info-selected'));
+          const cardRef = this._cardEls.find(c => c.charId === char.id);
+          cardRef?.el.classList.add('info-selected');
+          this._refreshInfoPanel();
+        }
       });
 
       slotsRow.appendChild(slot);
@@ -321,54 +342,54 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     const inParty = this._combatParty.includes(char.id);
     const eff     = CharacterManager.getEffectiveStats(char) as unknown as Record<string, number>;
     const SC      = CharacterManager.STAT_COLORS as Record<string, string>;
-    const SL      = CharacterManager.STAT_LABEL_MAP as Record<string, string>;
+    const SL: Record<string, string> = { hp:'체력', health:'건강', attack:'공격', agility:'민첩', luck:'행운' };
+    const AL: Record<string, string> = { passive:'패시브', action:'행동', enhanced:'강화', finale:'피날레' };
 
     const statRows = Object.entries(char.stats).map(([k, v]) => {
       const effV  = eff[k] ?? v;
       const bonus = effV - v;
-      return `<div class="bs-info-stat-row">
-        <span class="bs-info-stat-key">${SL[k] ?? k}</span>
-        <span class="bs-info-stat-val" style="color:${SC[k] ?? '#c8bfb0'}">${effV}${bonus > 0 ? `<span style="color:#80c870;font-size:0.8em"> +${bonus}</span>` : ''}</span>
+      const bHtml = bonus > 0 ? `<span class="mng-stat-bonus mng-stat-bonus--up">+${bonus}</span>` : '';
+      return `<div class="mng-stat-row">
+        <span class="mng-stat-key">${SL[k] ?? k}</span>
+        <span class="mng-stat-val" style="color:${SC[k] ?? '#c8bfb0'}">${v}${bHtml}</span>
       </div>`;
     }).join('');
 
     const abilRows = (['passive', 'action', 'enhanced', 'finale'] as const).map(type => {
       const id = char[type];
       const nm = id ? (AbilityIndex.getName(type, id) || id) : '—';
-      const typeLabel: Record<string, string> = { passive: 'PASSIVE', action: 'ACTION', enhanced: 'ENHANCED', finale: 'FINALE' };
-      const typeColor = type === 'passive' ? '#a0d080' : type === 'action' ? '#c8a060' : type === 'enhanced' ? '#80b8e0' : '#e08080';
-      return `<div class="bs-info-abil-cell">
-        <div class="bs-info-abil-type">${typeLabel[type]}</div>
-        <div class="bs-info-abil-name" style="color:${typeColor}">${nm}</div>
+      const ds = id ? (AbilityIndex.getDesc(type, id) || '') : '';
+      return `<div class="mng-ab-row">
+        <span class="mng-ab-type">${AL[type]}</span>
+        <span class="mng-ab-name">${nm}</span>
+        ${ds ? `<span class="mng-ab-desc">${ds}</span>` : ''}
       </div>`;
     }).join('');
 
     this._setupInfoEl.innerHTML = `
-      <div class="bs-info-portrait-wrap">
-        <video class="bs-info-portrait-video" autoplay loop muted playsinline></video>
-        <div class="bs-info-portrait-overlay">
-          <div class="bs-info-name">${char.name}</div>
-          <div class="bs-info-job" style="color:${jobCol}">${char.jobLabel}</div>
-          <div class="bs-info-cog" style="color:${cogC.css}">Cog ${char.cog} · 합계 ${char.statSum}</div>
-          <div class="bs-info-hpbar"><div class="bs-info-hpfill" style="width:${Math.round(hpPct * 100)}%;background:${hpCol}"></div></div>
-          <div class="bs-info-hptxt">${char.currentHp} / ${char.maxHp}</div>
+      <div class="mng-right-detail bs-mng-detail">
+        <div class="mng-detail-header">
+          <div class="mng-detail-basic">
+            <div class="mng-detail-name">${char.name}</div>
+            <div class="mng-detail-job" style="color:${jobCol}">${char.jobLabel}</div>
+            <div class="mng-detail-cog" style="color:${cogC.css}">Cog ${char.cog}  ·  합계 ${char.statSum}</div>
+            <div class="mng-detail-hprow">
+              <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
+              <span class="mng-detail-hptxt">HP ${char.currentHp} / ${char.maxHp}</span>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="bs-info-body">
-        <div class="bs-info-stats">${statRows}</div>
-        <div class="bs-info-abils">${abilRows}</div>
-        <button class="bs-info-toggle-btn${inParty ? ' in-party' : ''}">
+        <div class="mng-detail-divider"></div>
+        <div class="mng-detail-stats">${statRows}</div>
+        <div class="mng-detail-divider"></div>
+        <div class="mng-detail-abilities">${abilRows}</div>
+        ${char.overclock ? `<div class="mng-detail-divider"></div><div class="mng-overclock" style="color:${char.overclock.color}">${char.overclock.label}</div>` : ''}
+        <div class="mng-detail-divider"></div>
+        <button class="mng-action-btn bs-info-toggle-btn${inParty ? ' in-party' : ''}">
           ${inParty ? '▶ 배치 제거' : '+ 배치 추가'}
         </button>
       </div>
     `;
-
-    // 2D 라이브 비디오 소스 설정
-    const vid = this._setupInfoEl.querySelector<HTMLVideoElement>('.bs-info-portrait-video');
-    if (vid) {
-      const videoPath = CharacterSpriteManager.getVideoPath(char.job);
-      if (videoPath) { vid.src = videoPath; vid.load(); vid.play().catch(() => {}); }
-    }
 
     this._setupInfoEl.querySelector<HTMLButtonElement>('.bs-info-toggle-btn')
       ?.addEventListener('click', () => {
@@ -377,6 +398,44 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
           : this._addToCombat(char.id);
         this._refreshInfoPanel();
       });
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  우측 정보 패널 — 적 정보 렌더
+  // ════════════════════════════════════════════════════════════
+  protected _showEnemyInfo(enemy: EnemyInstance): void {
+    if (!this._setupInfoEl) return;
+    this._selectedEnemy = enemy;
+    this._selectedChar = null;
+    this._cardEls.forEach(c => c.el.classList.remove('info-selected'));
+
+    const hpPct = enemy._maxHp > 0 ? enemy._hp / enemy._maxHp : 0;
+    const hpCol = hpPct > 0.6 ? '#a03018' : hpPct > 0.3 ? '#904020' : '#601010';
+    const BL: Record<string, string> = {
+      random: '무작위', target_weak: '약체 우선', wave: '파상 공격',
+      target_strong: '강자 우선', defensive: '방어형',
+    };
+
+    this._setupInfoEl.innerHTML = `
+      <div class="mng-right-detail bs-mng-detail">
+        <div class="mng-detail-header">
+          <div class="mng-detail-basic">
+            <div class="mng-detail-name" style="color:#e08070">${enemy.name}</div>
+            <div class="mng-detail-job" style="color:#a86850">${BL[enemy.behavior] ?? enemy.behavior}</div>
+            <div class="mng-detail-hprow">
+              <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
+              <span class="mng-detail-hptxt">HP ${enemy._hp} / ${enemy._maxHp}</span>
+            </div>
+          </div>
+        </div>
+        <div class="mng-detail-divider"></div>
+        <div class="mng-detail-stats">
+          <div class="mng-stat-row"><span class="mng-stat-key">공격</span><span class="mng-stat-val" style="color:#e08060">${enemy.attack}</span></div>
+          <div class="mng-stat-row"><span class="mng-stat-key">민첩</span><span class="mng-stat-val" style="color:#80b8e0">${enemy.agility}</span></div>
+          <div class="mng-stat-row"><span class="mng-stat-key">행운</span><span class="mng-stat-val" style="color:#c8a060">${enemy.luck}</span></div>
+        </div>
+      </div>
+    `;
   }
 
   // ════════════════════════════════════════════════════════════

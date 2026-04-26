@@ -37,20 +37,39 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
 
   // ════════════════════════════════════════════════════════════
   //  적 영역 (상단 30%)  — Phaser
+  //  좌/우 패널(24%)에 가려지지 않도록 중앙 그리드(52% 폭) 사용
   // ════════════════════════════════════════════════════════════
   protected _buildEnemyArea(W: number, H: number): void {
     const areaY = H * 0.06, areaH = H * 0.31;
     const count = this._enemies.length;
     if (!count) return;
 
-    const unitW  = Math.min(W * 0.18, areaH * 0.7);
-    const gap    = W * 0.03;
-    const totalW = count * unitW + (count - 1) * gap;
-    const startX = W / 2 - totalW / 2 + unitW / 2;
+    // 중앙 영역: 좌측 패널 24% ~ 우측 패널 24% 사이 (총 52% 폭)
+    const centerLeft  = W * 0.25;
+    const centerRight = W * 0.75;
+    const centerW     = centerRight - centerLeft;
+
+    // 줄당 최대 개수 (4개) — 5명 이상은 자동으로 다음 줄
+    const cols = Math.min(count, 4);
+    const rows = Math.ceil(count / cols);
+
+    const gapX  = centerW * 0.02;
+    const gapY  = areaH * 0.08;
+    const rowH  = (areaH - gapY * (rows - 1)) / rows;
+    const unitW = Math.min(
+      (centerW - gapX * (cols - 1)) / cols,
+      rowH * 0.7,  // 이름/HP바 공간 확보
+    );
+
+    const totalW = cols * unitW + (cols - 1) * gapX;
+    const startX = centerLeft + centerW / 2 - totalW / 2 + unitW / 2;
+    const startY = areaY + rowH * 0.45;
 
     this._enemies.forEach((enemy, i) => {
-      const cx = startX + i * (unitW + gap);
-      const cy = areaY + areaH * 0.45;
+      const r  = Math.floor(i / cols);
+      const c  = i % cols;
+      const cx = startX + c * (unitW + gapX);
+      const cy = startY + r * (rowH + gapY);
       this._enemyObjs.push(this._makeEnemyUnit(enemy, cx, cy, unitW));
     });
 
@@ -93,6 +112,16 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
       hpNumTxt.setText(`${enemy._hp} / ${enemy._maxHp}`);
     };
     refreshHp();
+
+    // 편성 단계(전투 시작 전)에 클릭 시 우측 정보 패널에 적 정보 표시
+    const enemyHit = this.add.rectangle(cx, cy, half * 2, half * 2, 0x000000, 0)
+      .setInteractive({ useHandCursor: true });
+    enemyHit.on('pointerup', () => {
+      if (this._battleActive) return;
+      this._showEnemyInfo(enemy);
+    });
+    this._sceneHits.push(enemyHit);
+
     return { enemy, shape, nameTxt, hpBg, hpFg, hpNumTxt, refreshHp, cx, cy, half };
   }
 
