@@ -231,11 +231,17 @@ export class PartyScene extends Phaser.Scene {
     const statsHtml = Object.entries(char.stats).map(([k, v]) => {
       const effV  = eff[k] ?? v;
       const bonus = effV - v;
-      const bHtml = bonus > 0 ? `<span class="ps-stat-bonus up">▲+${bonus}</span>`
-        : bonus < 0 ? `<span class="ps-stat-bonus dn">▼${bonus}</span>` : '';
+      const isOc  = char.overclock?.statKey === k;
+      const ocCol = char.overclock?.color ?? SC[k];
+      const bHtml = isOc && bonus > 0
+        ? `<span class="mng-stat-bonus mng-stat-bonus--oc" style="color:${ocCol}">+${bonus}</span>`
+        : bonus > 0
+        ? `<span class="mng-stat-bonus mng-stat-bonus--up">+${bonus}</span>`
+        : bonus < 0
+        ? `<span class="ps-stat-bonus dn">${bonus}</span>` : '';
       return `<div class="ps-stat-row" data-stat-key="${k}" data-stat-eff="${effV}">
         <span class="ps-stat-key">${SL[k] ?? k}</span>
-        <span class="ps-stat-val" style="color:${SC[k] ?? '#c8bfb0'}">${effV}${bHtml}</span>
+        <span class="ps-stat-val" style="color:${SC[k] ?? '#c8bfb0'}">${v}${bHtml}</span>
       </div>`;
     }).join('');
 
@@ -252,7 +258,7 @@ export class PartyScene extends Phaser.Scene {
 
     const ocHtml = char.overclock ? `
       <div class="ps-detail-divider"></div>
-      <div class="ps-overclock" style="color:${char.overclock.color}">[오버클럭] ${char.overclock.label}</div>
+      <div class="ps-overclock" style="color:${char.overclock.color}">${char.overclock.label}</div>
     ` : '';
 
     const videoPath = CharacterSpriteManager.getVideoPath(char.job);
@@ -347,7 +353,20 @@ export class PartyScene extends Phaser.Scene {
           </div>
         `;
         this._attachSprite(slot.querySelector(`#ps-slotspr-${i}`)!, char.spriteKey);
-        slot.addEventListener('click', () => this._togglePartyMember(char));
+        // 단일 클릭: 정보 표시 / 더블 클릭: 파티 해제
+        let slotClickTimer: ReturnType<typeof setTimeout> | null = null;
+        slot.addEventListener('click', () => {
+          if (slotClickTimer) {
+            clearTimeout(slotClickTimer);
+            slotClickTimer = null;
+            this._togglePartyMember(char);
+            return;
+          }
+          slotClickTimer = setTimeout(() => {
+            slotClickTimer = null;
+            this._selectChar(char);
+          }, 220);
+        });
       } else {
         slot.innerHTML = `
           <span class="party-scene__slot-num">${i + 1}</span>

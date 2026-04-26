@@ -11,11 +11,12 @@
 // ================================================================
 
 import Phaser from 'phaser';
-import type { Character } from '../types';
+import type { Character, StatKey } from '../types';
 import { CharacterManager }        from '../Managers/CharacterManager';
 import { CharacterSpriteManager }  from '../Managers/CharacterSpriteManager';
 import { FontManager }             from '../Managers/FontManager';
 import { AbilityIndex }            from '../Data/AbilityIndex';
+import { getStatTooltipDynamic, getJobTooltip } from '../Data/Data_Tooltips';
 
 // ── 공유 런타임 타입 (하위 클래스에서 import) ────────────────────
 
@@ -113,6 +114,8 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
   protected _setupEl!:     HTMLDivElement;
   private _setupPanelEl!:  HTMLDivElement;
   private _setupInfoEl!:   HTMLDivElement;
+  private _portraitVideo!: HTMLVideoElement;
+  private _portraitImg!:   HTMLImageElement;
   private _goBtn!:         HTMLButtonElement;
   private _goSub!:         HTMLSpanElement;
   private _slotsRow!:      HTMLDivElement;
@@ -133,6 +136,9 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
   protected _selectedEnemy: EnemyInstance | null = null;
   private _lastClickMs  = 0;
   private _lastClickId  = '';
+
+  // ── 툴팁 ────────────────────────────────────────────────────
+  private _tipEl: HTMLElement | null = null;
 
   // ── 폰트 헬퍼 ───────────────────────────────────────────────
   protected _fs(base: number): string {
@@ -156,6 +162,22 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     const panel = document.createElement('div');
     panel.className = 'battle-setup__panel';
     this._setupPanelEl = panel;
+
+    /* 2D 라이브 초상화 (관리탭 일러스트 프레임 양식) */
+    const portraitWrap = document.createElement('div');
+    portraitWrap.className = 'battle-setup__portrait';
+    portraitWrap.innerHTML = `
+      <div class="mng-illus-frame">
+        <div class="mng-illus-inner">
+          <div class="mng-illus-mask">
+            <video class="mng-illus-video battle-setup__portrait-video" autoplay loop muted playsinline></video>
+            <img class="battle-setup__portrait-img" alt="" />
+          </div>
+        </div>
+      </div>
+    `;
+    this._portraitVideo = portraitWrap.querySelector('.battle-setup__portrait-video') as HTMLVideoElement;
+    this._portraitImg   = portraitWrap.querySelector('.battle-setup__portrait-img')   as HTMLImageElement;
 
     const title = document.createElement('div');
     title.className = 'battle-setup__title';
@@ -215,6 +237,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
           this._selectedEnemy = null;
           this._cardEls.forEach(c => c.el.classList.remove('info-selected'));
           card.classList.add('info-selected');
+          this._updatePortrait(char);
           this._refreshInfoPanel();
         }
       });
@@ -223,7 +246,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       this._cardEls.push({ el: card, mark, charId: char.id });
     });
 
-    panel.append(title, sub, grid);
+    panel.append(portraitWrap, title, sub, grid);
 
     /* ── 중앙 영역 (진행 버튼 + 배치 슬롯) ─────────────────── */
     const center = document.createElement('div');
@@ -302,6 +325,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
           this._cardEls.forEach(c => c.el.classList.remove('info-selected'));
           const cardRef = this._cardEls.find(c => c.charId === char.id);
           cardRef?.el.classList.add('info-selected');
+          this._updatePortrait(char);
           this._refreshInfoPanel();
         }
       });
@@ -326,6 +350,52 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     root.append(panel, center, infoPanel);
     canvas.parentElement?.appendChild(root);
     this._setupEl = root;
+
+    // 첫 캐릭터를 기본 선택해 초상화 영상을 표시
+    if (this._partyChars.length > 0) {
+      this._selectedChar = this._partyChars[0];
+      this._cardEls[0]?.el.classList.add('info-selected');
+      this._updatePortrait(this._partyChars[0]);
+      this._refreshInfoPanel();
+    } else {
+      this._updatePortrait(null);
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  좌측 2D 라이브 초상화 갱신
+  // ════════════════════════════════════════════════════════════
+  private _updatePortrait(char: Character | null): void {
+    if (!this._portraitVideo || !this._portraitImg) return;
+    const vid  = this._portraitVideo;
+    const img  = this._portraitImg;
+    if (!char) {
+      vid.removeAttribute('src');
+      vid.load?.();
+      vid.style.display = 'none';
+      img.removeAttribute('src');
+      img.style.display = 'none';
+      return;
+    }
+    const videoPath = CharacterSpriteManager.getVideoPath(char.job);
+    const pngPath   = CharacterSpriteManager.getDomSrc(char.spriteKey);
+    if (videoPath) {
+      vid.style.display = 'block';
+      img.style.display = 'none';
+      if (vid.getAttribute('src') !== videoPath) {
+        vid.src = videoPath;
+        vid.load();
+      }
+      vid.play().catch(() => {});
+    } else if (pngPath) {
+      // 동영상 없으면 PNG로 대체
+      vid.style.display = 'none';
+      img.style.display = 'block';
+      img.src = pngPath;
+    } else {
+      vid.style.display = 'none';
+      img.style.display = 'none';
+    }
   }
 
   // ════════════════════════════════════════════════════════════
@@ -348,8 +418,14 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     const statRows = Object.entries(char.stats).map(([k, v]) => {
       const effV  = eff[k] ?? v;
       const bonus = effV - v;
-      const bHtml = bonus > 0 ? `<span class="mng-stat-bonus mng-stat-bonus--up">+${bonus}</span>` : '';
-      return `<div class="mng-stat-row">
+      const isOc  = char.overclock?.statKey === k;
+      const ocCol = char.overclock?.color ?? SC[k];
+      const bHtml = isOc && bonus > 0
+        ? `<span class="mng-stat-bonus mng-stat-bonus--oc" style="color:${ocCol}">+${bonus}</span>`
+        : bonus > 0
+        ? `<span class="mng-stat-bonus mng-stat-bonus--up">+${bonus}</span>`
+        : '';
+      return `<div class="mng-stat-row" data-stat-key="${k}" data-stat-eff="${effV}">
         <span class="mng-stat-key">${SL[k] ?? k}</span>
         <span class="mng-stat-val" style="color:${SC[k] ?? '#c8bfb0'}">${v}${bHtml}</span>
       </div>`;
@@ -359,7 +435,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       const id = char[type];
       const nm = id ? (AbilityIndex.getName(type, id) || id) : '—';
       const ds = id ? (AbilityIndex.getDesc(type, id) || '') : '';
-      return `<div class="mng-ab-row">
+      return `<div class="mng-ab-row" data-ab-type="${type}" data-ab-id="${id ?? ''}">
         <span class="mng-ab-type">${AL[type]}</span>
         <span class="mng-ab-name">${nm}</span>
         ${ds ? `<span class="mng-ab-desc">${ds}</span>` : ''}
@@ -371,7 +447,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
         <div class="mng-detail-header">
           <div class="mng-detail-basic">
             <div class="mng-detail-name">${char.name}</div>
-            <div class="mng-detail-job" style="color:${jobCol}">${char.jobLabel}</div>
+            <div class="mng-detail-job" style="color:${jobCol}" data-job="${char.job}">${char.jobLabel}</div>
             <div class="mng-detail-cog" style="color:${cogC.css}">Cog ${char.cog}  ·  합계 ${char.statSum}</div>
             <div class="mng-detail-hprow">
               <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
@@ -398,6 +474,75 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
           : this._addToCombat(char.id);
         this._refreshInfoPanel();
       });
+
+    this._bindInfoTooltips(char);
+  }
+
+  // ── 툴팁 헬퍼 ─────────────────────────────────────────────────
+  private _ensureTipEl(): HTMLElement {
+    if (this._tipEl) return this._tipEl;
+    const el = document.createElement('div');
+    el.className = 'mng-tooltip';
+    (document.getElementById('game-container') ?? document.body).appendChild(el);
+    this._tipEl = el;
+    return el;
+  }
+  private _showTip(x: number, y: number, text: string): void {
+    const el = this._ensureTipEl();
+    el.innerHTML = text.replace(/\n/g, '<br>');
+    el.style.display = 'block';
+    this._moveTip(x, y);
+  }
+  private _moveTip(x: number, y: number): void {
+    if (!this._tipEl) return;
+    const W  = this._tipEl.offsetWidth || 160;
+    const H  = this._tipEl.offsetHeight || 60;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    this._tipEl.style.left = `${x + 12 + W > vw ? x - W - 8 : x + 12}px`;
+    this._tipEl.style.top  = `${y + 8  + H > vh ? y - H - 8 : y + 8}px`;
+  }
+  private _hideTip(): void { if (this._tipEl) this._tipEl.style.display = 'none'; }
+
+  private _bindInfoTooltips(char: Character): void {
+    const root = this._setupInfoEl;
+    if (!root) return;
+
+    const jobEl = root.querySelector<HTMLElement>('[data-job]');
+    if (jobEl) {
+      jobEl.style.cursor = 'help';
+      jobEl.addEventListener('mouseenter', e => {
+        const t = getJobTooltip(char.job);
+        if (t) this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, t);
+      });
+      jobEl.addEventListener('mousemove', e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
+      jobEl.addEventListener('mouseleave', () => this._hideTip());
+    }
+
+    root.querySelectorAll<HTMLElement>('.mng-stat-row[data-stat-key]').forEach(row => {
+      const key  = row.dataset.statKey as StatKey;
+      const effV = Number(row.dataset.statEff ?? 0);
+      row.style.cursor = 'help';
+      row.addEventListener('mouseenter', e => {
+        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, getStatTooltipDynamic(key, effV));
+      });
+      row.addEventListener('mousemove', e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
+      row.addEventListener('mouseleave', () => this._hideTip());
+    });
+
+    root.querySelectorAll<HTMLElement>('.mng-ab-row[data-ab-id]').forEach(row => {
+      const type = row.dataset.abType as 'passive'|'action'|'enhanced'|'finale';
+      const id   = row.dataset.abId!;
+      if (!id) return;
+      const desc = AbilityIndex.getDesc(type, id);
+      if (!desc) return;
+      row.style.cursor = 'help';
+      row.addEventListener('mouseenter', e => {
+        const nm = AbilityIndex.getName(type, id) || id;
+        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, `${nm}\n${desc}`);
+      });
+      row.addEventListener('mousemove', e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
+      row.addEventListener('mouseleave', () => this._hideTip());
+    });
   }
 
   // ════════════════════════════════════════════════════════════

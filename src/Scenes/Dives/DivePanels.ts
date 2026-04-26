@@ -9,7 +9,34 @@
 import { CharacterManager }       from '../../Managers/CharacterManager';
 import { CharacterSpriteManager } from '../../Managers/CharacterSpriteManager';
 import { AbilityIndex }     from '../../Data/AbilityIndex';
-import type { Character }   from '../../types';
+import { getStatTooltipDynamic, getJobTooltip } from '../../Data/Data_Tooltips';
+import type { Character, StatKey } from '../../types';
+
+// ── 툴팁 (모듈 내 공유) ────────────────────────────────────────
+let _divePanelsTip: HTMLElement | null = null;
+function _ensureTip(): HTMLElement {
+  if (_divePanelsTip) return _divePanelsTip;
+  const el = document.createElement('div');
+  el.className = 'mng-tooltip';
+  (document.getElementById('game-container') ?? document.body).appendChild(el);
+  _divePanelsTip = el;
+  return el;
+}
+function _showTip(x: number, y: number, text: string): void {
+  const el = _ensureTip();
+  el.innerHTML = text.replace(/\n/g, '<br>');
+  el.style.display = 'block';
+  _moveTip(x, y);
+}
+function _moveTip(x: number, y: number): void {
+  if (!_divePanelsTip) return;
+  const W  = _divePanelsTip.offsetWidth || 160;
+  const H  = _divePanelsTip.offsetHeight || 60;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  _divePanelsTip.style.left = `${x + 12 + W > vw ? x - W - 8 : x + 12}px`;
+  _divePanelsTip.style.top  = `${y + 8  + H > vh ? y - H - 8 : y + 8}px`;
+}
+function _hideTip(): void { if (_divePanelsTip) _divePanelsTip.style.display = 'none'; }
 
 // ── 공통 타입 ──────────────────────────────────────────────────
 export interface InventoryItem {
@@ -300,17 +327,23 @@ export function renderParty(
   const renderRight = (char: Character) => {
     const cogC  = CharacterManager.getCogColor(char.cog);
     const SC    = CharacterManager.STAT_COLORS as Record<string, string>;
-    const eff   = CharacterManager.getEffectiveStats(char);
+    const eff   = CharacterManager.getEffectiveStats(char) as unknown as Record<string, number>;
     const hpPct = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
     const hpCol = hpPct > 0.6 ? '#306030' : hpPct > 0.3 ? '#806020' : '#803020';
     const SL: Record<string, string> = { hp:'체력', health:'건강', attack:'공격', agility:'민첩', luck:'행운' };
     const AL: Record<string, string> = { passive:'패시브', action:'행동', enhanced:'강화', finale:'피날레' };
 
     const statRows = Object.entries(char.stats).map(([k, v]) => {
-      const effV  = (eff as unknown as Record<string, number>)[k] ?? v;
+      const effV  = eff[k] ?? v;
       const bonus = effV - v;
-      const bHtml = bonus > 0 ? `<span class="mng-stat-bonus mng-stat-bonus--up">+${bonus}</span>` : '';
-      return `<div class="mng-stat-row">
+      const isOc  = char.overclock?.statKey === k;
+      const ocCol = char.overclock?.color ?? SC[k];
+      const bHtml = isOc && bonus > 0
+        ? `<span class="mng-stat-bonus mng-stat-bonus--oc" style="color:${ocCol}">+${bonus}</span>`
+        : bonus > 0
+        ? `<span class="mng-stat-bonus mng-stat-bonus--up">+${bonus}</span>`
+        : '';
+      return `<div class="mng-stat-row" data-stat-key="${k}" data-stat-eff="${effV}">
         <span class="mng-stat-key">${SL[k] ?? k}</span>
         <span class="mng-stat-val" style="color:${SC[k]??'#c8bfb0'}">${v}${bHtml}</span>
       </div>`;
@@ -320,7 +353,7 @@ export function renderParty(
       const id = char[type];
       const nm = id ? (AbilityIndex.getName(type, id) || id) : '—';
       const ds = id ? (AbilityIndex.getDesc(type, id) || '') : '';
-      return `<div class="mng-ab-row">
+      return `<div class="mng-ab-row" data-ab-type="${type}" data-ab-id="${id ?? ''}">
         <span class="mng-ab-type">${AL[type]}</span>
         <span class="mng-ab-name">${nm}</span>
         ${ds ? `<span class="mng-ab-desc">${ds}</span>` : ''}
@@ -333,7 +366,7 @@ export function renderParty(
         <div class="mng-detail-header">
           <div class="mng-detail-basic">
             <div class="mng-detail-name">${char.name}</div>
-            <div class="mng-detail-job" style="color:${jobCol}">${char.jobLabel}</div>
+            <div class="mng-detail-job" style="color:${jobCol}" data-job="${char.job}">${char.jobLabel}</div>
             <div class="mng-detail-cog" style="color:${cogC.css}">Cog ${char.cog}  ·  합계 ${char.statSum}</div>
             <div class="mng-detail-hprow">
               <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
@@ -350,6 +383,42 @@ export function renderParty(
         <div class="mng-right-mastery">숙련도: ${char.mastery ?? 0}</div>
       </div>
     `;
+
+    // 툴팁 바인딩
+    const jobEl = rightEl.querySelector<HTMLElement>('[data-job]');
+    if (jobEl) {
+      jobEl.style.cursor = 'help';
+      jobEl.addEventListener('mouseenter', e => {
+        const t = getJobTooltip(char.job);
+        if (t) _showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, t);
+      });
+      jobEl.addEventListener('mousemove', e => _moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
+      jobEl.addEventListener('mouseleave', () => _hideTip());
+    }
+    rightEl.querySelectorAll<HTMLElement>('.mng-stat-row[data-stat-key]').forEach(row => {
+      const key  = row.dataset.statKey as StatKey;
+      const effV = Number(row.dataset.statEff ?? 0);
+      row.style.cursor = 'help';
+      row.addEventListener('mouseenter', e => {
+        _showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, getStatTooltipDynamic(key, effV));
+      });
+      row.addEventListener('mousemove', e => _moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
+      row.addEventListener('mouseleave', () => _hideTip());
+    });
+    rightEl.querySelectorAll<HTMLElement>('.mng-ab-row[data-ab-id]').forEach(row => {
+      const type = row.dataset.abType as 'passive'|'action'|'enhanced'|'finale';
+      const id   = row.dataset.abId!;
+      if (!id) return;
+      const desc = AbilityIndex.getDesc(type, id);
+      if (!desc) return;
+      row.style.cursor = 'help';
+      row.addEventListener('mouseenter', e => {
+        const nm = AbilityIndex.getName(type, id) || id;
+        _showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, `${nm}\n${desc}`);
+      });
+      row.addEventListener('mousemove', e => _moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
+      row.addEventListener('mouseleave', () => _hideTip());
+    });
   };
 
   const renderCards = () => {

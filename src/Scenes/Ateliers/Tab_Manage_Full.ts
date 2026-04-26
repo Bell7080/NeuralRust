@@ -351,8 +351,8 @@ export class Tab_Manage_Full {
             const ocColor = isOc ? (char.overclock!.color ?? '#ffaad0') : '';
             const ocStyle = isOc ? ` style="--oc-color:${ocColor}"` : '';
             const ocClass = isOc ? ' mng-stat-row--oc' : '';
-            const bonusHtml = isOc
-              ? `<span class="mng-stat-bonus mng-stat-bonus--oc" style="color:${ocColor}">→${effV}</span>`
+            const bonusHtml = isOc && bonus > 0
+              ? `<span class="mng-stat-bonus mng-stat-bonus--oc" style="color:${ocColor}">+${bonus}</span>`
               : bonus > 0
               ? `<span class="mng-stat-bonus mng-stat-bonus--up">+${bonus}</span>`
               : '';

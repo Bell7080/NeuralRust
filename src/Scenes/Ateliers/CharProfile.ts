@@ -120,7 +120,7 @@ function _fillModal(
     </div>
     ${char.overclock ? `
       <div class="cp-overclock" style="color:${char.overclock.color}">
-        [오버클럭]  ${char.overclock.label}
+        ${char.overclock.label}
       </div>` : ''}
     <div class="cp-hp-row">
       <div class="cp-hp-bar">
