@@ -141,6 +141,19 @@ export function getEffectiveStats(char: Character): CharacterStats {
   return r;
 }
 
+// ── 최대 HP 계산 (오버클럭 반영) ───────────────────────────────
+//   maxHp = (base hp + overclock hp 보너스) * 5
+//   체력 스탯의 OC 보너스는 실제 maxHp에도 그대로 반영된다.
+function _computeMaxHp(stats: CharacterStats, overclock: OverclockDefinition | null): number {
+  const hpBase  = stats?.hp ?? 0;
+  const ocBonus = (overclock && overclock.statKey === 'hp')
+    ? Math.floor(hpBase * overclock.bonus) : 0;
+  return (hpBase + ocBonus) * 5;
+}
+export function computeMaxHp(char: Character): number {
+  return _computeMaxHp(char.stats, char.overclock ?? null);
+}
+
 export function getStatBreakdown(char: Character, key: keyof CharacterStats): StatBreakdown {
   const base        = char.stats[key] ?? 0;
   const ocBonus     = (char.overclock && char.overclock.statKey === key)
@@ -188,9 +201,11 @@ function _getNamePool(): string[] {
 
 // ── 캐릭터 생성 ───────────────────────────────────────────────────
 export function createCharacter(job: JobId): Character {
-  const stats   = _randStats();
-  const statSum = (Object.values(stats) as number[]).reduce((a, v) => a + v, 0);
-  const cog     = calcCog(statSum);
+  const stats     = _randStats();
+  const statSum   = (Object.values(stats) as number[]).reduce((a, v) => a + v, 0);
+  const cog       = calcCog(statSum);
+  const overclock = _rollInitialOverclock();
+  const maxHp     = _computeMaxHp(stats, overclock);
   return {
     id:           `c_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     name:         _pick(_getNamePool()),
@@ -202,20 +217,22 @@ export function createCharacter(job: JobId): Character {
     action:       _pick(_getAbilityPool('action',   job, cog)),
     enhanced:     _pick(_getAbilityPool('enhanced', job, cog)),
     finale:       _pick(_getAbilityPool('finale',   job, cog)),
-    overclock:    _rollInitialOverclock(),
+    overclock,
     mastery:      0,
     pendingStats: 0,
-    currentHp:    stats.hp * 5,
-    maxHp:        stats.hp * 5,
+    currentHp:    maxHp,
+    maxHp:        maxHp,
     status:       'alive',
     spriteKey:    _jobSpriteKey(job),
   };
 }
 
 export function createCharacterOfCog(job: JobId, cog: number): Character {
-  const range   = COG_STAT_RANGE[cog] ?? COG_STAT_RANGE[1];
-  const statSum = range.min + Math.floor(Math.random() * (range.max - range.min + 1));
-  const stats   = _randStatsBySum(statSum);
+  const range     = COG_STAT_RANGE[cog] ?? COG_STAT_RANGE[1];
+  const statSum   = range.min + Math.floor(Math.random() * (range.max - range.min + 1));
+  const stats     = _randStatsBySum(statSum);
+  const overclock = _rollInitialOverclock();
+  const maxHp     = _computeMaxHp(stats, overclock);
   return {
     id:           `c_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     name:         _pick(_getNamePool()),
@@ -227,11 +244,11 @@ export function createCharacterOfCog(job: JobId, cog: number): Character {
     action:       _pick(_getAbilityPool('action',   job, cog)),
     enhanced:     _pick(_getAbilityPool('enhanced', job, cog)),
     finale:       _pick(_getAbilityPool('finale',   job, cog)),
-    overclock:    _rollInitialOverclock(),
+    overclock,
     mastery:      0,
     pendingStats: 0,
-    currentHp:    stats.hp * 5,
-    maxHp:        stats.hp * 5,
+    currentHp:    maxHp,
+    maxHp:        maxHp,
     status:       'alive',
     spriteKey:    _jobSpriteKey(job),
   };
@@ -332,6 +349,15 @@ function initIfEmpty(): Character[] {
           c.currentHp   = Math.round(expected5 * hpRatio);
         }
         c._hpMigrated = true;
+        dirty = true;
+      }
+
+      // OC 체력 보너스를 maxHp 에 반영 (이전 데이터 보정)
+      const expectedMax = _computeMaxHp(c.stats, c.overclock ?? null);
+      if (c.maxHp !== expectedMax) {
+        const hpRatio = c.maxHp > 0 ? (c.currentHp / c.maxHp) : 1;
+        c.maxHp       = expectedMax;
+        c.currentHp   = Math.min(expectedMax, Math.round(expectedMax * hpRatio));
         dirty = true;
       }
     });
@@ -442,6 +468,7 @@ export const CharacterManager = {
   getEffectiveStat,
   getEffectiveStats,
   getStatBreakdown,
+  computeMaxHp,
   gainMastery,
   spendStat,
 };

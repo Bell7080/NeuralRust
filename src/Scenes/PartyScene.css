@@ -282,7 +282,7 @@
 .ps-stat-val {
   font-weight: 700; display: flex; align-items: center; gap: 0.4em;
 }
-.ps-stat-bonus       { font-size: 0.8em; }
+.ps-stat-bonus       { font-family: var(--font-mono); font-size: 0.8em; font-weight: bold; letter-spacing: 0.02em; margin-left: 0.15em; }
 .ps-stat-bonus.up    { color: #80c080; }
 .ps-stat-bonus.dn    { color: #c06060; }
 

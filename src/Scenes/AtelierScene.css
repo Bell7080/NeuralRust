@@ -838,9 +838,9 @@
 .mng-stat-row       { display: flex; justify-content: space-between; align-items: center; }
 .mng-stat-key       { font-family: var(--font-mono); font-size: clamp(10px, 1.04vw, 16px); color: #5a3a18; }
 .mng-stat-val       { font-family: var(--font-mono); font-size: clamp(12px, 1.17vw, 17px); font-weight: bold; display: flex; align-items: center; gap: 0.4em; }
-.mng-stat-bonus        { font-size: 0.8em; }
+.mng-stat-bonus        { font-family: var(--font-mono); font-size: 0.8em; font-weight: bold; letter-spacing: 0.02em; margin-left: 0.15em; }
 .mng-stat-bonus--up    { color: #80c080; }
-.mng-stat-bonus--oc    { font-size: 0.82em; font-weight: normal; font-family: var(--font-mono); }
+.mng-stat-bonus--oc    { font-family: var(--font-mono); font-size: 0.85em; font-weight: bold; }
 .mng-stat-row--oc {
   position: relative;
   background: linear-gradient(to right,

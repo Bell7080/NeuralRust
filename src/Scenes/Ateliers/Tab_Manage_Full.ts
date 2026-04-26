@@ -415,7 +415,7 @@ export class Tab_Manage_Full {
         target.stats[key] = (target.stats[key] ?? 0) + 1;
         target.pendingStats--;
         target.statSum = (Object.values(target.stats) as number[]).reduce((a,b) => a+b, 0);
-        if (key === 'hp') { target.maxHp = target.stats.hp * 5; }
+        if (key === 'hp') { target.maxHp = CharacterManager.computeMaxHp(target); }
         CharacterManager.saveAll(chars);
         this._chars = chars;
         this._selected = target;

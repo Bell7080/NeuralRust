@@ -114,8 +114,6 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
   protected _setupEl!:     HTMLDivElement;
   private _setupPanelEl!:  HTMLDivElement;
   private _setupInfoEl!:   HTMLDivElement;
-  private _portraitVideo!: HTMLVideoElement;
-  private _portraitImg!:   HTMLImageElement;
   private _goBtn!:         HTMLButtonElement;
   private _goSub!:         HTMLSpanElement;
   private _slotsRow!:      HTMLDivElement;
@@ -162,22 +160,6 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     const panel = document.createElement('div');
     panel.className = 'battle-setup__panel';
     this._setupPanelEl = panel;
-
-    /* 2D 라이브 초상화 (관리탭 일러스트 프레임 양식) */
-    const portraitWrap = document.createElement('div');
-    portraitWrap.className = 'battle-setup__portrait';
-    portraitWrap.innerHTML = `
-      <div class="mng-illus-frame">
-        <div class="mng-illus-inner">
-          <div class="mng-illus-mask">
-            <video class="mng-illus-video battle-setup__portrait-video" autoplay loop muted playsinline></video>
-            <img class="battle-setup__portrait-img" alt="" />
-          </div>
-        </div>
-      </div>
-    `;
-    this._portraitVideo = portraitWrap.querySelector('.battle-setup__portrait-video') as HTMLVideoElement;
-    this._portraitImg   = portraitWrap.querySelector('.battle-setup__portrait-img')   as HTMLImageElement;
 
     const title = document.createElement('div');
     title.className = 'battle-setup__title';
@@ -237,7 +219,6 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
           this._selectedEnemy = null;
           this._cardEls.forEach(c => c.el.classList.remove('info-selected'));
           card.classList.add('info-selected');
-          this._updatePortrait(char);
           this._refreshInfoPanel();
         }
       });
@@ -246,7 +227,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       this._cardEls.push({ el: card, mark, charId: char.id });
     });
 
-    panel.append(portraitWrap, title, sub, grid);
+    panel.append(title, sub, grid);
 
     /* ── 중앙 영역 (진행 버튼 + 배치 슬롯) ─────────────────── */
     const center = document.createElement('div');
@@ -325,7 +306,6 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
           this._cardEls.forEach(c => c.el.classList.remove('info-selected'));
           const cardRef = this._cardEls.find(c => c.charId === char.id);
           cardRef?.el.classList.add('info-selected');
-          this._updatePortrait(char);
           this._refreshInfoPanel();
         }
       });
@@ -351,50 +331,11 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     canvas.parentElement?.appendChild(root);
     this._setupEl = root;
 
-    // 첫 캐릭터를 기본 선택해 초상화 영상을 표시
+    // 첫 캐릭터를 기본 선택해 우측 정보 패널을 채움
     if (this._partyChars.length > 0) {
       this._selectedChar = this._partyChars[0];
       this._cardEls[0]?.el.classList.add('info-selected');
-      this._updatePortrait(this._partyChars[0]);
       this._refreshInfoPanel();
-    } else {
-      this._updatePortrait(null);
-    }
-  }
-
-  // ════════════════════════════════════════════════════════════
-  //  좌측 2D 라이브 초상화 갱신
-  // ════════════════════════════════════════════════════════════
-  private _updatePortrait(char: Character | null): void {
-    if (!this._portraitVideo || !this._portraitImg) return;
-    const vid  = this._portraitVideo;
-    const img  = this._portraitImg;
-    if (!char) {
-      vid.removeAttribute('src');
-      vid.load?.();
-      vid.style.display = 'none';
-      img.removeAttribute('src');
-      img.style.display = 'none';
-      return;
-    }
-    const videoPath = CharacterSpriteManager.getVideoPath(char.job);
-    const pngPath   = CharacterSpriteManager.getDomSrc(char.spriteKey);
-    if (videoPath) {
-      vid.style.display = 'block';
-      img.style.display = 'none';
-      if (vid.getAttribute('src') !== videoPath) {
-        vid.src = videoPath;
-        vid.load();
-      }
-      vid.play().catch(() => {});
-    } else if (pngPath) {
-      // 동영상 없으면 PNG로 대체
-      vid.style.display = 'none';
-      img.style.display = 'block';
-      img.src = pngPath;
-    } else {
-      vid.style.display = 'none';
-      img.style.display = 'none';
     }
   }
 
@@ -442,18 +383,26 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       </div>`;
     }).join('');
 
+    const videoPath = CharacterSpriteManager.getVideoPath(char.job);
+    const pngPath   = CharacterSpriteManager.getDomSrc(char.spriteKey);
+
     this._setupInfoEl.innerHTML = `
+      <div class="bs-info-portrait-wrap">
+        ${videoPath
+          ? `<video class="bs-info-portrait-media" src="${videoPath}" autoplay loop muted playsinline></video>`
+          : pngPath
+          ? `<img class="bs-info-portrait-media" src="${pngPath}" alt="" />`
+          : `<div class="bs-info-portrait-fallback"></div>`}
+        <div class="bs-info-portrait-overlay">
+          <div class="mng-detail-name">${char.name}</div>
+          <div class="mng-detail-job" style="color:${jobCol}" data-job="${char.job}">${char.jobLabel}</div>
+          <div class="mng-detail-cog" style="color:${cogC.css}">Cog ${char.cog}  ·  합계 ${char.statSum}</div>
+        </div>
+      </div>
       <div class="mng-right-detail bs-mng-detail">
-        <div class="mng-detail-header">
-          <div class="mng-detail-basic">
-            <div class="mng-detail-name">${char.name}</div>
-            <div class="mng-detail-job" style="color:${jobCol}" data-job="${char.job}">${char.jobLabel}</div>
-            <div class="mng-detail-cog" style="color:${cogC.css}">Cog ${char.cog}  ·  합계 ${char.statSum}</div>
-            <div class="mng-detail-hprow">
-              <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
-              <span class="mng-detail-hptxt">HP ${char.currentHp} / ${char.maxHp}</span>
-            </div>
-          </div>
+        <div class="mng-detail-hprow">
+          <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
+          <span class="mng-detail-hptxt">HP ${char.currentHp} / ${char.maxHp}</span>
         </div>
         <div class="mng-detail-divider"></div>
         <div class="mng-detail-stats">${statRows}</div>
@@ -562,16 +511,17 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     };
 
     this._setupInfoEl.innerHTML = `
+      <div class="bs-info-portrait-wrap bs-info-portrait-wrap--enemy">
+        <div class="bs-info-portrait-fallback">적</div>
+        <div class="bs-info-portrait-overlay">
+          <div class="mng-detail-name" style="color:#e08070">${enemy.name}</div>
+          <div class="mng-detail-job" style="color:#a86850">${BL[enemy.behavior] ?? enemy.behavior}</div>
+        </div>
+      </div>
       <div class="mng-right-detail bs-mng-detail">
-        <div class="mng-detail-header">
-          <div class="mng-detail-basic">
-            <div class="mng-detail-name" style="color:#e08070">${enemy.name}</div>
-            <div class="mng-detail-job" style="color:#a86850">${BL[enemy.behavior] ?? enemy.behavior}</div>
-            <div class="mng-detail-hprow">
-              <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
-              <span class="mng-detail-hptxt">HP ${enemy._hp} / ${enemy._maxHp}</span>
-            </div>
-          </div>
+        <div class="mng-detail-hprow">
+          <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
+          <span class="mng-detail-hptxt">HP ${enemy._hp} / ${enemy._maxHp}</span>
         </div>
         <div class="mng-detail-divider"></div>
         <div class="mng-detail-stats">
