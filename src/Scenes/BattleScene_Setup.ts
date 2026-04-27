@@ -152,6 +152,14 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
   //  Phase 1 UI 빌드 (CSS DOM)
   // ════════════════════════════════════════════════════════════
   protected _buildSetupUI(): void {
+    // 라운드 간 재진입 시 이전 DOM 참조 배열 초기화
+    this._cardEls = [];
+    this._slotEls = [];
+    this._selectedChar  = null;
+    this._selectedEnemy = null;
+    this._lastClickMs   = 0;
+    this._lastClickId   = '';
+
     const canvas = this.sys.game.canvas;
 
     /* ── 루트 (3열 그리드) ─────────────────────────────────── */
