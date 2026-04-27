@@ -35,7 +35,10 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
       } as AllyInstance));
 
     this._slideOutSetup(() => {
-      this._buildAllyArea(this.scale.width, this.scale.height);
+      const W = this.scale.width, H = this.scale.height;
+      // 전투 진입: 적을 화면 폭에 맞춰 1단으로 재배치
+      this._rebuildEnemyAreaForBattle(W, H);
+      this._buildAllyArea(W, H);
       this._startBattle();
     });
   }

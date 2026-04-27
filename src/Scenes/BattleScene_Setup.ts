@@ -49,7 +49,9 @@ export interface EnemyUnitObjs {
   hpBg:      Phaser.GameObjects.Graphics;
   hpFg:      Phaser.GameObjects.Graphics;
   hpNumTxt:  Phaser.GameObjects.Text;
+  hit:       Phaser.GameObjects.Rectangle;
   refreshHp: () => void;
+  destroyAll:() => void;
   cx: number; cy: number; half: number;
 }
 
@@ -389,7 +391,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     this._setupInfoEl.innerHTML = `
       <div class="bs-info-portrait-wrap">
         ${videoPath
-          ? `<video class="bs-info-portrait-media" src="${videoPath}" autoplay loop muted playsinline></video>`
+          ? `<video class="bs-info-portrait-media" autoplay loop muted playsinline></video>`
           : pngPath
           ? `<img class="bs-info-portrait-media" src="${pngPath}" alt="" />`
           : `<div class="bs-info-portrait-fallback"></div>`}
@@ -415,6 +417,16 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
         </button>
       </div>
     `;
+
+    // 동영상 src/load/play를 명시적으로 호출 (라운드 2 이후에도 안정 재생)
+    if (videoPath) {
+      const vid = this._setupInfoEl.querySelector<HTMLVideoElement>('.bs-info-portrait-media');
+      if (vid) {
+        vid.src = videoPath;
+        vid.load();
+        vid.play().catch(() => {});
+      }
+    }
 
     this._setupInfoEl.querySelector<HTMLButtonElement>('.bs-info-toggle-btn')
       ?.addEventListener('click', () => {

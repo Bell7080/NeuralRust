@@ -37,44 +37,76 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
 
   // ════════════════════════════════════════════════════════════
   //  적 영역 (상단 30%)  — Phaser
-  //  좌/우 패널(24%)에 가려지지 않도록 중앙 그리드(52% 폭) 사용
+  //  편성 단계: 좌/우 패널(24%)에 가려지지 않도록 중앙 그리드(52%)
+  //  전투 단계: 화면 폭에 맞춰 1단으로 좍 펼치기 (수가 많으면 작게)
   // ════════════════════════════════════════════════════════════
-  protected _buildEnemyArea(W: number, H: number): void {
+  protected _buildEnemyArea(
+    W: number, H: number, mode: 'setup' | 'battle' = 'setup'
+  ): void {
     const areaY = H * 0.06, areaH = H * 0.31;
     const count = this._enemies.length;
     if (!count) return;
 
-    // 중앙 영역: 좌측 패널 24% ~ 우측 패널 24% 사이 (총 52% 폭)
-    const centerLeft  = W * 0.25;
-    const centerRight = W * 0.75;
-    const centerW     = centerRight - centerLeft;
+    let layout: { cx: number; cy: number; size: number }[];
 
-    // 줄당 최대 개수 (4개) — 5명 이상은 자동으로 다음 줄
-    const cols = Math.min(count, 4);
-    const rows = Math.ceil(count / cols);
-
-    const gapX  = centerW * 0.02;
-    const gapY  = areaH * 0.08;
-    const rowH  = (areaH - gapY * (rows - 1)) / rows;
-    const unitW = Math.min(
-      (centerW - gapX * (cols - 1)) / cols,
-      rowH * 0.7,  // 이름/HP바 공간 확보
-    );
-
-    const totalW = cols * unitW + (cols - 1) * gapX;
-    const startX = centerLeft + centerW / 2 - totalW / 2 + unitW / 2;
-    const startY = areaY + rowH * 0.45;
+    if (mode === 'battle') {
+      // 전투: 화면 가용 폭의 96% 안에 한 줄로 균등 배치
+      const availW = W * 0.96;
+      const startEdge = (W - availW) / 2;
+      const gap   = Math.min(availW * 0.02, W * 0.015);
+      const unitW = Math.min(
+        (availW - gap * (count - 1)) / count,
+        areaH * 0.65,
+      );
+      const totalW = count * unitW + (count - 1) * gap;
+      const startX = startEdge + (availW - totalW) / 2 + unitW / 2;
+      const cy     = areaY + areaH * 0.45;
+      layout = this._enemies.map((_, i) => ({
+        cx:   startX + i * (unitW + gap),
+        cy,
+        size: unitW,
+      }));
+    } else {
+      // 편성: 중앙 52% 폭에 4열 그리드 (5명 이상이면 자동 다음 줄)
+      const centerLeft = W * 0.25;
+      const centerW    = W * 0.5;
+      const cols  = Math.min(count, 4);
+      const rows  = Math.ceil(count / cols);
+      const gapX  = centerW * 0.02;
+      const gapY  = areaH * 0.08;
+      const rowH  = (areaH - gapY * (rows - 1)) / rows;
+      const unitW = Math.min(
+        (centerW - gapX * (cols - 1)) / cols,
+        rowH * 0.7,
+      );
+      const totalW = cols * unitW + (cols - 1) * gapX;
+      const startX = centerLeft + centerW / 2 - totalW / 2 + unitW / 2;
+      const startY = areaY + rowH * 0.45;
+      layout = this._enemies.map((_, i) => {
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        return {
+          cx:   startX + c * (unitW + gapX),
+          cy:   startY + r * (rowH + gapY),
+          size: unitW,
+        };
+      });
+    }
 
     this._enemies.forEach((enemy, i) => {
-      const r  = Math.floor(i / cols);
-      const c  = i % cols;
-      const cx = startX + c * (unitW + gapX);
-      const cy = startY + r * (rowH + gapY);
-      this._enemyObjs.push(this._makeEnemyUnit(enemy, cx, cy, unitW));
+      const { cx, cy, size } = layout[i];
+      this._enemyObjs.push(this._makeEnemyUnit(enemy, cx, cy, size));
     });
 
     this.add.graphics().lineStyle(1, 0x1e1008, 0.6)
       .lineBetween(W * 0.02, areaY + areaH, W * 0.98, areaY + areaH);
+  }
+
+  // ── 전투 진입 시 단일행으로 재배치 ─────────────────────────
+  protected _rebuildEnemyAreaForBattle(W: number, H: number): void {
+    this._enemyObjs.forEach(o => { try { o.destroyAll(); } catch (_) {} });
+    this._enemyObjs = [];
+    this._buildEnemyArea(W, H, 'battle');
   }
 
   protected _makeEnemyUnit(
@@ -114,15 +146,22 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
     refreshHp();
 
     // 편성 단계(전투 시작 전)에 클릭 시 우측 정보 패널에 적 정보 표시
-    const enemyHit = this.add.rectangle(cx, cy, half * 2, half * 2, 0x000000, 0)
+    const hit = this.add.rectangle(cx, cy, half * 2, half * 2, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
-    enemyHit.on('pointerup', () => {
+    hit.on('pointerup', () => {
       if (this._battleActive) return;
       this._showEnemyInfo(enemy);
     });
-    this._sceneHits.push(enemyHit);
+    this._sceneHits.push(hit);
 
-    return { enemy, shape, nameTxt, hpBg, hpFg, hpNumTxt, refreshHp, cx, cy, half };
+    const destroyAll = () => {
+      ([shape, nameTxt, hpBg, hpFg, hpNumTxt, hit] as Array<{ active?: boolean; destroy(): void } | null>)
+        .forEach(o => { try { if (o && o.active !== false) o.destroy(); } catch (_) {} });
+      const idx = this._sceneHits.indexOf(hit);
+      if (idx >= 0) this._sceneHits.splice(idx, 1);
+    };
+
+    return { enemy, shape, nameTxt, hpBg, hpFg, hpNumTxt, hit, refreshHp, destroyAll, cx, cy, half };
   }
 
   // ════════════════════════════════════════════════════════════
