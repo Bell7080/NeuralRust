@@ -33,6 +33,7 @@ export interface EnemyInstance {
   luck:         number;
   _dead:        boolean;
   _attackCount: number;
+  spriteKey?:   string;
 }
 
 export type AllyInstance = Character & {
@@ -46,6 +47,7 @@ export type AllyInstance = Character & {
 export interface EnemyUnitObjs {
   enemy:     EnemyInstance;
   shape:     Phaser.GameObjects.Graphics;
+  spriteImg: Phaser.GameObjects.Image | null;
   nameTxt:   Phaser.GameObjects.Text;
   hpBg:      Phaser.GameObjects.Graphics;
   hpFg:      Phaser.GameObjects.Graphics;

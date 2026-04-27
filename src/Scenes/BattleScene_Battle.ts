@@ -95,7 +95,7 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
     const aObj = this._allyObjs[allyIdx];
     eObj?.refreshHp();
     aObj?.refreshGauge();
-    if (eObj) this._flashDamage(eObj.shape);
+    if (eObj) this._flashDamage(eObj.shape, eObj.spriteImg);
 
     if (this._effects3d && aObj && eObj) {
       this._effects3d.spawnAllyAttack(aObj.cx, aObj.cy, eObj.cx, eObj.cy, isCrit);
@@ -175,12 +175,14 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
   }
 
   // ── 데미지 플래시 ────────────────────────────────────────────
-  protected _flashDamage(shape: Phaser.GameObjects.Graphics | Phaser.GameObjects.Arc): void {
-    if (!shape?.active) return;
-    const orig = shape.alpha;
+  protected _flashDamage(
+    ...targets: (Phaser.GameObjects.Graphics | Phaser.GameObjects.Arc | Phaser.GameObjects.Image | null | undefined)[]
+  ): void {
+    const valid = targets.filter((t): t is NonNullable<typeof t> => !!(t?.active));
+    if (!valid.length) return;
     this.tweens.add({
-      targets: shape, alpha: 0.2, duration: 80, yoyo: true, repeat: 1,
-      onComplete: () => { if (shape.active) shape.setAlpha(orig); },
+      targets: valid, alpha: 0.2, duration: 80, yoyo: true, repeat: 1,
+      onComplete: () => { valid.forEach(t => { if (t.active) t.setAlpha(1); }); },
     });
   }
 

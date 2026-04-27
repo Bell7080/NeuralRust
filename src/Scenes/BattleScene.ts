@@ -24,6 +24,12 @@ export class BattleScene extends BattleSceneBattle {
 
   preload(): void {
     CharacterSpriteManager.preload(this);
+    for (let i = 1; i <= 6; i++) {
+      const n = String(i).padStart(3, '0');
+      this.load.image(`BattleBackground_${n}`, `Games/Assets/Sprites/BattleBackground_${n}.png`);
+    }
+    this.load.image('Enemy_001', 'Games/Assets/Sprites/Enemy_001.png');
+    this.load.image('Enemy_002', 'Games/Assets/Sprites/Enemy_002.png');
   }
 
   // ────────────────────────────────────────────────────────────
@@ -102,16 +108,11 @@ export class BattleScene extends BattleSceneBattle {
   //  배경 / HUD
   // ════════════════════════════════════════════════════════════
   private _buildBackground(W: number, H: number): void {
-    this.add.rectangle(0, 0, W, H, 0x050407).setOrigin(0);
-    const grid = this.add.graphics();
-    const step = Math.round(W / 60);
-    grid.lineStyle(1, 0x0d0a06, 0.5);
-    for (let x = 0; x <= W; x += step) grid.lineBetween(x, 0, x, H);
-    for (let y = 0; y <= H; y += step) grid.lineBetween(0, y, W, y);
-    this.add.text(W / 2, H / 2, 'BATTLE', {
-      fontSize: FontManager.adjustedSize(100, this.scale),
-      color: '#0a0705', fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5).setAlpha(0.05);
+    const idx = Math.floor(Math.random() * 6) + 1;
+    const key = `BattleBackground_${String(idx).padStart(3, '0')}`;
+    this.add.image(W / 2, H / 2, key)
+      .setDisplaySize(W, H)
+      .setOrigin(0.5);
   }
 
   private _buildHUD(W: number, H: number): void {
@@ -204,6 +205,7 @@ export class BattleScene extends BattleSceneBattle {
     const scaled = getEnemyScaledStats(picked.id, cogMax);
     if (!scaled) return [];
     const M = 2.5;
+    const sprites = ['Enemy_001', 'Enemy_002'];
     return [{
       _uid: `e_raid_${Date.now()}`, id: picked.id,
       name: `[레이드] ${picked.name}`, behavior: picked.behavior,
@@ -213,6 +215,7 @@ export class BattleScene extends BattleSceneBattle {
       agility: Math.round(scaled.agility * 1.2),
       luck:    Math.round(scaled.luck    * 1.5),
       _dead: false, _attackCount: 0,
+      spriteKey: sprites[Math.floor(Math.random() * sprites.length)],
     }];
   }
 
@@ -221,11 +224,13 @@ export class BattleScene extends BattleSceneBattle {
     scaled: { hp: number; attack: number; agility: number; luck: number },
     count: number
   ): EnemyInstance[] {
+    const sprites = ['Enemy_001', 'Enemy_002'];
     return Array.from({ length: count }, (_, i) => ({
       _uid: `e_${i}_${Date.now()}`, id, name, behavior,
       _hp: scaled.hp, _maxHp: scaled.hp,
       attack: scaled.attack, agility: scaled.agility, luck: scaled.luck,
       _dead: false, _attackCount: 0,
+      spriteKey: sprites[Math.floor(Math.random() * sprites.length)],
     }));
   }
 }

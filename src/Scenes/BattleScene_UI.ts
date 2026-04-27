@@ -113,25 +113,42 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
     enemy: EnemyInstance, cx: number, cy: number, size: number
   ): EnemyUnitObjs {
     const half = size * 0.38;
+
+    // 외곽 테두리 (flash 효과 대상)
     const shape = this.add.graphics();
-    shape.fillStyle(0x3a1a0a, 1);
     shape.lineStyle(2, 0xa03018, 0.9);
-    shape.fillRect(cx - half, cy - half, half * 2, half * 2);
     shape.strokeRect(cx - half, cy - half, half * 2, half * 2);
+
+    // 적 스프라이트 이미지
+    let spriteImg: Phaser.GameObjects.Image | null = null;
+    const sk = enemy.spriteKey ?? '';
+    if (sk && this.textures.exists(sk)) {
+      const frame = this.textures.get(sk).get();
+      const imgW  = frame.realWidth  || frame.width  || half * 2;
+      const imgH  = frame.realHeight || frame.height || half * 2;
+      const scale = Math.max((half * 2) / imgW, (half * 2) / imgH);
+      const maskGfx = this.make.graphics({ x: 0, y: 0 });
+      maskGfx.fillStyle(0xffffff);
+      maskGfx.fillRect(cx - half, cy - half, half * 2, half * 2);
+      spriteImg = this.add.image(cx, cy, sk)
+        .setDisplaySize(imgW * scale, imgH * scale)
+        .setDepth(1)
+        .setMask(maskGfx.createGeometryMask());
+    }
 
     const nameTxt = this.add.text(cx, cy - half - Math.round(size * 0.04), enemy.name, {
       fontSize: this._fs(11), color: '#c8a060', fontFamily: FontManager.MONO,
-    }).setOrigin(0.5, 1);
+    }).setOrigin(0.5, 1).setDepth(2);
 
     const barW = size * 0.9, barH = Math.max(6, Math.round(size * 0.1));
     const barY = cy + half + Math.round(size * 0.06);
-    const hpBg = this.add.graphics();
+    const hpBg = this.add.graphics().setDepth(2);
     hpBg.fillStyle(0x1a0a06, 1);
     hpBg.fillRect(cx - barW / 2, barY, barW, barH);
-    const hpFg = this.add.graphics();
+    const hpFg = this.add.graphics().setDepth(2);
     const hpNumTxt = this.add.text(cx, barY + barH + Math.round(size * 0.03), '', {
       fontSize: this._fs(9), color: '#a06040', fontFamily: FontManager.MONO,
-    }).setOrigin(0.5, 0);
+    }).setOrigin(0.5, 0).setDepth(2);
 
     const refreshHp = () => {
       const pct = enemy._maxHp > 0 ? enemy._hp / enemy._maxHp : 0;
@@ -147,7 +164,7 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
 
     // 편성 단계(전투 시작 전)에 클릭 시 우측 정보 패널에 적 정보 표시
     const hit = this.add.rectangle(cx, cy, half * 2, half * 2, 0x000000, 0)
-      .setInteractive({ useHandCursor: true });
+      .setInteractive({ useHandCursor: true }).setDepth(3);
     hit.on('pointerup', () => {
       if (this._battleActive) return;
       this._showEnemyInfo(enemy);
@@ -155,13 +172,13 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
     this._sceneHits.push(hit);
 
     const destroyAll = () => {
-      ([shape, nameTxt, hpBg, hpFg, hpNumTxt, hit] as Array<{ active?: boolean; destroy(): void } | null>)
+      ([shape, spriteImg, nameTxt, hpBg, hpFg, hpNumTxt, hit] as Array<{ active?: boolean; destroy(): void } | null>)
         .forEach(o => { try { if (o && o.active !== false) o.destroy(); } catch (_) {} });
       const idx = this._sceneHits.indexOf(hit);
       if (idx >= 0) this._sceneHits.splice(idx, 1);
     };
 
-    return { enemy, shape, nameTxt, hpBg, hpFg, hpNumTxt, hit, refreshHp, destroyAll, cx, cy, half };
+    return { enemy, shape, spriteImg, nameTxt, hpBg, hpFg, hpNumTxt, hit, refreshHp, destroyAll, cx, cy, half };
   }
 
   // ════════════════════════════════════════════════════════════
