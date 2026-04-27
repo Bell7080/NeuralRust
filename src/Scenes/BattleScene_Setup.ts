@@ -17,6 +17,7 @@ import { CharacterSpriteManager }  from '../Managers/CharacterSpriteManager';
 import { FontManager }             from '../Managers/FontManager';
 import { AbilityIndex }            from '../Data/AbilityIndex';
 import { getStatTooltipDynamic, getJobTooltip } from '../Data/Data_Tooltips';
+import type { BattleEffects3D }    from '../Effects/BattleEffects3D';
 
 // ── 공유 런타임 타입 (하위 클래스에서 import) ────────────────────
 
@@ -111,6 +112,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
   protected _partyChars:  Character[] = [];
   protected _combatParty: string[]    = [];
   protected _sceneHits:   Phaser.GameObjects.Rectangle[] = [];
+  protected _effects3d:   BattleEffects3D | null = null;
 
   // ── DOM refs ─────────────────────────────────────────────────
   protected _setupEl!:     HTMLDivElement;

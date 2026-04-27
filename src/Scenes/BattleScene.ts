@@ -17,6 +17,7 @@ import { clearAllSceneDom } from '../utils/sceneCleanup';
 import { ENEMY_DATA, getEnemyScaledStats } from '../Data/Data_Enemies';
 import { BattleSceneBattle }               from './BattleScene_Battle';
 import type { BattleInitData, EnemyInstance } from './BattleScene_Setup';
+import { BattleEffects3D }                 from '../Effects/BattleEffects3D';
 
 export class BattleScene extends BattleSceneBattle {
   constructor() { super({ key: 'BattleScene' }); }
@@ -77,6 +78,12 @@ export class BattleScene extends BattleSceneBattle {
     this._buildEnemyArea(W, H);
     this._buildSetupUI();
     this._buildLogArea(W, H);
+
+    this._effects3d = new BattleEffects3D(this.sys.game.canvas);
+  }
+
+  update(_time: number, delta: number): void {
+    this._effects3d?.update(delta / 1000);
   }
 
   shutdown(): void {
@@ -87,6 +94,8 @@ export class BattleScene extends BattleSceneBattle {
     this._sceneHits = [];
     if (this._setupEl?.parentElement) this._setupEl.remove();
     document.getElementById('battle-hud')?.remove();
+    this._effects3d?.destroy();
+    this._effects3d = null;
   }
 
   // ════════════════════════════════════════════════════════════

@@ -53,9 +53,9 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
     this._allies.forEach((ally, i) => {
       if (ally._dead) return;
       const eff      = CharacterManager.getEffectiveStat(ally, 'agility');
-      const interval = Math.max(500, 3000 - eff * 100);
+      const interval = Math.max(1000, 6000 - eff * 200);
       this._attackTimers.push(this.time.addEvent({
-        delay: interval + Math.random() * 300, loop: true,
+        delay: interval + Math.random() * 600, loop: true,
         callback: () => {
           if (!this._battleActive || ally._dead) return;
           this._allyAttack(ally, i);
@@ -64,9 +64,9 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
     });
 
     this._enemies.forEach(enemy => {
-      const interval = Math.max(600, 3500 - enemy.agility * 100);
+      const interval = Math.max(1200, 7000 - enemy.agility * 200);
       this._attackTimers.push(this.time.addEvent({
-        delay: interval * 1.2 + Math.random() * 400, loop: true,
+        delay: interval * 1.2 + Math.random() * 800, loop: true,
         callback: () => {
           if (!this._battleActive || enemy._dead) return;
           this._enemyAttack(enemy);
@@ -96,6 +96,10 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
     eObj?.refreshHp();
     aObj?.refreshGauge();
     if (eObj) this._flashDamage(eObj.shape);
+
+    if (this._effects3d && aObj && eObj) {
+      this._effects3d.spawnAllyAttack(aObj.cx, aObj.cy, eObj.cx, eObj.cy, isCrit);
+    }
 
     this._addLog(
       `${ally.name} → ${target.name}  ${dmg}${isCrit ? ' ★크리!★' : ''}`,
@@ -134,6 +138,13 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
     const aObj = this._allyObjs[aIdx];
     if (aObj) { aObj.refreshHp(); aObj.refreshGauge(); this._flashDamage(aObj.shape); }
 
+    if (this._effects3d && aObj) {
+      const attackerObj = this._enemyObjs.find(o => o.enemy._uid === enemy._uid);
+      if (attackerObj) {
+        this._effects3d.spawnEnemyAttack(attackerObj.cx, attackerObj.cy, aObj.cx, aObj.cy, isCrit);
+      }
+    }
+
     this._addLog(
       `${enemy.name} → ${target.name}  ${dmg}${isCrit ? ' ★크리!★' : ''}`,
       '#c06040'
@@ -148,7 +159,11 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
   // ── 아군 사망 ────────────────────────────────────────────────
   protected _killAlly(ally: AllyInstance, killedBy: string): void {
     ally._dead = true;
-    this._allyObjs[this._allies.indexOf(ally)]?.destroyAll();
+    const dyingObj = this._allyObjs[this._allies.indexOf(ally)];
+    if (dyingObj && this._effects3d) {
+      this._effects3d.spawnDeathEffect(dyingObj.cx, dyingObj.cy);
+    }
+    dyingObj?.destroyAll();
     const day  = SaveManager.load()?.day ?? 1;
     const char = this._allChars.find(c => c.id === ally.id);
     if (char) {
