@@ -22,6 +22,8 @@ export class BattleEffects3D {
   private _scene:    THREE.Scene | null = null;
   private _camera:   THREE.OrthographicCamera | null = null;
   private _effects:  Effect[] = [];
+  private _pendingEffects: Effect[] = [];
+  private _isUpdating = false;
   private _W: number;
   private _H: number;
   private _enabled = false;
@@ -111,6 +113,15 @@ export class BattleEffects3D {
     this._scene?.add(obj);
   }
 
+  // ── 이펙트 등록 공통 처리 ──────────────────────────────────────
+  // update() 순회 중에 새 이펙트를 바로 _effects에 push하면,
+  // 같은 프레임의 filter 재할당 과정에서 유실될 수 있다.
+  // (=> 이펙트 로직은 사라졌는데 오브젝트만 scene에 남는 잔여물 문제)
+  private _registerEffect(effect: Effect): void {
+    if (this._isUpdating) this._pendingEffects.push(effect);
+    else this._effects.push(effect);
+  }
+
   // ── 공통 수명 보조: t(0~1)에서 자연스러운 감쇠 곡선 ────────────────
   //  - 다른 사람이 수정할 때 "왜 이렇게 꺼지지?"를 빠르게 파악할 수 있도록
   //    이펙트 감쇠 함수를 공통화해 둔다.
@@ -163,7 +174,7 @@ export class BattleEffects3D {
     const dur = isCrit ? 0.27 : 0.34;
     let elapsed = 0;
 
-    this._effects.push({
+    this._registerEffect({
       update: (dt) => {
         elapsed += dt;
         const t = Math.min(elapsed / dur, 1);
@@ -256,7 +267,7 @@ export class BattleEffects3D {
     let elapsed = 0;
     const maxLife = frags.reduce((m, f) => Math.max(m, f.life), 0.55);
 
-    this._effects.push({
+    this._registerEffect({
       update: (dt) => {
         elapsed += dt;
         let alive = false;
@@ -322,7 +333,7 @@ export class BattleEffects3D {
 
     let elapsed = 0;
     const DUR = 0.22;
-    this._effects.push({
+    this._registerEffect({
       update: (dt) => {
         elapsed += dt;
         const t = Math.min(elapsed / DUR, 1);
@@ -369,7 +380,7 @@ export class BattleEffects3D {
 
     let elapsed = 0;
     const DUR = isCrit ? 0.22 : 0.16;
-    this._effects.push({
+    this._registerEffect({
       update: (dt) => {
         elapsed += dt;
         const t = Math.min(elapsed / DUR, 1);
@@ -423,7 +434,7 @@ export class BattleEffects3D {
     }
 
     let elapsed = 0;
-    this._effects.push({
+    this._registerEffect({
       update: (dt) => {
         elapsed += dt;
         let alive = false;
@@ -497,7 +508,7 @@ export class BattleEffects3D {
     const dur = isCrit ? 0.40 : 0.32;
     let elapsed = 0;
 
-    this._effects.push({
+    this._registerEffect({
       update: (dt) => {
         elapsed += dt;
         let alive = false;
@@ -564,7 +575,7 @@ export class BattleEffects3D {
 
     let elapsed = 0;
     const DUR = isCrit ? 0.45 : 0.33;
-    this._effects.push({
+    this._registerEffect({
       update: (dt) => {
         elapsed += dt;
         const t = Math.min(elapsed / DUR, 1);
@@ -628,7 +639,7 @@ export class BattleEffects3D {
     let elapsed = 0;
     const DUR = 1.05;
 
-    this._effects.push({
+    this._registerEffect({
       update: (dt) => {
         elapsed += dt;
         const t = Math.min(elapsed / DUR, 1);
@@ -678,13 +689,30 @@ export class BattleEffects3D {
   // ════════════════════════════════════════════════════════════
   update(dt: number): void {
     if (!this._enabled || !this._renderer || !this._scene || !this._camera) return;
-    if (!this._effects.length) return;
-    this._effects = this._effects.filter(e => e.update(dt));
+    if (!this._effects.length) {
+      // 마지막 프레임 잔상을 지우기 위해 효과가 없을 때도 클리어
+      this._renderer.clear();
+      return;
+    }
+
+    this._isUpdating = true;
+    const next: Effect[] = [];
+    for (const effect of this._effects) {
+      if (effect.update(dt)) next.push(effect);
+    }
+    this._isUpdating = false;
+    if (this._pendingEffects.length) {
+      next.push(...this._pendingEffects);
+      this._pendingEffects.length = 0;
+    }
+    this._effects = next;
     this._renderer.render(this._scene, this._camera);
   }
 
   destroy(): void {
     this._effects = [];
+    this._pendingEffects = [];
+    this._isUpdating = false;
     this._scene?.clear();
     this._renderer?.domElement.remove();
     this._renderer?.dispose();
