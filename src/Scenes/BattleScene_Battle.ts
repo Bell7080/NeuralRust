@@ -97,6 +97,10 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
     aObj?.refreshGauge();
     if (eObj) this._flashDamage(eObj.shape);
 
+    if (this._effects3d && aObj && eObj) {
+      this._effects3d.spawnAllyAttack(aObj.cx, aObj.cy, eObj.cx, eObj.cy, isCrit);
+    }
+
     this._addLog(
       `${ally.name} → ${target.name}  ${dmg}${isCrit ? ' ★크리!★' : ''}`,
       '#c8a060'
@@ -134,6 +138,13 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
     const aObj = this._allyObjs[aIdx];
     if (aObj) { aObj.refreshHp(); aObj.refreshGauge(); this._flashDamage(aObj.shape); }
 
+    if (this._effects3d && aObj) {
+      const attackerObj = this._enemyObjs.find(o => o.enemy._uid === enemy._uid);
+      if (attackerObj) {
+        this._effects3d.spawnEnemyAttack(attackerObj.cx, attackerObj.cy, aObj.cx, aObj.cy, isCrit);
+      }
+    }
+
     this._addLog(
       `${enemy.name} → ${target.name}  ${dmg}${isCrit ? ' ★크리!★' : ''}`,
       '#c06040'
@@ -148,7 +159,11 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
   // ── 아군 사망 ────────────────────────────────────────────────
   protected _killAlly(ally: AllyInstance, killedBy: string): void {
     ally._dead = true;
-    this._allyObjs[this._allies.indexOf(ally)]?.destroyAll();
+    const dyingObj = this._allyObjs[this._allies.indexOf(ally)];
+    if (dyingObj && this._effects3d) {
+      this._effects3d.spawnDeathEffect(dyingObj.cx, dyingObj.cy);
+    }
+    dyingObj?.destroyAll();
     const day  = SaveManager.load()?.day ?? 1;
     const char = this._allChars.find(c => c.id === ally.id);
     if (char) {
