@@ -14,7 +14,7 @@ import { FontManager }      from '../Managers/FontManager';
 import { InputManager }     from '../Managers/InputManager';
 import { SaveManager }      from '../Managers/SaveManager';
 import { clearAllSceneDom } from '../utils/sceneCleanup';
-import { ENEMY_DATA, getEnemyScaledStats } from '../Data/Data_Enemies';
+import { ENEMY_DATA, getEnemyScaledStats, getEnemyAbilities } from '../Data/Data_Enemies';
 import { BattleSceneBattle }               from './BattleScene_Battle';
 import type { BattleInitData, EnemyInstance } from './BattleScene_Setup';
 import { BattleEffects3D }                 from '../Effects/BattleEffects3D';
@@ -77,7 +77,7 @@ export class BattleScene extends BattleSceneBattle {
         Boolean(c) && c!.status === 'alive'
       );
     this._combatParty = [];
-    this._enemies     = this._spawnEnemies(this._cogMax);
+    this._enemies     = this._spawnEnemies(this._cogMax, this._round);
 
     this._buildBackground(W, H);
     this._buildHUD(W, H);
@@ -165,13 +165,13 @@ export class BattleScene extends BattleSceneBattle {
   // ════════════════════════════════════════════════════════════
   //  적 생성
   // ════════════════════════════════════════════════════════════
-  private _spawnEnemies(cogMax: number): EnemyInstance[] {
-    if (this._battleType === 'raid') return this._spawnRaid(cogMax);
-    if (this._battleType === 'wave') return this._spawnWave(cogMax);
-    return this._spawnNormal(cogMax);
+  private _spawnEnemies(cogMax: number, round: number): EnemyInstance[] {
+    if (this._battleType === 'raid') return this._spawnRaid(cogMax, round);
+    if (this._battleType === 'wave') return this._spawnWave(cogMax, round);
+    return this._spawnNormal(cogMax, round);
   }
 
-  private _spawnNormal(cogMax: number): EnemyInstance[] {
+  private _spawnNormal(cogMax: number, round: number): EnemyInstance[] {
     const pool = ENEMY_DATA.filter(e =>
       e.cogMin <= cogMax && (e.cogMax === null || e.cogMax >= cogMax)
     );
@@ -181,22 +181,22 @@ export class BattleScene extends BattleSceneBattle {
     for (const e of pool) { r -= e.spawnWeight; if (r <= 0) { picked = e; break; } }
     const [minC, maxC] = picked.spawnCount;
     const count  = minC + Math.floor(Math.random() * (maxC - minC + 1));
-    const scaled = getEnemyScaledStats(picked.id, cogMax);
+    const scaled = getEnemyScaledStats(picked.id, cogMax, round);
     if (!scaled) return [];
     return this._buildEnemyArray(picked.id, picked.name, picked.behavior, scaled, count);
   }
 
-  private _spawnWave(cogMax: number): EnemyInstance[] {
+  private _spawnWave(cogMax: number, round: number): EnemyInstance[] {
     const pool = ENEMY_DATA.filter(e =>
       e.cogMin <= cogMax && (e.cogMax === null || e.cogMax >= cogMax)
     );
-    if (!pool.length) return this._spawnNormal(cogMax);
+    if (!pool.length) return this._spawnNormal(cogMax, round);
     const picked = pool.find(e => e.id === 'drowned')
       ?? pool.reduce((best, e) =>
           e.spawnCount[1] > best.spawnCount[1] ? e : best, pool[0]);
     const [minC, maxC] = picked.spawnCount;
     const count  = (minC + 1) + Math.floor(Math.random() * (maxC - minC + 3));
-    const scaled = getEnemyScaledStats(picked.id, cogMax);
+    const scaled = getEnemyScaledStats(picked.id, cogMax, round);
     if (!scaled) return [];
     const enemies = this._buildEnemyArray(
       picked.id, picked.name, picked.behavior, scaled, count
@@ -213,27 +213,31 @@ export class BattleScene extends BattleSceneBattle {
     return enemies;
   }
 
-  private _spawnRaid(cogMax: number): EnemyInstance[] {
+  private _spawnRaid(cogMax: number, round: number): EnemyInstance[] {
     const pool = ENEMY_DATA.filter(e =>
       e.cogMin <= cogMax && (e.cogMax === null || e.cogMax >= cogMax)
     );
     if (!pool.length) return [];
     const picked = pool.reduce((best, e) =>
       e.baseStats.hp > best.baseStats.hp ? e : best, pool[0]);
-    const scaled = getEnemyScaledStats(picked.id, cogMax);
+    const scaled = getEnemyScaledStats(picked.id, cogMax, round);
     if (!scaled) return [];
-    const M = 2.5;
+    const M       = 2.5;
+    const abils   = getEnemyAbilities(picked.id);
     const sprites = ['Enemy_001', 'Enemy_002'];
     return [{
       _uid: `e_raid_${Date.now()}`, id: picked.id,
       name: `[레이드] ${picked.name}`, behavior: picked.behavior,
-      _hp:     Math.round(scaled.hp      * M),
-      _maxHp:  Math.round(scaled.hp      * M),
-      attack:  Math.round(scaled.attack  * M),
-      agility: Math.round(scaled.agility * 1.2),
-      luck:    Math.round(scaled.luck    * 1.5),
+      _hp:      Math.round(scaled.hp      * M),
+      _maxHp:   Math.round(scaled.hp      * M),
+      attack:   Math.round(scaled.attack  * M),
+      agility:  Math.round(scaled.agility * 1.2),
+      luck:     Math.round(scaled.luck    * 1.5),
       _dead: false, _attackCount: 0,
       spriteKey: sprites[Math.floor(Math.random() * sprites.length)],
+      passive:   abils?.passive  ?? '',
+      action:    abils?.action   ?? '',
+      enhanced:  abils?.enhanced ?? '',
     }];
   }
 
@@ -242,6 +246,7 @@ export class BattleScene extends BattleSceneBattle {
     scaled: { hp: number; attack: number; agility: number; luck: number },
     count: number
   ): EnemyInstance[] {
+    const abils   = getEnemyAbilities(id);
     const sprites = ['Enemy_001', 'Enemy_002'];
     return Array.from({ length: count }, (_, i) => ({
       _uid: `e_${i}_${Date.now()}`, id, name, behavior,
@@ -249,6 +254,9 @@ export class BattleScene extends BattleSceneBattle {
       attack: scaled.attack, agility: scaled.agility, luck: scaled.luck,
       _dead: false, _attackCount: 0,
       spriteKey: sprites[Math.floor(Math.random() * sprites.length)],
+      passive:   abils?.passive  ?? '',
+      action:    abils?.action   ?? '',
+      enhanced:  abils?.enhanced ?? '',
     }));
   }
 }

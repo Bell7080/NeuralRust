@@ -52,7 +52,7 @@ export type JobDataMap = Record<JobId, JobDefinition>;
 export type StatKey = 'hp' | 'health' | 'attack' | 'agility' | 'luck';
 
 // ── 적 (이형) ─────────────────────────────────────────────────────
-export type EnemyBehavior = 'random' | 'target_weak' | 'wave';
+export type EnemyBehavior = 'random' | 'target_weak' | 'target_strong' | 'wave';
 
 export interface EnemyBaseStats {
   hp:      number;
@@ -72,19 +72,21 @@ export interface WaveBonus {
 }
 
 export interface EnemyDefinition {
-  id:              string;
-  name:            string;
-  cogMin:          number;
-  cogMax:          number | null;
-  baseStats:       EnemyBaseStats;
-  statScaling:     number;
-  behavior:        EnemyBehavior;
-  behaviorWeights: { attack: number; move: number; skill: number };
-  spawnCount:      [number, number];
-  spawnWeight:     number;
-  waveBonus?:      WaveBonus;
-  reward:          EnemyReward;
-  description:     string;
+  id:          string;
+  name:        string;
+  cogMin:      number;
+  cogMax:      number | null;
+  baseStats:   EnemyBaseStats;
+  statScaling: number;
+  behavior:    EnemyBehavior;
+  passive:     string;
+  action:      string;
+  enhanced:    string;
+  spawnCount:  [number, number];
+  spawnWeight: number;
+  waveBonus?:  WaveBonus;
+  reward:      EnemyReward;
+  description: string;
 }
 
 // ── 아이템 ────────────────────────────────────────────────────────
@@ -173,7 +175,7 @@ export interface OverclockDefinition {
 }
 
 // ── 능력 공통 ─────────────────────────────────────────────────────
-export type AbilityJob  = 'common' | 'fisher' | 'diver' | 'helmsman' | 'named' | 'ai';
+export type AbilityJob  = 'common' | 'fisher' | 'diver' | 'helmsman' | 'named' | 'ai' | 'enemy';
 export type TriggerType = 'attack_count' | 'on_hit' | 'hp_below' | 'kill';
 export type AbilityType = 'passive' | 'action' | 'enhanced' | 'finale';
 export type GaugeLevel  = 100 | 200 | 300;

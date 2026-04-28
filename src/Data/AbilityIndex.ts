@@ -24,16 +24,19 @@ import passivesCommon   from './Passives/Common';
 import passivesFisher   from './Passives/Fisher';
 import passivesDiver    from './Passives/Diver';
 import passivesHelmsman from './Passives/Helmsman';
+import passivesEnemy    from './Passives/Enemy';
 
 import actionsCommon    from './Actions/Common';
 import actionsFisher    from './Actions/Fisher';
 import actionsDiver     from './Actions/Diver';
 import actionsHelmsman  from './Actions/Helmsman';
+import actionsEnemy     from './Actions/Enemy';
 
 import enhancedCommon   from './Enhanced/Common';
 import enhancedFisher   from './Enhanced/Fisher';
 import enhancedDiver    from './Enhanced/Diver';
 import enhancedHelmsman from './Enhanced/Helmsman';
+import enhancedEnemy    from './Enhanced/Enemy';
 
 import finalesCommon    from './Finales/Common';
 import finalesFisher    from './Finales/Fisher';
@@ -45,9 +48,9 @@ import finalesNamed     from './Finales/Named';
 type AnyAbility = PassiveDefinition | ActionDefinition | EnhancedDefinition | FinaleDefinition;
 
 const _reg: Record<AbilityType, AnyAbility[]> = {
-  passive:  [...passivesCommon,  ...passivesFisher,  ...passivesDiver,  ...passivesHelmsman],
-  action:   [...actionsCommon,   ...actionsFisher,   ...actionsDiver,   ...actionsHelmsman],
-  enhanced: [...enhancedCommon,  ...enhancedFisher,  ...enhancedDiver,  ...enhancedHelmsman],
+  passive:  [...passivesCommon,  ...passivesFisher,  ...passivesDiver,  ...passivesHelmsman,  ...passivesEnemy],
+  action:   [...actionsCommon,   ...actionsFisher,   ...actionsDiver,   ...actionsHelmsman,   ...actionsEnemy],
+  enhanced: [...enhancedCommon,  ...enhancedFisher,  ...enhancedDiver,  ...enhancedHelmsman,  ...enhancedEnemy],
   finale:   [...finalesCommon,   ...finalesFisher,   ...finalesDiver,   ...finalesHelmsman, ...finalesNamed],
 };
 

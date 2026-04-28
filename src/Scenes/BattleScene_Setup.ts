@@ -34,6 +34,9 @@ export interface EnemyInstance {
   _dead:        boolean;
   _attackCount: number;
   spriteKey?:   string;
+  passive:      string;
+  action:       string;
+  enhanced:     string;
 }
 
 export type AllyInstance = Character & {
@@ -535,12 +538,15 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       target_strong: '강자 우선', defensive: '방어형',
     };
 
-    const bgUrl = this._bgKey
-      ? `Games/Assets/Sprites/${this._bgKey}.png`
-      : '';
-    const enemySrc = enemy.spriteKey
-      ? `Games/Assets/Sprites/${enemy.spriteKey}.png`
-      : '';
+    const bgUrl    = this._bgKey   ? `Games/Assets/Sprites/${this._bgKey}.png`      : '';
+    const enemySrc = enemy.spriteKey ? `Games/Assets/Sprites/${enemy.spriteKey}.png` : '';
+
+    const passiveName   = AbilityIndex.getName('passive',  enemy.passive);
+    const passiveDesc   = AbilityIndex.getDesc('passive',  enemy.passive);
+    const actionName    = AbilityIndex.getName('action',   enemy.action);
+    const actionDesc    = AbilityIndex.getDesc('action',   enemy.action);
+    const enhancedName  = AbilityIndex.getName('enhanced', enemy.enhanced);
+    const enhancedDesc  = AbilityIndex.getDesc('enhanced', enemy.enhanced);
 
     this._setupInfoEl.innerHTML = `
       <div class="bs-info-portrait-wrap bs-info-portrait-wrap--enemy">
@@ -562,6 +568,24 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
           <div class="mng-stat-row"><span class="mng-stat-key">공격</span><span class="mng-stat-val" style="color:#e08060">${enemy.attack}</span></div>
           <div class="mng-stat-row"><span class="mng-stat-key">민첩</span><span class="mng-stat-val" style="color:#80b8e0">${enemy.agility}</span></div>
           <div class="mng-stat-row"><span class="mng-stat-key">행운</span><span class="mng-stat-val" style="color:#c8a060">${enemy.luck}</span></div>
+        </div>
+        <div class="mng-detail-divider"></div>
+        <div class="bs-enemy-abilities">
+          <div class="bs-enemy-ability-row bs-enemy-ability--passive">
+            <span class="bs-enemy-ability-type">패시브</span>
+            <span class="bs-enemy-ability-name">${passiveName}</span>
+            <div class="bs-enemy-ability-desc">${passiveDesc}</div>
+          </div>
+          <div class="bs-enemy-ability-row bs-enemy-ability--action">
+            <span class="bs-enemy-ability-type">행동</span>
+            <span class="bs-enemy-ability-name">${actionName}</span>
+            <div class="bs-enemy-ability-desc">${actionDesc}</div>
+          </div>
+          <div class="bs-enemy-ability-row bs-enemy-ability--enhanced">
+            <span class="bs-enemy-ability-type">강화</span>
+            <span class="bs-enemy-ability-name">${enhancedName}</span>
+            <div class="bs-enemy-ability-desc">${enhancedDesc}</div>
+          </div>
         </div>
       </div>
     `;
