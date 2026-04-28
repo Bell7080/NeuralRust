@@ -72,16 +72,16 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
       const centerW    = W * 0.5;
       const cols  = Math.min(count, 4);
       const rows  = Math.ceil(count / cols);
-      const gapX  = centerW * 0.02;
-      const gapY  = areaH * 0.08;
+      const gapX  = centerW * 0.015;
+      const gapY  = areaH * 0.06;
       const rowH  = (areaH - gapY * (rows - 1)) / rows;
       const unitW = Math.min(
         (centerW - gapX * (cols - 1)) / cols,
-        rowH * 0.7,
+        rowH * 1.05,
       );
       const totalW = cols * unitW + (cols - 1) * gapX;
       const startX = centerLeft + centerW / 2 - totalW / 2 + unitW / 2;
-      const startY = areaY + rowH * 0.45;
+      const startY = areaY + rowH * 0.5;
       layout = this._enemies.map((_, i) => {
         const r = Math.floor(i / cols);
         const c = i % cols;
@@ -112,28 +112,23 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
   protected _makeEnemyUnit(
     enemy: EnemyInstance, cx: number, cy: number, size: number
   ): EnemyUnitObjs {
-    const half = size * 0.38;
+    const half = size * 0.46;
 
-    // 외곽 테두리 (flash 효과 대상)
+    // 빈 graphics — flash 효과 호환용 (테두리 없음)
     const shape = this.add.graphics();
-    shape.lineStyle(2, 0xa03018, 0.9);
-    shape.strokeRect(cx - half, cy - half, half * 2, half * 2);
 
-    // 적 스프라이트 이미지
+    // 적 스프라이트 이미지 (테두리/배경 없이 투명 PNG 그대로)
     let spriteImg: Phaser.GameObjects.Image | null = null;
     const sk = enemy.spriteKey ?? '';
     if (sk && this.textures.exists(sk)) {
       const frame = this.textures.get(sk).get();
       const imgW  = frame.realWidth  || frame.width  || half * 2;
       const imgH  = frame.realHeight || frame.height || half * 2;
-      const scale = Math.max((half * 2) / imgW, (half * 2) / imgH);
-      const maskGfx = this.make.graphics({ x: 0, y: 0 });
-      maskGfx.fillStyle(0xffffff);
-      maskGfx.fillRect(cx - half, cy - half, half * 2, half * 2);
+      // contain: 박스 안에 비율 유지하며 들어가도록
+      const scale = Math.min((half * 2) / imgW, (half * 2) / imgH);
       spriteImg = this.add.image(cx, cy, sk)
         .setDisplaySize(imgW * scale, imgH * scale)
-        .setDepth(1)
-        .setMask(maskGfx.createGeometryMask());
+        .setDepth(1);
     }
 
     const nameTxt = this.add.text(cx, cy - half - Math.round(size * 0.04), enemy.name, {

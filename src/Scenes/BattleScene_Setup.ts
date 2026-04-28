@@ -115,6 +115,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
   protected _combatParty: string[]    = [];
   protected _sceneHits:   Phaser.GameObjects.Rectangle[] = [];
   protected _effects3d:   BattleEffects3D | null = null;
+  protected _bgKey:       string  = '';
 
   // ── DOM refs ─────────────────────────────────────────────────
   protected _setupEl!:     HTMLDivElement;
@@ -534,9 +535,18 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       target_strong: '강자 우선', defensive: '방어형',
     };
 
+    const bgUrl = this._bgKey
+      ? `Games/Assets/Sprites/${this._bgKey}.png`
+      : '';
+    const enemySrc = enemy.spriteKey
+      ? `Games/Assets/Sprites/${enemy.spriteKey}.png`
+      : '';
+
     this._setupInfoEl.innerHTML = `
       <div class="bs-info-portrait-wrap bs-info-portrait-wrap--enemy">
-        <div class="bs-info-portrait-fallback">적</div>
+        ${bgUrl ? `<div class="bs-info-portrait-enemy-bg" style="background-image:url('${bgUrl}')"></div>` : ''}
+        <div class="bs-info-portrait-enemy-bg-shade"></div>
+        ${enemySrc ? `<img class="bs-info-portrait-enemy-img" src="${enemySrc}" alt="${enemy.name}"/>` : '<div class="bs-info-portrait-fallback">적</div>'}
         <div class="bs-info-portrait-overlay">
           <div class="mng-detail-name" style="color:#e08070">${enemy.name}</div>
           <div class="mng-detail-job" style="color:#a86850">${BL[enemy.behavior] ?? enemy.behavior}</div>

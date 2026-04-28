@@ -110,9 +110,27 @@ export class BattleScene extends BattleSceneBattle {
   private _buildBackground(W: number, H: number): void {
     const idx = Math.floor(Math.random() * 6) + 1;
     const key = `BattleBackground_${String(idx).padStart(3, '0')}`;
+    this._bgKey = key;
     this.add.image(W / 2, H / 2, key)
       .setDisplaySize(W, H)
       .setOrigin(0.5);
+    // 전체 어둠 오버레이 (톤다운)
+    this.add.rectangle(0, 0, W, H, 0x000000, 0.35).setOrigin(0);
+    // vignette: 가장자리 어둠 4면 그라디언트
+    const vg = this.add.graphics();
+    const edgeV = H * 0.30, edgeH = W * 0.22;
+    // top
+    vg.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.85, 0.85, 0, 0);
+    vg.fillRect(0, 0, W, edgeV);
+    // bottom
+    vg.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.85, 0.85);
+    vg.fillRect(0, H - edgeV, W, edgeV);
+    // left
+    vg.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.7, 0, 0.7, 0);
+    vg.fillRect(0, 0, edgeH, H);
+    // right
+    vg.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0.7, 0, 0.7);
+    vg.fillRect(W - edgeH, 0, edgeH, H);
   }
 
   private _buildHUD(W: number, H: number): void {
