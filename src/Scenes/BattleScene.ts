@@ -14,7 +14,8 @@ import { FontManager }      from '../Managers/FontManager';
 import { InputManager }     from '../Managers/InputManager';
 import { SaveManager }      from '../Managers/SaveManager';
 import { clearAllSceneDom } from '../utils/sceneCleanup';
-import { ENEMY_DATA, getEnemyScaledStats, getEnemyAbilities } from '../Data/Data_Enemies';
+import { ENEMY_DATA, getEnemyScaledStats } from '../Data/Data_Enemies';
+import { AbilityIndex }                    from '../Data/AbilityIndex';
 import { BattleSceneBattle }               from './BattleScene_Battle';
 import type { BattleInitData, EnemyInstance } from './BattleScene_Setup';
 import { BattleEffects3D }                 from '../Effects/BattleEffects3D';
@@ -183,7 +184,7 @@ export class BattleScene extends BattleSceneBattle {
     const count  = minC + Math.floor(Math.random() * (maxC - minC + 1));
     const scaled = getEnemyScaledStats(picked.id, cogMax, round);
     if (!scaled) return [];
-    return this._buildEnemyArray(picked.id, picked.name, picked.behavior, scaled, count);
+    return this._buildEnemyArray(picked, scaled, count, cogMax);
   }
 
   private _spawnWave(cogMax: number, round: number): EnemyInstance[] {
@@ -198,9 +199,7 @@ export class BattleScene extends BattleSceneBattle {
     const count  = (minC + 1) + Math.floor(Math.random() * (maxC - minC + 3));
     const scaled = getEnemyScaledStats(picked.id, cogMax, round);
     if (!scaled) return [];
-    const enemies = this._buildEnemyArray(
-      picked.id, picked.name, picked.behavior, scaled, count
-    );
+    const enemies = this._buildEnemyArray(picked, scaled, count, cogMax);
     if (picked.waveBonus) {
       const { attackBonus, hpBonus } = picked.waveBonus;
       const bonus = enemies.length - 1;
@@ -223,8 +222,8 @@ export class BattleScene extends BattleSceneBattle {
     const scaled = getEnemyScaledStats(picked.id, cogMax, round);
     if (!scaled) return [];
     const M       = 2.5;
-    const abils   = getEnemyAbilities(picked.id);
     const sprites = ['Enemy_001', 'Enemy_002'];
+    // 레이드는 단일 보스 — 변동 없이 default 능력
     return [{
       _uid: `e_raid_${Date.now()}`, id: picked.id,
       name: `[레이드] ${picked.name}`, behavior: picked.behavior,
@@ -235,28 +234,46 @@ export class BattleScene extends BattleSceneBattle {
       luck:     Math.round(scaled.luck    * 1.5),
       _dead: false, _attackCount: 0,
       spriteKey: sprites[Math.floor(Math.random() * sprites.length)],
-      passive:   abils?.passive  ?? '',
-      action:    abils?.action   ?? '',
-      enhanced:  abils?.enhanced ?? '',
+      passive:   picked.passive,
+      action:    picked.action,
+      enhanced:  picked.enhanced,
     }];
   }
 
+  // 개체별 ±15% 스탯 변동 + 능력 50% 확률 풀에서 랜덤 선택
   private _buildEnemyArray(
-    id: string, name: string, behavior: string,
+    def: typeof ENEMY_DATA[number],
     scaled: { hp: number; attack: number; agility: number; luck: number },
-    count: number
+    count: number,
+    cogLevel: number,
   ): EnemyInstance[] {
-    const abils   = getEnemyAbilities(id);
     const sprites = ['Enemy_001', 'Enemy_002'];
-    return Array.from({ length: count }, (_, i) => ({
-      _uid: `e_${i}_${Date.now()}`, id, name, behavior,
-      _hp: scaled.hp, _maxHp: scaled.hp,
-      attack: scaled.attack, agility: scaled.agility, luck: scaled.luck,
-      _dead: false, _attackCount: 0,
-      spriteKey: sprites[Math.floor(Math.random() * sprites.length)],
-      passive:   abils?.passive  ?? '',
-      action:    abils?.action   ?? '',
-      enhanced:  abils?.enhanced ?? '',
-    }));
+    const variance = () => 0.85 + Math.random() * 0.30;
+    const pickAbility = (
+      type: 'passive' | 'action' | 'enhanced',
+      defaultId: string,
+    ): string => {
+      if (Math.random() < 0.5) return defaultId;
+      const pool = AbilityIndex.getPool(type, 'enemy', cogLevel);
+      if (!pool.length) return defaultId;
+      return pool[Math.floor(Math.random() * pool.length)];
+    };
+
+    return Array.from({ length: count }, (_, i) => {
+      const hp = Math.max(1, Math.round(scaled.hp * variance()));
+      return {
+        _uid: `e_${i}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+        id: def.id, name: def.name, behavior: def.behavior,
+        _hp: hp, _maxHp: hp,
+        attack:  Math.max(1, Math.round(scaled.attack  * variance())),
+        agility: Math.max(1, Math.round(scaled.agility * variance())),
+        luck:    Math.max(0, Math.round(scaled.luck    * variance())),
+        _dead: false, _attackCount: 0,
+        spriteKey: sprites[Math.floor(Math.random() * sprites.length)],
+        passive:   pickAbility('passive',  def.passive),
+        action:    pickAbility('action',   def.action),
+        enhanced:  pickAbility('enhanced', def.enhanced),
+      };
+    });
   }
 }

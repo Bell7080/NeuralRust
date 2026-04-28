@@ -528,31 +528,65 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
   protected _showEnemyInfo(enemy: EnemyInstance): void {
     if (!this._setupInfoEl) return;
     this._selectedEnemy = enemy;
-    this._selectedChar = null;
+    this._selectedChar  = null;
     this._cardEls.forEach(c => c.el.classList.remove('info-selected'));
 
-    const hpPct = enemy._maxHp > 0 ? enemy._hp / enemy._maxHp : 0;
-    const hpCol = hpPct > 0.6 ? '#a03018' : hpPct > 0.3 ? '#904020' : '#601010';
+    const hpPct  = enemy._maxHp > 0 ? enemy._hp / enemy._maxHp : 0;
+    const hpCol  = hpPct > 0.6 ? '#8a2010' : hpPct > 0.3 ? '#804018' : '#501010';
     const BL: Record<string, string> = {
       random: '무작위', target_weak: '약체 우선', wave: '파상 공격',
       target_strong: '강자 우선', defensive: '방어형',
     };
+    const SC: Record<string, string> = {
+      hp: '#ff88bb', attack: '#ff3333', agility: '#55ccff', luck: '#ddcc44',
+    };
+    const SL: Record<string, string> = {
+      hp: '체력', attack: '공격', agility: '민첩', luck: '행운',
+    };
+    const AL: Record<string, string> = {
+      passive: '패시브', action: '행동', enhanced: '강화',
+    };
 
-    const bgUrl    = this._bgKey   ? `Games/Assets/Sprites/${this._bgKey}.png`      : '';
-    const enemySrc = enemy.spriteKey ? `Games/Assets/Sprites/${enemy.spriteKey}.png` : '';
+    const bgUrl    = this._bgKey      ? `Games/Assets/Sprites/${this._bgKey}.png`        : '';
+    const enemySrc = enemy.spriteKey  ? `Games/Assets/Sprites/${enemy.spriteKey}.png`    : '';
 
-    const passiveName   = AbilityIndex.getName('passive',  enemy.passive);
-    const passiveDesc   = AbilityIndex.getDesc('passive',  enemy.passive);
-    const actionName    = AbilityIndex.getName('action',   enemy.action);
-    const actionDesc    = AbilityIndex.getDesc('action',   enemy.action);
-    const enhancedName  = AbilityIndex.getName('enhanced', enemy.enhanced);
-    const enhancedDesc  = AbilityIndex.getDesc('enhanced', enemy.enhanced);
+    // 스탯 행 (HP 포함)
+    const statEntries: [string, number][] = [
+      ['hp',      enemy._maxHp],
+      ['attack',  enemy.attack],
+      ['agility', enemy.agility],
+      ['luck',    enemy.luck],
+    ];
+    const statRows = statEntries.map(([k, v]) =>
+      `<div class="mng-stat-row" data-stat-key="${k}" data-stat-eff="${v}">
+        <span class="mng-stat-key">${SL[k] ?? k}</span>
+        <span class="mng-stat-val" style="color:${SC[k] ?? '#c8bfb0'}">${v}</span>
+      </div>`
+    ).join('');
+
+    // 능력 행 (아군 동일 구조)
+    const abilEntries: [string, string][] = [
+      ['passive',  enemy.passive],
+      ['action',   enemy.action],
+      ['enhanced', enemy.enhanced],
+    ];
+    const abilRows = abilEntries.map(([type, id]) => {
+      const nm = id ? (AbilityIndex.getName(type as 'passive'|'action'|'enhanced', id) || id) : '—';
+      const ds = id ? (AbilityIndex.getDesc(type as 'passive'|'action'|'enhanced', id) || '') : '';
+      return `<div class="mng-ab-row" data-ab-type="${type}" data-ab-id="${id}">
+        <span class="mng-ab-type">${AL[type] ?? type}</span>
+        <span class="mng-ab-name">${nm}</span>
+        ${ds ? `<span class="mng-ab-desc">${ds}</span>` : ''}
+      </div>`;
+    }).join('');
 
     this._setupInfoEl.innerHTML = `
       <div class="bs-info-portrait-wrap bs-info-portrait-wrap--enemy">
         ${bgUrl ? `<div class="bs-info-portrait-enemy-bg" style="background-image:url('${bgUrl}')"></div>` : ''}
         <div class="bs-info-portrait-enemy-bg-shade"></div>
-        ${enemySrc ? `<img class="bs-info-portrait-enemy-img" src="${enemySrc}" alt="${enemy.name}"/>` : '<div class="bs-info-portrait-fallback">적</div>'}
+        ${enemySrc
+          ? `<img class="bs-info-portrait-enemy-img" src="${enemySrc}" alt="${enemy.name}"/>`
+          : `<div class="bs-info-portrait-fallback">적</div>`}
         <div class="bs-info-portrait-overlay">
           <div class="mng-detail-name" style="color:#e08070">${enemy.name}</div>
           <div class="mng-detail-job" style="color:#a86850">${BL[enemy.behavior] ?? enemy.behavior}</div>
@@ -560,35 +594,59 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       </div>
       <div class="mng-right-detail bs-mng-detail">
         <div class="mng-detail-hprow">
-          <div class="mng-detail-hpbar"><div class="mng-detail-hpfill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div></div>
+          <div class="mng-detail-hpbar">
+            <div class="mng-detail-hpfill" style="width:${Math.round(hpPct*100)}%;background:${hpCol}"></div>
+          </div>
           <span class="mng-detail-hptxt">HP ${enemy._hp} / ${enemy._maxHp}</span>
         </div>
         <div class="mng-detail-divider"></div>
-        <div class="mng-detail-stats">
-          <div class="mng-stat-row"><span class="mng-stat-key">공격</span><span class="mng-stat-val" style="color:#e08060">${enemy.attack}</span></div>
-          <div class="mng-stat-row"><span class="mng-stat-key">민첩</span><span class="mng-stat-val" style="color:#80b8e0">${enemy.agility}</span></div>
-          <div class="mng-stat-row"><span class="mng-stat-key">행운</span><span class="mng-stat-val" style="color:#c8a060">${enemy.luck}</span></div>
-        </div>
+        <div class="mng-detail-stats">${statRows}</div>
         <div class="mng-detail-divider"></div>
-        <div class="bs-enemy-abilities">
-          <div class="bs-enemy-ability-row bs-enemy-ability--passive">
-            <span class="bs-enemy-ability-type">패시브</span>
-            <span class="bs-enemy-ability-name">${passiveName}</span>
-            <div class="bs-enemy-ability-desc">${passiveDesc}</div>
-          </div>
-          <div class="bs-enemy-ability-row bs-enemy-ability--action">
-            <span class="bs-enemy-ability-type">행동</span>
-            <span class="bs-enemy-ability-name">${actionName}</span>
-            <div class="bs-enemy-ability-desc">${actionDesc}</div>
-          </div>
-          <div class="bs-enemy-ability-row bs-enemy-ability--enhanced">
-            <span class="bs-enemy-ability-type">강화</span>
-            <span class="bs-enemy-ability-name">${enhancedName}</span>
-            <div class="bs-enemy-ability-desc">${enhancedDesc}</div>
-          </div>
-        </div>
+        <div class="mng-detail-abilities">${abilRows}</div>
       </div>
     `;
+
+    this._bindEnemyInfoTooltips(enemy);
+  }
+
+  // ── 적 정보 패널 툴팁 바인딩 ─────────────────────────────────
+  private _bindEnemyInfoTooltips(enemy: EnemyInstance): void {
+    const root = this._setupInfoEl;
+    if (!root) return;
+
+    root.querySelectorAll<HTMLElement>('.mng-stat-row[data-stat-key]').forEach(row => {
+      const key  = row.dataset.statKey!;
+      const effV = Number(row.dataset.statEff ?? 0);
+      const TIPS: Record<string, string> = {
+        hp:      `체력 ${effV}\n전투 시작 시 최대 HP로 설정됩니다.`,
+        attack:  `공격 ${effV}\n기본 공격 피해량의 기준이 됩니다.`,
+        agility: `민첩 ${effV}\n공격 간격을 결정합니다. 높을수록 빠릅니다.`,
+        luck:    `행운 ${effV}\n치명타 발생 확률에 영향을 줍니다.`,
+      };
+      const tip = TIPS[key];
+      if (!tip) return;
+      row.style.cursor = 'help';
+      row.addEventListener('mouseenter', e => this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, tip));
+      row.addEventListener('mousemove',  e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
+      row.addEventListener('mouseleave', () => this._hideTip());
+    });
+
+    root.querySelectorAll<HTMLElement>('.mng-ab-row[data-ab-id]').forEach(row => {
+      const type = row.dataset.abType as 'passive'|'action'|'enhanced';
+      const id   = row.dataset.abId!;
+      if (!id) return;
+      const desc = AbilityIndex.getDesc(type, id);
+      if (!desc) return;
+      row.style.cursor = 'help';
+      row.addEventListener('mouseenter', e => {
+        const nm = AbilityIndex.getName(type, id) || id;
+        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, `${nm}\n${desc}`);
+      });
+      row.addEventListener('mousemove',  e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
+      row.addEventListener('mouseleave', () => this._hideTip());
+    });
+
+    void enemy;
   }
 
   // ════════════════════════════════════════════════════════════
