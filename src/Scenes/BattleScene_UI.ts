@@ -47,9 +47,7 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
     const count = this._enemies.length;
     if (!count) return;
 
-    let layout: Array<{ cx: number; cy: number; size: number; depthLane: 0 | 1 | 2 }>;
-
-    const lanes: Array<0 | 1 | 2> = [0, 1, 1, 2, 2, 0, 1, 2];
+    let layout: { cx: number; cy: number; size: number }[];
 
     if (mode === 'battle') {
       // 전투: 화면 가용 폭의 96% 안에 한 줄로 균등 배치
@@ -63,47 +61,41 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
       const totalW = count * unitW + (count - 1) * gap;
       const startX = startEdge + (availW - totalW) / 2 + unitW / 2;
       const cy     = areaY + areaH * 0.45;
-      layout = this._enemies.map((_, i) => {
-        const lane = lanes[i % lanes.length];
-        const laneYOffset = lane === 0 ? -areaH * 0.03 : lane === 1 ? areaH * 0.02 : areaH * 0.08;
-        return {
-          cx:   startX + i * (unitW + gap),
-          cy: cy + laneYOffset,
-          size: unitW,
-          depthLane: lane,
-        };
-      });
+      layout = this._enemies.map((_, i) => ({
+        cx:   startX + i * (unitW + gap),
+        cy,
+        size: unitW,
+      }));
     } else {
       // 편성: 중앙 52% 폭에 4열 그리드 (5명 이상이면 자동 다음 줄)
-      const centerLeft = W * 0.26;
-      const centerW    = W * 0.48;
-      const laneUnitW  = Math.min(centerW * 0.18, areaH * 0.62);
-      const laneGapX   = Math.min(centerW * 0.06, W * 0.03);
-      const laneY = [
-        areaY + areaH * 0.29,
-        areaY + areaH * 0.46,
-        areaY + areaH * 0.62,
-      ] as const;
-      const laneSizeMul = [1.0, 0.94, 0.88] as const;
-
+      const centerLeft = W * 0.25;
+      const centerW    = W * 0.5;
+      const cols  = Math.min(count, 4);
+      const rows  = Math.ceil(count / cols);
+      const gapX  = centerW * 0.015;
+      const gapY  = areaH * 0.06;
+      const rowH  = (areaH - gapY * (rows - 1)) / rows;
+      const unitW = Math.min(
+        (centerW - gapX * (cols - 1)) / cols,
+        rowH * 1.05,
+      );
+      const totalW = cols * unitW + (cols - 1) * gapX;
+      const startX = centerLeft + centerW / 2 - totalW / 2 + unitW / 2;
+      const startY = areaY + rowH * 0.5;
       layout = this._enemies.map((_, i) => {
-        const lane = lanes[i % lanes.length];
-        const slot = Math.floor(i / 3);
-        const cxBase = centerLeft + centerW / 2 + (slot - 0.5) * (laneUnitW + laneGapX);
-        const cxJitter = (lane === 1 ? -1 : lane === 2 ? 1 : 0) * laneGapX * 0.35;
-        const cx = Phaser.Math.Clamp(cxBase + cxJitter, centerLeft + laneUnitW * 0.5, centerLeft + centerW - laneUnitW * 0.5);
+        const r = Math.floor(i / cols);
+        const c = i % cols;
         return {
-          cx,
-          cy: laneY[lane],
-          size: laneUnitW * laneSizeMul[lane],
-          depthLane: lane,
+          cx:   startX + c * (unitW + gapX),
+          cy:   startY + r * (rowH + gapY),
+          size: unitW,
         };
       });
     }
 
     this._enemies.forEach((enemy, i) => {
-      const { cx, cy, size, depthLane } = layout[i];
-      this._enemyObjs.push(this._makeEnemyUnit(enemy, cx, cy, size, depthLane));
+      const { cx, cy, size } = layout[i];
+      this._enemyObjs.push(this._makeEnemyUnit(enemy, cx, cy, size));
     });
 
     this.add.graphics().lineStyle(1, 0x1e1008, 0.6)
@@ -118,10 +110,9 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
   }
 
   protected _makeEnemyUnit(
-    enemy: EnemyInstance, cx: number, cy: number, size: number, depthLane: 0 | 1 | 2 = 1
+    enemy: EnemyInstance, cx: number, cy: number, size: number
   ): EnemyUnitObjs {
     const half = size * 0.46;
-    const laneShadeAlpha = depthLane === 0 ? 0 : depthLane === 1 ? 0.14 : 0.26;
 
     // 빈 graphics — flash 효과 호환용 (테두리 없음)
     const shape = this.add.graphics();
@@ -138,11 +129,7 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
       spriteImg = this.add.image(cx, cy, sk)
         .setDisplaySize(imgW * scale, imgH * scale)
         .setDepth(1);
-      if (depthLane > 0) spriteImg.setTintFill(0x1a2233).setTint(0xffffff);
     }
-
-    const laneShade = this.add.rectangle(cx, cy, half * 2.08, half * 2.08, 0x000000, laneShadeAlpha)
-      .setDepth(1.5);
 
     const nameTxt = this.add.text(cx, cy - half - Math.round(size * 0.04), enemy.name, {
       fontSize: this._fs(11), color: '#c8a060', fontFamily: FontManager.MONO,
@@ -180,7 +167,7 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
     this._sceneHits.push(hit);
 
     const destroyAll = () => {
-      ([shape, spriteImg, laneShade, nameTxt, hpBg, hpFg, hpNumTxt, hit] as Array<{ active?: boolean; destroy(): void } | null>)
+      ([shape, spriteImg, nameTxt, hpBg, hpFg, hpNumTxt, hit] as Array<{ active?: boolean; destroy(): void } | null>)
         .forEach(o => { try { if (o && o.active !== false) o.destroy(); } catch (_) {} });
       const idx = this._sceneHits.indexOf(hit);
       if (idx >= 0) this._sceneHits.splice(idx, 1);
