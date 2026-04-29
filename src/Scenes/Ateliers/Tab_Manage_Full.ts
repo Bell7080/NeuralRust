@@ -243,6 +243,20 @@ export class Tab_Manage_Full {
   // ── 툴팁 ────────────────────────────────────────────────────────
   private _tip: HTMLElement | null = null;
 
+  
+  // 설명창 가독성 향상: 제목/수치/본문을 분리해 색상과 크기를 다르게 렌더링한다.
+  private _formatTooltipHtml(text: string): string {
+    const lines = text.split('\\n').map(v => v.trim()).filter(Boolean);
+    const title = lines[0] ?? '';
+    const body  = lines.slice(1).join('<br>');
+    const hasNumeric = /\d/.test(text);
+    return [
+      title ? `<div class="mng-tooltip__title">${title}</div>` : '',
+      hasNumeric ? `<div class="mng-tooltip__meta">VALUE LINKED</div>` : '',
+      body ? `<div class="mng-tooltip__desc">${body}</div>` : '',
+    ].join('');
+  }
+
   private _showTip(x: number, y: number, text: string): void {
     if (!this._tip) {
       const el = document.createElement('div');
@@ -250,7 +264,7 @@ export class Tab_Manage_Full {
       document.getElementById('game-container')?.appendChild(el) ?? document.body.appendChild(el);
       this._tip = el;
     }
-    this._tip.innerHTML = text.replace(/\n/g, '<br>');
+    this._tip.innerHTML = this._formatTooltipHtml(text);
     this._tip.style.display = 'block';
     this._moveTip(x, y);
   }
