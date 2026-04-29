@@ -135,6 +135,11 @@ export class DiveScene extends Phaser.Scene {
     this._battleParty = data.battleParty?.length
       ? data.battleParty
       : ((CharacterManager as unknown as { loadParty?: () => string[] }).loadParty?.() ?? []);
+    // 탐사 중 전투 불능/제거된 파티원 id를 정리하여 실제 생존 인원만 유지한다.
+    const allChars = CharacterManager.loadAll() ?? [];
+    this._battleParty = this._battleParty.filter(id =>
+      allChars.some(char => char.id === id && char.status === 'alive')
+    );
 
     this._inventory = Array.isArray(data.inventory) && data.inventory.length === INV_MAX
       ? data.inventory
@@ -172,6 +177,12 @@ export class DiveScene extends Phaser.Scene {
       deepCoin: this._deepCoin, log: this._log, battleParty: this._battleParty,
       inventory: this._inventory, submarine: this._submarine, shopItems: this._shopItems,
     });
+
+    // 생존 탐사 인원이 없으면 라운드 진행이 불가능하므로 탐사를 자동 종료한다.
+    if (this._battleParty.length === 0) {
+      this.time.delayedCall(300, () => this._exitExpedition());
+      return;
+    }
 
     if (this._round > this._maxRound) {
       this.time.delayedCall(300, () => this._exitExpedition());

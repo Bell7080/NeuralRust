@@ -119,7 +119,9 @@ export const FontManager = {
   adjustedSize(basePx: number, sceneScale?: ScaleLike): string {
     const raw   = parseInt(scaledFontSize(basePx, sceneScale), 10);
     const scale = this.SCALE[this._activePreset] ?? 1.00;
-    return `${Math.round(raw * scale)}px`;
+    // 1920x1080 기준 가독성 확보를 위해 Phaser 텍스트의 하한선을 12px로 고정한다.
+    const scaled = Math.round(raw * scale);
+    return `${Math.max(12, scaled)}px`;
   },
 
   _loadFont(font: FontEntry): Promise<void> {

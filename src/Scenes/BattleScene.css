@@ -75,7 +75,7 @@
 
 .battle-slot__cog {
   font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:    clamp(10px, 1.04vw, 16px);
+  font-size:    clamp(12px, 1.04vw, 16px);
   font-weight:  700;
   white-space:  nowrap;
 }
@@ -83,7 +83,7 @@
 /* ── 파티 슬롯 — 피날레 버튼 ───────────────────────────────── */
 .battle-slot__finale {
   font-family:    var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:      clamp(10px, 0.98vw, 14px);
+  font-size:      clamp(12px, 0.98vw, 14px);
   letter-spacing: 0.05em;
   padding:        2px 6px;
   border:         1px solid var(--color-rust, #b05030);
@@ -148,7 +148,7 @@
 
 .battle-log__entry {
   font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:    clamp(10px, 0.98vw, 14px);
+  font-size:    clamp(12px, 0.98vw, 14px);
   color:        rgba(200, 200, 176, 0.65);
   line-height:  1.4;
   animation:    logEntry 0.2s ease;
@@ -206,7 +206,7 @@
 
 .battle-setup__sub {
   font-family:  var(--font-mono, monospace);
-  font-size:    clamp(10px, 0.91vw, 14px);
+  font-size:    clamp(12px, 0.91vw, 14px);
   color:        #2a1508;
   text-align:   center;
   margin-bottom: 1.2vh;
@@ -216,7 +216,7 @@
 .battle-setup__grid {
   display:               grid;
   grid-template-columns: repeat(3, 1fr);
-  gap:                   clamp(3px, 0.4vh, 6px);
+  gap:                   clamp(12px, 0.4vh, 12px);
   padding:               0 2%;
 }
 
@@ -290,7 +290,7 @@
 
 .battle-setup__card-name {
   font-family:  var(--font-display, monospace);
-  font-size:    clamp(10px, 1.04vw, 15px);
+  font-size:    clamp(12px, 1.04vw, 15px);
   color:        #f0e0c0;
   word-break:   keep-all;
   line-height:  1.15;
@@ -300,13 +300,13 @@
 
 .battle-setup__card-job {
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(8px, 0.85vw, 12px);
+  font-size:   clamp(12px, 0.85vw, 12px);
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
 
 .battle-setup__card-cog {
   font-family:  var(--font-mono, monospace);
-  font-size:    clamp(8px, 0.85vw, 12px);
+  font-size:    clamp(12px, 0.85vw, 12px);
   font-weight:  700;
   text-shadow:  0 1px 2px rgba(0,0,0,0.9);
 }
@@ -322,7 +322,7 @@
 
 .battle-setup__card-hptxt {
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(6px, 0.72vw, 10px);
+  font-size:   clamp(12px, 0.72vw, 12px);
   color:       #c8a070;
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
@@ -380,7 +380,7 @@
 
 .battle-setup__go-sub {
   font-family:  var(--font-mono, monospace);
-  font-size:    clamp(10px, 0.98vw, 14px);
+  font-size:    clamp(12px, 0.98vw, 14px);
   color:        #3a2010;
   text-align:   center;
 }
@@ -401,7 +401,7 @@
 
 .battle-setup__slots-label {
   font-family:    var(--font-mono, monospace);
-  font-size:      clamp(10px, 0.91vw, 13px);
+  font-size:      clamp(12px, 0.91vw, 13px);
   color:          #2a1508;
   letter-spacing: 0.1em;
   border-top:     1px solid rgba(30, 16, 8, 0.5);
@@ -412,7 +412,7 @@
 
 .battle-setup__slots {
   display:    flex;
-  gap:        clamp(4px, 0.65vw, 10px);
+  gap:        clamp(12px, 0.65vw, 12px);
   flex-wrap:  wrap;
   justify-content: center;
 }
@@ -453,7 +453,7 @@
   top:         3%;
   left:        5%;
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(8px, 0.78vw, 12px);
+  font-size:   clamp(12px, 0.78vw, 12px);
   color:       #4a2a10;
   z-index:     4;
   text-shadow: 0 0 3px rgba(0,0,0,0.9);
@@ -481,7 +481,7 @@
 }
 .battle-setup__slot-name {
   font-family:  var(--font-display, monospace);
-  font-size:    clamp(9px, 0.91vw, 13px);
+  font-size:    clamp(12px, 0.91vw, 13px);
   color:        #f0e0c0;
   word-break:   keep-all;
   line-height:  1.15;
@@ -490,12 +490,12 @@
 }
 .battle-setup__slot-job {
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(7px, 0.72vw, 11px);
+  font-size:   clamp(12px, 0.72vw, 12px);
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
 .battle-setup__slot-cog {
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(7px, 0.72vw, 11px);
+  font-size:   clamp(12px, 0.72vw, 12px);
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
@@ -508,7 +508,7 @@
 .battle-setup__slot-hp-fill { height: 100%; transition: width 0.1s; border-radius: 1px; }
 .battle-setup__slot-hptxt {
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(6px, 0.65vw, 9px);
+  font-size:   clamp(12px, 0.65vw, 12px);
   color:       #c8a070;
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
@@ -555,7 +555,7 @@
   align-items:     center;
   justify-content: center;
   font-family:     var(--font-mono, monospace);
-  font-size:       clamp(10px, 1.04vw, 14px);
+  font-size:       clamp(12px, 1.04vw, 14px);
   color:           #2a1508;
   text-align:      center;
   white-space:     pre-line;
@@ -685,7 +685,7 @@
 .bs-info-hpfill { height: 100%; }
 .bs-info-hptxt {
   font-family:   var(--font-mono, monospace);
-  font-size:     clamp(10px, 1.04vw, 14px);
+  font-size:     clamp(12px, 1.04vw, 14px);
   color:         #c8a070;
   text-shadow:   0 1px 2px rgba(0,0,0,0.9);
 }
@@ -712,12 +712,12 @@
 .bs-info-stat-key {
   flex:          1;
   font-family:   var(--font-mono, monospace);
-  font-size:     clamp(9px, 1.0vw, 13px);
+  font-size:     clamp(12px, 1.0vw, 13px);
   color:         rgba(200, 191, 176, 0.8);
 }
 .bs-info-stat-val {
   font-family:   var(--font-mono, monospace);
-  font-size:     clamp(10px, 1.1vw, 14px);
+  font-size:     clamp(12px, 1.1vw, 14px);
 }
 
 .bs-info-abils {
@@ -735,12 +735,12 @@
 }
 .bs-info-abil-type {
   font-family:   var(--font-mono, monospace);
-  font-size:     clamp(7px, 0.72vw, 9px);
+  font-size:     clamp(12px, 0.72vw, 12px);
   color:         #3a2808;
 }
 .bs-info-abil-name {
   font-family:   var(--font-mono, monospace);
-  font-size:     clamp(8px, 0.85vw, 11px);
+  font-size:     clamp(12px, 0.85vw, 12px);
   word-break:    keep-all;
   text-align:    center;
 }
@@ -749,7 +749,7 @@
   width:         100%;
   padding:       0.7em 0;
   font-family:   var(--font-display, monospace);
-  font-size:     clamp(11px, 1.17vw, 16px);
+  font-size:     clamp(12px, 1.17vw, 16px);
   letter-spacing:0.1em;
   color:         #c8a070;
   background:    rgba(30, 16, 8, 1);
