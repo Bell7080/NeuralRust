@@ -14,6 +14,20 @@ import type { Character, StatKey } from '../../types';
 
 // ── 툴팁 (모듈 내 공유) ────────────────────────────────────────
 let _divePanelsTip: HTMLElement | null = null;
+
+// 설명창 가독성 향상: 제목/수치/본문을 분리해 색상과 크기를 다르게 렌더링한다.
+function _formatTooltipHtml(text: string): string {
+  const lines = text.split('\\n').map(v => v.trim()).filter(Boolean);
+  const title = lines[0] ?? '';
+  const desc  = lines.slice(1).join('<br>');
+    const num   = title.match(/-?\d+(?:\.\d+)?/);
+  return [
+    title ? `<div class="mng-tooltip__title">${title}</div>` : '',
+    desc ? `<div class="mng-tooltip__desc">${desc}</div>` : '',
+      num ? `<div class="mng-tooltip__value">현재 수치 · ${num[0]}</div>` : '',
+  ].join('');
+}
+
 function _ensureTip(): HTMLElement {
   if (_divePanelsTip) return _divePanelsTip;
   const el = document.createElement('div');
@@ -24,7 +38,7 @@ function _ensureTip(): HTMLElement {
 }
 function _showTip(x: number, y: number, text: string): void {
   const el = _ensureTip();
-  el.innerHTML = text.replace(/\n/g, '<br>');
+  el.innerHTML = _formatTooltipHtml(text);
   el.style.display = 'block';
   _moveTip(x, y);
 }

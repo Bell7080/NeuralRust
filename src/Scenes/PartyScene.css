@@ -27,7 +27,7 @@
 
 .party-scene__back {
   font-family:    var(--font-mono, monospace);
-  font-size:      clamp(11px, 1.04vw, 15px);
+  font-size:      clamp(12px, 1.04vw, 15px);
   color:          #5a3a18;
   background:     none;
   border:         1px solid rgba(42, 26, 10, 0.5);
@@ -54,7 +54,7 @@
 }
 .party-scene__subtitle {
   font-family:    var(--font-mono, monospace);
-  font-size:      clamp(8px, 0.78vw, 11px);
+  font-size:      clamp(12px, 0.78vw, 12px);
   color:          #2a1508;
   letter-spacing: 0.4em;
   margin-top:     0.15em;
@@ -133,7 +133,7 @@
 .party-scene__card-mark {
   position:    absolute;
   top:         4%; right: 5%;
-  font-size:   clamp(11px, 1.04vw, 15px);
+  font-size:   clamp(12px, 1.04vw, 15px);
   color:       #60c060;
   opacity:     0;
   pointer-events: none;
@@ -162,19 +162,19 @@
 }
 .party-scene__card-name {
   font-family:  var(--font-display, monospace);
-  font-size:    clamp(10px, 1.1vw, 16px);
+  font-size:    clamp(12px, 1.1vw, 16px);
   color:        #f0e0c0;
   overflow:     hidden; text-overflow: ellipsis; white-space: nowrap;
   text-shadow:  0 1px 3px rgba(0,0,0,0.95);
 }
 .party-scene__card-job {
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(8px, 0.85vw, 12px);
+  font-size:   clamp(12px, 0.85vw, 12px);
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
 .party-scene__card-cog {
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(8px, 0.85vw, 12px);
+  font-size:   clamp(12px, 0.85vw, 12px);
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
@@ -189,7 +189,7 @@
 }
 .party-scene__card-hptxt {
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(6px, 0.72vw, 10px);
+  font-size:   clamp(12px, 0.72vw, 12px);
   color:       #c8a070;
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
@@ -237,9 +237,9 @@
   color:       #e8c080;
   letter-spacing: 0.05em;
 }
-.ps-job  { font-size: clamp(11px, 1.04vw, 16px); }
-.ps-cog  { font-size: clamp(11px, 1.04vw, 16px); font-weight: 700; }
-.ps-mastery { font-size: clamp(9px, 0.91vw, 13px); }
+.ps-job  { font-size: clamp(12px, 1.04vw, 16px); }
+.ps-cog  { font-size: clamp(12px, 1.04vw, 16px); font-weight: 700; }
+.ps-mastery { font-size: clamp(12px, 0.91vw, 13px); }
 
 .ps-hp-row {
   display: flex; flex-direction: column; gap: 0.15em; margin-top: 0.2em;
@@ -249,7 +249,7 @@
 }
 .ps-hp-fill { height: 100%; transition: width 0.2s; }
 .ps-hp-txt {
-  font-size: clamp(9px, 0.85vw, 13px); color: #4a3018;
+  font-size: clamp(12px, 0.85vw, 13px); color: #4a3018;
 }
 
 @keyframes ps-oc-pulse {
@@ -257,7 +257,7 @@
   50%      { opacity: 0.55; filter: brightness(1.4); }
 }
 .ps-overclock {
-  font-size:  clamp(10px, 0.98vw, 14px);
+  font-size:  clamp(12px, 0.98vw, 14px);
   animation:  ps-oc-pulse 1.9s ease-in-out infinite;
   letter-spacing: 0.05em;
 }
@@ -274,7 +274,7 @@
 .ps-stat-row {
   display: flex; justify-content: space-between; align-items: center;
   padding: 0.18em 0; border-bottom: 1px solid rgba(24, 16, 8, 0.9);
-  font-size: clamp(10px, 0.98vw, 14px);
+  font-size: clamp(12px, 0.98vw, 14px);
 }
 .ps-stat-row:last-child { border-bottom: none; }
 .ps-stat-row:hover { background: rgba(24, 16, 8, 0.7); }
@@ -292,21 +292,21 @@
 }
 .ps-ab-row:last-child { border-bottom: none; }
 .ps-ab-type {
-  font-size: clamp(8px, 0.78vw, 11px);
+  font-size: clamp(12px, 0.78vw, 12px);
   color: #3a2010; min-width: 4em; letter-spacing: 0.1em;
 }
 .ps-ab-name {
   font-family: var(--font-display, monospace);
-  font-size: clamp(11px, 1.04vw, 15px); color: #c8a070;
+  font-size: clamp(12px, 1.04vw, 15px); color: #c8a070;
 }
 .ps-ab-desc {
-  width: 100%; font-size: clamp(8px, 0.85vw, 12px);
+  width: 100%; font-size: clamp(12px, 0.85vw, 12px);
   color: #4a2a10; margin-left: 4em; line-height: 1.4;
 }
 
 /* ── 우측: 편성 슬롯 + 출발 ───────────────────────────────────── */
 .party-scene__slots-label {
-  font-size:      clamp(10px, 0.98vw, 14px);
+  font-size:      clamp(12px, 0.98vw, 14px);
   color:          #7a5028;
   letter-spacing: 0.15em;
   text-align:     center;
@@ -342,7 +342,7 @@
 }
 .party-scene__slot-num {
   position: absolute; top: 3%; left: 5%;
-  font-size: clamp(8px, 0.78vw, 12px);
+  font-size: clamp(12px, 0.78vw, 12px);
   color: #4a2a10; z-index: 4;
   text-shadow: 0 0 3px rgba(0,0,0,0.9);
 }
@@ -370,7 +370,7 @@
 }
 .party-scene__slot-name {
   font-family: var(--font-display, monospace);
-  font-size:   clamp(9px, 0.85vw, 12px);
+  font-size:   clamp(12px, 0.85vw, 12px);
   color:       #f0e0c0;
   line-height: 1.15;
   text-shadow: 0 1px 3px rgba(0,0,0,0.95);
@@ -380,12 +380,12 @@
 }
 .party-scene__slot-job {
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(7px, 0.72vw, 10px);
+  font-size:   clamp(12px, 0.72vw, 12px);
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
 .party-scene__slot-cog {
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(7px, 0.72vw, 10px);
+  font-size:   clamp(12px, 0.72vw, 12px);
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
@@ -397,7 +397,7 @@
 .party-scene__slot-hpbar > div { height: 100%; transition: width 0.2s; }
 .party-scene__slot-hptxt {
   font-family: var(--font-mono, monospace);
-  font-size:   clamp(6px, 0.65vw, 9px);
+  font-size:   clamp(12px, 0.65vw, 12px);
   color:       #c8a070;
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
@@ -407,7 +407,7 @@
 }
 
 .party-scene__cost {
-  font-size:  clamp(10px, 0.98vw, 14px);
+  font-size:  clamp(12px, 0.98vw, 14px);
   color:      #5a3a18;
   text-align: center;
   padding:    0.3em 0;

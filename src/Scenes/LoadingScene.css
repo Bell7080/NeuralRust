@@ -78,7 +78,7 @@
 .loading-hint {
   margin-top:   1.5em;
   font-family:  var(--font-mono, 'NeoDunggeunmoPro', monospace);
-  font-size:    clamp(9px, 0.85vw, 13px);
+  font-size:    clamp(12px, 0.85vw, 13px);
   letter-spacing: 0.15em;
   color:        rgba(200, 200, 176, 0.3);
 }
