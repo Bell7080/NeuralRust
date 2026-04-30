@@ -71,6 +71,8 @@ export interface InventoryItem {
 export interface AugmentItem {
   id: string; name: string; desc: string; color: string;
   shape?: number[][];
+  // 잠수정 대기 공간에서 표시할 커스텀 배경 에셋 경로이다.
+  artKey?: string;
 }
 export interface ShopItem {
   id: string; name: string; desc: string; color: string;
@@ -93,6 +95,14 @@ export const SHOP_DEFAULTS: ShopItem[] = [
   { id:'ration',       name:'건조식량',    desc:'탐사 라운드를 1 연장한다.',   color:'#806030', price:4, type:'consumable', sold:false },
   { id:'aug_pressure', name:'수압 강화',   desc:'아군 전체 공격력 +10%',      color:'#3090a0', price:5, type:'augment',     shape:[[1,1,0],[0,1,1]], sold:false },
   { id:'aug_shell',    name:'철각 외장',   desc:'아군 전체 피격 데미지 -8%',  color:'#806040', price:6, type:'augment',     shape:[[1,0],[1,1],[0,1]], sold:false },
+  // 탐사 밸류 강화를 위해 민첩/보상 계열 증강도 기본 풀에 포함한다.
+  { id:'aug_tide',     name:'조류 기동',   desc:'아군 전체 민첩 +12%',         color:'#53c4df', price:6, type:'augment',     shape:[[1,1,1],[0,1,0]], sold:false },
+  { id:'aug_salvage',  name:'인양 증폭',   desc:'탐사 종료 보상 +15%',         color:'#d0b76e', price:7, type:'augment',     shape:[[1,1],[1,1]], sold:false },
+  // 테스트 시 다양한 블럭 모양을 바로 확인할 수 있도록 5~6종 이상의 증강을 제공한다.
+  { id:'aug_overdrive',name:'과급 터빈',   desc:'아군 전체 공격 속도 +10%',    color:'#f18d65', price:7, type:'augment',     shape:[[1,0,0],[1,1,1]], sold:false },
+  { id:'aug_barrier',  name:'심해 장막',   desc:'아군 전체 방어력 +12%',        color:'#8aa8ff', price:7, type:'augment',     shape:[[1,1,1,1]], sold:false },
+  { id:'aug_lens',     name:'추적 렌즈',   desc:'치명타 확률 +8%',              color:'#b08cff', price:8, type:'augment',     shape:[[1,1,0],[0,1,1]], sold:false },
+  { id:'aug_resonance',name:'공명 코일',   desc:'스킬 위력 +10%',              color:'#58d7b6', price:8, type:'augment',     shape:[[0,1,0],[1,1,1]], sold:false },
 ];
 
 export const INV_MAX   = 10;
@@ -176,10 +186,20 @@ export function renderSubmarine(
     const star = document.createElement('div');
     star.className = 'sub-aug-star';
     star.title = `${aug.name}\n${aug.desc}`;
+    // 대기 중인 블럭은 심해 네온/야광 콘셉트를 살리기 위해 배경 + 글로우를 동시에 부여한다.
     star.style.background = `${aug.color}40`;
     star.style.border = `1px solid ${aug.color}`;
     star.style.boxShadow = `0 0 6px ${aug.color}60`;
-    star.textContent = aug.name;
+    // 배경 에셋은 증강 카드별로 순환하여 시각적인 다양성을 만든다.
+    const art = _pickAugmentArt(aug.id);
+    star.style.setProperty('--aug-art', `url("${art}")`);
+    // 심해 별/블럭 입자를 연출하기 위해 pseudo 레이어에 사용할 색상도 CSS 변수로 전달한다.
+    star.style.setProperty('--aug-glow', aug.color);
+    star.textContent = '';
+    const label = document.createElement('div');
+    label.className = 'sub-aug-star__label';
+    label.textContent = aug.name;
+    star.appendChild(label);
     star.addEventListener('click', () => {
       _subPlaceToGrid(sub, aug);
       onGridChange();
@@ -216,6 +236,19 @@ export function renderSubmarine(
       gridEl.appendChild(cell);
     }
   }
+}
+
+// 증강 id를 기반으로 배경 텍스처를 순환 선택해, 중복 클릭 카드도 다른 테마처럼 보이게 만든다.
+function _pickAugmentArt(seed: string): string {
+  const assets = [
+    '/Games/Assets/Sprites/Background_001.png',
+    '/Games/Assets/Sprites/Background_004.png',
+    '/Games/Assets/Sprites/BattleBackground_002.png',
+    '/Games/Assets/Sprites/BattleBackground_006.png',
+    '/Games/Assets/Sprites/Background_007.png',
+  ];
+  const hash = seed.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return assets[hash % assets.length];
 }
 
 function _subPlaceToGrid(sub: SubmarineData, aug: AugmentItem): void {
