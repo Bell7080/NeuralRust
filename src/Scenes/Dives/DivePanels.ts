@@ -15,16 +15,18 @@ import type { Character, StatKey } from '../../types';
 // ── 툴팁 (모듈 내 공유) ────────────────────────────────────────
 let _divePanelsTip: HTMLElement | null = null;
 
-// 설명창 가독성 향상: 제목/수치/본문을 분리해 색상과 크기를 다르게 렌더링한다.
+// 설명창 가독성 향상:
+// 1) 제목(크게) 2) 설명(중간) 3) 현재 수치(작게) 3단 레이아웃을 고정 적용한다.
 function _formatTooltipHtml(text: string): string {
   const lines = text.split('\\n').map(v => v.trim()).filter(Boolean);
   const title = lines[0] ?? '';
-  const body  = lines.slice(1).join('<br>');
-  const hasNumeric = /\d/.test(text);
+  const desc  = lines[1] ?? '';
+  // 값 라인은 3번째 줄부터 모두 포함해 스탯/스킬/기타 설명창 포맷을 통일한다.
+  const value = lines.slice(2).join('<br>');
   return [
     title ? `<div class="mng-tooltip__title">${title}</div>` : '',
-    hasNumeric ? `<div class="mng-tooltip__meta">VALUE LINKED</div>` : '',
-    body ? `<div class="mng-tooltip__desc">${body}</div>` : '',
+    desc ? `<div class="mng-tooltip__desc">${desc}</div>` : '',
+    value ? `<div class="mng-tooltip__value">${value}</div>` : '',
   ].join('');
 }
 
