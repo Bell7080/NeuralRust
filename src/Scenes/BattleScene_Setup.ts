@@ -471,12 +471,22 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     const lines = text.split('\\n').map(v => v.trim()).filter(Boolean);
     const title = lines[0] ?? '';
     const desc  = lines[1] ?? '';
+    // 제목 텍스트 기준으로 스탯/능력 테마 색을 자동 연동한다.
+    const themeColor = (() => {
+      if (/체력|HP/i.test(title)) return '#d96a74';
+      if (/건강|Health/i.test(title)) return '#5bc9a8';
+      if (/공격|Attack/i.test(title)) return '#d0834a';
+      if (/민첩|Agility/i.test(title)) return '#b48af6';
+      if (/행운|Luck/i.test(title)) return '#e8c66a';
+      if (/스킬|능력|피날레|강화|오버클럭/i.test(title)) return '#7fc7ff';
+      return '#e8c78f';
+    })();
     // 값 라인은 3번째 줄부터 모두 포함해 스탯/스킬/기타 설명창 포맷을 통일한다.
     const value = lines.slice(2).join('<br>');
     return [
-      title ? `<div class="mng-tooltip__title">${title}</div>` : '',
+      title ? `<div class="mng-tooltip__title" style="color:${themeColor}">${title}</div>` : '',
       desc ? `<div class="mng-tooltip__desc">${desc}</div>` : '',
-      value ? `<div class="mng-tooltip__value">${value}</div>` : '',
+      value ? `<div class="mng-tooltip__value" style="color:${themeColor}">${value}</div>` : '',
     ].join('');
   }
 
