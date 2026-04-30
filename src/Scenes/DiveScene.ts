@@ -147,7 +147,13 @@ export class DiveScene extends Phaser.Scene {
 
     this._submarine = data.submarine && Array.isArray(data.submarine.grid)
       ? data.submarine
-      : { pending: [], grid: new Array(SUB_COLS * SUB_ROWS).fill(null) };
+      : {
+          // 임시 테스트 단계에서는 잠수정 증강을 기본 소지 상태로 시작한다.
+          // TODO: 추후 심해상점/이벤트/적 처치 드랍으로 획득하도록 전환한다.
+          // TODO: 추후 라운드 시작 시 대기 증강을 초기화하는 규칙을 적용한다.
+          pending: this._buildTestAugments(),
+          grid: new Array(SUB_COLS * SUB_ROWS).fill(null),
+        };
 
     this._shopItems = Array.isArray(data.shopItems) && data.shopItems.length
       ? data.shopItems
@@ -164,6 +170,20 @@ export class DiveScene extends Phaser.Scene {
     this._canChoose  = false;
     this._spinTimer  = null;
     this._deepCoinTxt = null;
+  }
+
+  // 잠수정 탭의 테트리스/별 블럭 시각 테스트를 위해 6종 이상 증강을 즉시 지급한다.
+  private _buildTestAugments(): AugmentItem[] {
+    return SHOP_DEFAULTS
+      .filter((item) => item.type === 'augment')
+      .slice(0, 6)
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        desc: item.desc,
+        color: item.color,
+        shape: item.shape,
+      }));
   }
 
   create(): void {
