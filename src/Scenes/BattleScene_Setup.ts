@@ -56,8 +56,10 @@ export interface EnemyUnitObjs {
   hpFg:      Phaser.GameObjects.Graphics;
   hpNumTxt:  Phaser.GameObjects.Text;
   hit:       Phaser.GameObjects.Rectangle;
+  flashBorder: Phaser.GameObjects.Graphics;
   refreshHp: () => void;
   destroyAll:() => void;
+  playAttackAnim: (targetCx: number, targetCy: number, isCrit?: boolean) => void;
   cx: number; cy: number; half: number;
 }
 
@@ -73,9 +75,11 @@ export interface AllyUnitObjs {
   gaugeFg:      Phaser.GameObjects.Graphics;
   gaugeTxt:     Phaser.GameObjects.Text;
   skillHit:     Phaser.GameObjects.Rectangle;
+  flashBorder:  Phaser.GameObjects.Graphics;
   refreshHp:    () => void;
   refreshGauge: () => void;
   destroyAll:   () => void;
+  playAttackAnim: (targetCx: number, targetCy: number, isCrit?: boolean) => void;
   cx: number; cy: number; rad: number;
 }
 

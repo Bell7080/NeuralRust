@@ -97,6 +97,8 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
     aObj?.refreshGauge();
     if (eObj) this._flashDamage(eObj.shape, eObj.spriteImg);
 
+    if (aObj && eObj) aObj.playAttackAnim(eObj.cx, eObj.cy, isCrit);
+
     if (this._effects3d && aObj && eObj) {
       this._effects3d.spawnAllyAttack(aObj.cx, aObj.cy, eObj.cx, eObj.cy, isCrit);
     }
@@ -138,11 +140,11 @@ export abstract class BattleSceneBattle extends BattleSceneUI {
     const aObj = this._allyObjs[aIdx];
     if (aObj) { aObj.refreshHp(); aObj.refreshGauge(); this._flashDamage(aObj.shape); }
 
-    if (this._effects3d && aObj) {
-      const attackerObj = this._enemyObjs.find(o => o.enemy._uid === enemy._uid);
-      if (attackerObj) {
-        this._effects3d.spawnEnemyAttack(attackerObj.cx, attackerObj.cy, aObj.cx, aObj.cy, isCrit);
-      }
+    const attackerObj = this._enemyObjs.find(o => o.enemy._uid === enemy._uid);
+    if (attackerObj && aObj) attackerObj.playAttackAnim(aObj.cx, aObj.cy, isCrit);
+
+    if (this._effects3d && aObj && attackerObj) {
+      this._effects3d.spawnEnemyAttack(attackerObj.cx, attackerObj.cy, aObj.cx, aObj.cy, isCrit);
     }
 
     this._addLog(

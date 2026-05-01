@@ -166,14 +166,82 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
     });
     this._sceneHits.push(hit);
 
+    // 공격 시 반짝이는 잉크빛 보더 (적은 카드 박스가 없으므로 스프라이트 주변에 그림)
+    const flashBorder = this.add.graphics().setDepth(4);
+    flashBorder.lineStyle(2, 0xa03018, 1);
+    flashBorder.strokeRect(cx - half, cy - half, half * 2, half * 2);
+    flashBorder.lineStyle(1, 0xff8844, 0.7);
+    flashBorder.strokeRect(cx - half - 2, cy - half - 2, half * 2 + 4, half * 2 + 4);
+    flashBorder.setAlpha(0);
+
+    // ── 공격 애니메이션 (lunge + 보더 반짝) ────────────────────
+    const _origSpriteX = spriteImg?.x ?? cx;
+    const _origSpriteY = spriteImg?.y ?? cy;
+    const _origNameX   = nameTxt.x;
+    const _origNameY   = nameTxt.y;
+
+    const playAttackAnim = (targetCx: number, targetCy: number, isCrit = false) => {
+      const dx = Math.sign(targetCx - cx) * (isCrit ? 11 : 7);
+      const dy = Math.sign(targetCy - cy) * (isCrit ? 14 : 9);
+
+      this.tweens.killTweensOf([flashBorder, nameTxt]);
+      if (spriteImg) this.tweens.killTweensOf(spriteImg);
+      flashBorder.x = 0; flashBorder.y = 0;
+      if (spriteImg) { spriteImg.x = _origSpriteX; spriteImg.y = _origSpriteY; }
+      nameTxt.x = _origNameX; nameTxt.y = _origNameY;
+
+      const lunge = { v: 0 };
+      this.tweens.add({
+        targets: lunge, v: 1,
+        duration: isCrit ? 130 : 110,
+        ease: 'Sine.Out', yoyo: true, hold: 50,
+        onUpdate: () => {
+          const ox = dx * lunge.v;
+          const oy = dy * lunge.v;
+          flashBorder.x = ox; flashBorder.y = oy;
+          if (spriteImg) { spriteImg.x = _origSpriteX + ox; spriteImg.y = _origSpriteY + oy; }
+          nameTxt.x = _origNameX + ox; nameTxt.y = _origNameY + oy;
+        },
+        onComplete: () => {
+          flashBorder.x = 0; flashBorder.y = 0;
+          if (spriteImg) { spriteImg.x = _origSpriteX; spriteImg.y = _origSpriteY; }
+          nameTxt.x = _origNameX; nameTxt.y = _origNameY;
+        },
+      });
+
+      flashBorder.setAlpha(1);
+      this.tweens.add({
+        targets: flashBorder,
+        alpha: 0,
+        duration: isCrit ? 380 : 280,
+        ease: 'Cubic.Out',
+      });
+
+      if (spriteImg) {
+        try { spriteImg.setTint(isCrit ? 0xffaa66 : 0xffccaa); } catch (_) {}
+        const baseW = spriteImg.displayWidth;
+        const baseH = spriteImg.displayHeight;
+        this.tweens.add({
+          targets: spriteImg,
+          displayWidth:  baseW  * (isCrit ? 1.10 : 1.06),
+          displayHeight: baseH  * (isCrit ? 1.10 : 1.06),
+          duration: 110, ease: 'Sine.Out', yoyo: true, hold: 50,
+          onComplete: () => {
+            try { spriteImg.setDisplaySize(baseW, baseH); spriteImg.clearTint(); } catch (_) {}
+          },
+        });
+      }
+    };
+
     const destroyAll = () => {
-      ([shape, spriteImg, nameTxt, hpBg, hpFg, hpNumTxt, hit] as Array<{ active?: boolean; destroy(): void } | null>)
+      ([shape, spriteImg, nameTxt, hpBg, hpFg, hpNumTxt, hit, flashBorder] as Array<{ active?: boolean; destroy(): void } | null>)
         .forEach(o => { try { if (o && o.active !== false) o.destroy(); } catch (_) {} });
       const idx = this._sceneHits.indexOf(hit);
       if (idx >= 0) this._sceneHits.splice(idx, 1);
     };
 
-    return { enemy, shape, spriteImg, nameTxt, hpBg, hpFg, hpNumTxt, hit, refreshHp, destroyAll, cx, cy, half };
+    return { enemy, shape, spriteImg, nameTxt, hpBg, hpFg, hpNumTxt, hit, flashBorder,
+             refreshHp, destroyAll, playAttackAnim, cx, cy, half };
   }
 
   // ════════════════════════════════════════════════════════════
@@ -269,6 +337,14 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
     const skillHit = this.add.rectangle(cx, cy, halfW * 2, halfH * 2, 0x000000, 0)
       .setInteractive({ useHandCursor: false });
 
+    // 공격 시 반짝이는 보더 (기본 비표시)
+    const flashBorder = this.add.graphics().setDepth(4);
+    flashBorder.lineStyle(3, cogC.phaser, 1);
+    flashBorder.strokeRect(cx - halfW, cy - halfH, halfW * 2, halfH * 2);
+    flashBorder.lineStyle(1, 0xffe8aa, 0.8);
+    flashBorder.strokeRect(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4);
+    flashBorder.setAlpha(0);
+
     const refreshHp = () => {
       const pct = ally._maxHp > 0 ? ally._hp / ally._maxHp : 0;
       const col = pct > 0.6 ? 0x306030 : pct > 0.3 ? 0x806020 : 0x803020;
@@ -297,14 +373,82 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
         skillHit.setInteractive({ useHandCursor: true });
       }
     };
+
+    // ── 공격 애니메이션 (lunge + 보더 반짝) ────────────────────
+    const _origSpriteX = spriteImg?.x ?? cx;
+    const _origSpriteY = spriteImg?.y ?? cy;
+    const _origNameX   = nameTxt.x;
+    const _origNameY   = nameTxt.y;
+
+    const playAttackAnim = (targetCx: number, targetCy: number, isCrit = false) => {
+      const dx = Math.sign(targetCx - cx) * (isCrit ? 11 : 7);
+      const dy = Math.sign(targetCy - cy) * (isCrit ? 14 : 9);
+
+      // 이전 애니메이션 취소 후 위치 리셋
+      this.tweens.killTweensOf([shape, flashBorder, nameTxt]);
+      if (spriteImg) this.tweens.killTweensOf(spriteImg);
+      shape.x = 0; shape.y = 0;
+      flashBorder.x = 0; flashBorder.y = 0;
+      if (spriteImg) { spriteImg.x = _origSpriteX; spriteImg.y = _origSpriteY; }
+      nameTxt.x = _origNameX; nameTxt.y = _origNameY;
+
+      // 카드 + 스프라이트 + 이름 동시 lunge (yoyo)
+      const lunge = { v: 0 };
+      this.tweens.add({
+        targets: lunge, v: 1,
+        duration: isCrit ? 130 : 110,
+        ease: 'Sine.Out', yoyo: true, hold: 50,
+        onUpdate: () => {
+          const ox = dx * lunge.v;
+          const oy = dy * lunge.v;
+          shape.x = ox; shape.y = oy;
+          flashBorder.x = ox; flashBorder.y = oy;
+          if (spriteImg) { spriteImg.x = _origSpriteX + ox; spriteImg.y = _origSpriteY + oy; }
+          nameTxt.x = _origNameX + ox; nameTxt.y = _origNameY + oy;
+        },
+        onComplete: () => {
+          shape.x = 0; shape.y = 0;
+          flashBorder.x = 0; flashBorder.y = 0;
+          if (spriteImg) { spriteImg.x = _origSpriteX; spriteImg.y = _origSpriteY; }
+          nameTxt.x = _origNameX; nameTxt.y = _origNameY;
+        },
+      });
+
+      // 보더 반짝
+      flashBorder.setAlpha(1);
+      this.tweens.add({
+        targets: flashBorder,
+        alpha: 0,
+        duration: isCrit ? 380 : 280,
+        ease: 'Cubic.Out',
+      });
+
+      // 스프라이트 틴트 + 살짝 확대
+      if (spriteImg) {
+        try { spriteImg.setTint(isCrit ? 0xffe080 : 0xffeebb); } catch (_) {}
+        const baseW = spriteImg.displayWidth;
+        const baseH = spriteImg.displayHeight;
+        this.tweens.add({
+          targets: spriteImg,
+          displayWidth:  baseW  * (isCrit ? 1.10 : 1.06),
+          displayHeight: baseH  * (isCrit ? 1.10 : 1.06),
+          duration: 110, ease: 'Sine.Out', yoyo: true, hold: 50,
+          onComplete: () => {
+            try { spriteImg.setDisplaySize(baseW, baseH); spriteImg.clearTint(); } catch (_) {}
+          },
+        });
+      }
+    };
+
     const destroyAll = () => {
       ([shape, spriteImg, maskGfx, nameTxt, hpBg, hpFg, hpTxt,
-        gaugeBg, gaugeFg, gaugeTxt, skillHit] as Array<{ active?: boolean; destroy(): void } | null>)
+        gaugeBg, gaugeFg, gaugeTxt, skillHit, flashBorder] as Array<{ active?: boolean; destroy(): void } | null>)
         .forEach(o => { try { if (o && o.active !== false) o.destroy(); } catch (_) {} });
     };
     refreshHp(); refreshGauge();
     return { ally, shape, spriteImg, nameTxt, hpBg, hpFg, hpTxt, gaugeBg, gaugeFg, gaugeTxt,
-             skillHit, refreshHp, refreshGauge, destroyAll, cx, cy, rad: halfW };
+             skillHit, flashBorder, refreshHp, refreshGauge, destroyAll, playAttackAnim,
+             cx, cy, rad: halfW };
   }
 
   // ════════════════════════════════════════════════════════════
