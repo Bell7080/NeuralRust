@@ -872,15 +872,58 @@
   display: none;
   position: fixed;
   z-index: 99999;
-  max-width: 240px;
-  padding: 0.5em 0.8em;
-  background: rgba(8,4,2,0.96);
-  border: 1px solid rgba(160,90,30,0.5);
+  min-width: 160px;
+  max-width: 260px;
+  padding: 0.55em 0.85em 0.6em;
+  background: rgba(6,3,1,0.97);
+  border: 1px solid rgba(160,90,30,0.45);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.75), inset 0 0 0 1px rgba(255,200,120,0.04);
   color: #c8bfb0;
   font-family: var(--font-mono);
   font-size: clamp(9px, 0.91vw, 13px);
   line-height: 1.5;
   pointer-events: none;
+}
+
+/* 3줄 구조 내부 요소 */
+.tip-name {
+  font-family: var(--font-display, 'NeoDunggeunmoPro', monospace);
+  font-size: clamp(11px, 1.05vw, 15px);
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  margin-bottom: 0.1em;
+}
+
+.tip-sep {
+  width: 100%;
+  height: 1px;
+  background: rgba(160,90,30,0.28);
+  margin: 0.3em 0;
+}
+
+.tip-desc {
+  font-family: var(--font-mono);
+  font-size: clamp(8px, 0.82vw, 12px);
+  color: #a09080;
+  line-height: 1.55;
+}
+
+.tip-value {
+  font-family: var(--font-mono);
+  font-size: clamp(8px, 0.85vw, 12px);
+  color: #c8bfb0;
+  letter-spacing: 0.04em;
+}
+
+.tip-value strong {
+  color: #e8d090;
+  font-weight: 700;
+}
+
+.tip-type-badge {
+  font-size: clamp(7px, 0.75vw, 11px);
+  opacity: 0.55;
+  letter-spacing: 0.08em;
 }
 
 /* 우측 행동 */

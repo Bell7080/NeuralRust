@@ -16,7 +16,7 @@ import {
 } from '../../Managers/CharacterManager';
 import { CharacterSpriteManager } from '../../Managers/CharacterSpriteManager';
 import { AbilityIndex } from '../../Data/AbilityIndex';
-import { getStatTooltipDynamic } from '../../Data/Data_Tooltips';
+import { getStatTooltipDynamic, buildAbilTipHtml } from '../../Data/Data_Tooltips';
 
 // ── 공개 타입 ─────────────────────────────────────────────────────
 export interface CharProfileOpts {
@@ -170,12 +170,13 @@ function _fillModal(
     const color  = STAT_COLORS[key] ?? '#c8bfb0';
     const label  = STAT_LABEL_MAP[key] ?? key;
     const valStr = isOc ? `${base} → ${effVal}` : `${effVal}`;
-    const tip    = getStatTooltipDynamic(key, effVal);
+    const tipHtml = getStatTooltipDynamic(key, effVal);
     const valColor = isOc ? (char.overclock?.color ?? color) : color;
 
     const row = document.createElement('div');
     row.className = 'cp-stat-row';
-    row.title = tip;
+    row.style.cursor = 'help';
+    _bindTip(row, tipHtml);
 
     const keySpan = document.createElement('span');
     keySpan.className = 'cp-stat-key';
@@ -242,6 +243,8 @@ function _fillModal(
       descEl.className = 'cp-abil-desc';
       descEl.textContent = desc;
       box.appendChild(descEl);
+      box.style.cursor = 'help';
+      _bindTip(box, buildAbilTipHtml(type, nm, desc));
     }
 
     abilCol.appendChild(box);
@@ -286,4 +289,40 @@ function _divider(): HTMLHRElement {
   const hr = document.createElement('hr');
   hr.className = 'cp-divider';
   return hr;
+}
+
+// ── 커스텀 툴팁 바인딩 ──────────────────────────────────────────
+let _cpTip: HTMLElement | null = null;
+
+function _ensureCpTip(): HTMLElement {
+  if (_cpTip) return _cpTip;
+  const el = document.createElement('div');
+  el.className = 'mng-tooltip';
+  document.body.appendChild(el);
+  _cpTip = el;
+  return el;
+}
+
+function _bindTip(el: HTMLElement, html: string): void {
+  el.addEventListener('mouseenter', (e) => {
+    const tip = _ensureCpTip();
+    tip.innerHTML = html;
+    tip.style.display = 'block';
+    _moveCpTip((e as MouseEvent).clientX, (e as MouseEvent).clientY);
+  });
+  el.addEventListener('mousemove', (e) => {
+    _moveCpTip((e as MouseEvent).clientX, (e as MouseEvent).clientY);
+  });
+  el.addEventListener('mouseleave', () => {
+    if (_cpTip) _cpTip.style.display = 'none';
+  });
+}
+
+function _moveCpTip(x: number, y: number): void {
+  if (!_cpTip) return;
+  const W  = _cpTip.offsetWidth || 160;
+  const H  = _cpTip.offsetHeight || 60;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  _cpTip.style.left = `${x + 12 + W > vw ? x - W - 8 : x + 12}px`;
+  _cpTip.style.top  = `${y + 8  + H > vh ? y - H - 8 : y + 8}px`;
 }

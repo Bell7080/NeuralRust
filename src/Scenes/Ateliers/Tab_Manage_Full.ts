@@ -9,7 +9,7 @@ import { CharacterSpriteManager }         from '../../Managers/CharacterSpriteMa
 import { AbilityIndex } from '../../Data/AbilityIndex';
 import { SaveManager }  from '../../Managers/SaveManager';
 import { CharProfile }  from './CharProfile';
-import { getStatTooltipDynamic, getJobTooltip } from '../../Data/Data_Tooltips';
+import { getStatTooltipDynamic, getJobTooltip, buildJobTipHtml, buildAbilTipHtml } from '../../Data/Data_Tooltips';
 import type { Character } from '../../types/index';
 import type { StatKey } from '../../types';
 
@@ -243,14 +243,14 @@ export class Tab_Manage_Full {
   // ── 툴팁 ────────────────────────────────────────────────────────
   private _tip: HTMLElement | null = null;
 
-  private _showTip(x: number, y: number, text: string): void {
+  private _showTip(x: number, y: number, html: string): void {
     if (!this._tip) {
       const el = document.createElement('div');
       el.className = 'mng-tooltip';
       document.getElementById('game-container')?.appendChild(el) ?? document.body.appendChild(el);
       this._tip = el;
     }
-    this._tip.innerHTML = text.replace(/\n/g, '<br>');
+    this._tip.innerHTML = html;
     this._tip.style.display = 'block';
     this._moveTip(x, y);
   }
@@ -278,7 +278,7 @@ export class Tab_Manage_Full {
       jobEl.style.cursor = 'help';
       jobEl.addEventListener('mouseenter', e => {
         const tip = getJobTooltip(char.job);
-        if (tip) this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, tip);
+        if (tip) this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, buildJobTipHtml(char.job, tip));
       });
       jobEl.addEventListener('mousemove', e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
       jobEl.addEventListener('mouseleave', () => this._hideTip());
@@ -290,8 +290,7 @@ export class Tab_Manage_Full {
       const effV = Number(row.dataset.statEff ?? 0);
       row.style.cursor = 'help';
       row.addEventListener('mouseenter', e => {
-        const tip = getStatTooltipDynamic(key, effV);
-        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, tip);
+        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, getStatTooltipDynamic(key, effV));
       });
       row.addEventListener('mousemove', e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
       row.addEventListener('mouseleave', () => this._hideTip());
@@ -306,7 +305,7 @@ export class Tab_Manage_Full {
       row.style.cursor = 'help';
       row.addEventListener('mouseenter', e => {
         const nm = AbilityIndex.getName(type, id) || id;
-        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, `${nm}\n${desc}`);
+        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, buildAbilTipHtml(type, nm, desc));
       });
       row.addEventListener('mousemove', e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
       row.addEventListener('mouseleave', () => this._hideTip());

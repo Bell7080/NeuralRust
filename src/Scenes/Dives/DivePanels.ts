@@ -9,7 +9,7 @@
 import { CharacterManager }       from '../../Managers/CharacterManager';
 import { CharacterSpriteManager } from '../../Managers/CharacterSpriteManager';
 import { AbilityIndex }     from '../../Data/AbilityIndex';
-import { getStatTooltipDynamic, getJobTooltip } from '../../Data/Data_Tooltips';
+import { getStatTooltipDynamic, getJobTooltip, buildJobTipHtml, buildAbilTipHtml } from '../../Data/Data_Tooltips';
 import type { Character, StatKey } from '../../types';
 
 // ── 툴팁 (모듈 내 공유) ────────────────────────────────────────
@@ -22,9 +22,9 @@ function _ensureTip(): HTMLElement {
   _divePanelsTip = el;
   return el;
 }
-function _showTip(x: number, y: number, text: string): void {
+function _showTip(x: number, y: number, html: string): void {
   const el = _ensureTip();
-  el.innerHTML = text.replace(/\n/g, '<br>');
+  el.innerHTML = html;
   el.style.display = 'block';
   _moveTip(x, y);
 }
@@ -390,7 +390,7 @@ export function renderParty(
       jobEl.style.cursor = 'help';
       jobEl.addEventListener('mouseenter', e => {
         const t = getJobTooltip(char.job);
-        if (t) _showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, t);
+        if (t) _showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, buildJobTipHtml(char.job, t));
       });
       jobEl.addEventListener('mousemove', e => _moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
       jobEl.addEventListener('mouseleave', () => _hideTip());
@@ -414,7 +414,7 @@ export function renderParty(
       row.style.cursor = 'help';
       row.addEventListener('mouseenter', e => {
         const nm = AbilityIndex.getName(type, id) || id;
-        _showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, `${nm}\n${desc}`);
+        _showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, buildAbilTipHtml(type, nm, desc));
       });
       row.addEventListener('mousemove', e => _moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
       row.addEventListener('mouseleave', () => _hideTip());

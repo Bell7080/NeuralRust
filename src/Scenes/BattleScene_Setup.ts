@@ -16,7 +16,7 @@ import { CharacterManager }        from '../Managers/CharacterManager';
 import { CharacterSpriteManager }  from '../Managers/CharacterSpriteManager';
 import { FontManager }             from '../Managers/FontManager';
 import { AbilityIndex }            from '../Data/AbilityIndex';
-import { getStatTooltipDynamic, getJobTooltip } from '../Data/Data_Tooltips';
+import { getStatTooltipDynamic, getJobTooltip, buildJobTipHtml, buildAbilTipHtml } from '../Data/Data_Tooltips';
 import type { BattleEffects3D }    from '../Effects/BattleEffects3D';
 
 // ── 공유 런타임 타입 (하위 클래스에서 import) ────────────────────
@@ -464,9 +464,9 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     this._tipEl = el;
     return el;
   }
-  private _showTip(x: number, y: number, text: string): void {
+  private _showTip(x: number, y: number, html: string): void {
     const el = this._ensureTipEl();
-    el.innerHTML = text.replace(/\n/g, '<br>');
+    el.innerHTML = html;
     el.style.display = 'block';
     this._moveTip(x, y);
   }
@@ -489,7 +489,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       jobEl.style.cursor = 'help';
       jobEl.addEventListener('mouseenter', e => {
         const t = getJobTooltip(char.job);
-        if (t) this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, t);
+        if (t) this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, buildJobTipHtml(char.job, t));
       });
       jobEl.addEventListener('mousemove', e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
       jobEl.addEventListener('mouseleave', () => this._hideTip());
@@ -515,7 +515,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       row.style.cursor = 'help';
       row.addEventListener('mouseenter', e => {
         const nm = AbilityIndex.getName(type, id) || id;
-        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, `${nm}\n${desc}`);
+        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, buildAbilTipHtml(type, nm, desc));
       });
       row.addEventListener('mousemove', e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
       row.addEventListener('mouseleave', () => this._hideTip());
@@ -615,18 +615,11 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
     if (!root) return;
 
     root.querySelectorAll<HTMLElement>('.mng-stat-row[data-stat-key]').forEach(row => {
-      const key  = row.dataset.statKey!;
+      const key  = row.dataset.statKey as StatKey;
       const effV = Number(row.dataset.statEff ?? 0);
-      const TIPS: Record<string, string> = {
-        hp:      `체력 ${effV}\n전투 시작 시 최대 HP로 설정됩니다.`,
-        attack:  `공격 ${effV}\n기본 공격 피해량의 기준이 됩니다.`,
-        agility: `민첩 ${effV}\n공격 간격을 결정합니다. 높을수록 빠릅니다.`,
-        luck:    `행운 ${effV}\n치명타 발생 확률에 영향을 줍니다.`,
-      };
-      const tip = TIPS[key];
-      if (!tip) return;
+      if (!key) return;
       row.style.cursor = 'help';
-      row.addEventListener('mouseenter', e => this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, tip));
+      row.addEventListener('mouseenter', e => this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, getStatTooltipDynamic(key, effV)));
       row.addEventListener('mousemove',  e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
       row.addEventListener('mouseleave', () => this._hideTip());
     });
@@ -640,7 +633,7 @@ export abstract class BattleSceneSetup extends Phaser.Scene {
       row.style.cursor = 'help';
       row.addEventListener('mouseenter', e => {
         const nm = AbilityIndex.getName(type, id) || id;
-        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, `${nm}\n${desc}`);
+        this._showTip((e as MouseEvent).clientX, (e as MouseEvent).clientY, buildAbilTipHtml(type, nm, desc));
       });
       row.addEventListener('mousemove',  e => this._moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
       row.addEventListener('mouseleave', () => this._hideTip());
