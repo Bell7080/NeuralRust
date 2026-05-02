@@ -179,3 +179,8 @@ export function getSkillTooltip(name: string): string {
 export function getStatTooltipDynamic(key: StatKey, effVal: number): string {
   return buildStatTipHtml(key, effVal);
 }
+
+/** 아이템·증강·일반 요소용 단순 툴팁 (이름 + 설명) */
+export function buildSimpleTipHtml(name: string, desc: string, color = '#c8a070'): string {
+  return _tip(color, name, desc, '');
+}

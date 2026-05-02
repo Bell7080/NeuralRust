@@ -9,36 +9,11 @@
 import { CharacterManager }       from '../../Managers/CharacterManager';
 import { CharacterSpriteManager } from '../../Managers/CharacterSpriteManager';
 import { AbilityIndex }     from '../../Data/AbilityIndex';
-import { getStatTooltipDynamic, getJobTooltip, buildJobTipHtml, buildAbilTipHtml } from '../../Data/Data_Tooltips';
+import { getStatTooltipDynamic, getJobTooltip, buildJobTipHtml, buildAbilTipHtml, buildSimpleTipHtml } from '../../Data/Data_Tooltips';
 import type { Character, StatKey } from '../../types';
 
-// ── 툴팁 (모듈 내 공유) ────────────────────────────────────────
+// ── 호버 툴팁 ──────────────────────────────────────────────────
 let _divePanelsTip: HTMLElement | null = null;
-
-// 설명창 가독성 향상:
-// 1) 제목(크게) 2) 설명(중간) 3) 현재 수치(작게) 3단 레이아웃을 고정 적용한다.
-function _formatTooltipHtml(text: string): string {
-  const lines = text.split('\\n').map(v => v.trim()).filter(Boolean);
-  const title = lines[0] ?? '';
-  const desc  = lines[1] ?? '';
-  // 제목 텍스트를 기준으로 테마 색을 자동 선택한다. (스탯/능력/기타)
-  const themeColor = (() => {
-    if (/체력|HP/i.test(title)) return '#d96a74';
-    if (/건강|Health/i.test(title)) return '#5bc9a8';
-    if (/공격|Attack/i.test(title)) return '#d0834a';
-    if (/민첩|Agility/i.test(title)) return '#b48af6';
-    if (/행운|Luck/i.test(title)) return '#e8c66a';
-    if (/스킬|능력|피날레|강화|오버클럭/i.test(title)) return '#7fc7ff';
-    return '#e8c78f';
-  })();
-  // 값 라인은 3번째 줄부터 모두 포함해 스탯/스킬/기타 설명창 포맷을 통일한다.
-  const value = lines.slice(2).join('<br>');
-  return [
-    title ? `<div class="mng-tooltip__title" style="color:${themeColor}">${title}</div>` : '',
-    desc ? `<div class="mng-tooltip__desc">${desc}</div>` : '',
-    value ? `<div class="mng-tooltip__value" style="color:${themeColor}">${value}</div>` : '',
-  ].join('');
-}
 
 function _ensureTip(): HTMLElement {
   if (_divePanelsTip) return _divePanelsTip;
@@ -63,6 +38,50 @@ function _moveTip(x: number, y: number): void {
   _divePanelsTip.style.top  = `${y + 8  + H > vh ? y - H - 8 : y + 8}px`;
 }
 function _hideTip(): void { if (_divePanelsTip) _divePanelsTip.style.display = 'none'; }
+
+// ── 증강 상세 패널 (클릭 핀) ────────────────────────────────────
+let _subDetailEl: HTMLElement | null = null;
+
+function _ensureSubDetail(): HTMLElement {
+  if (_subDetailEl) return _subDetailEl;
+  const el = document.createElement('div');
+  el.className = 'sub-aug-detail';
+  el.style.display = 'none';
+  (document.getElementById('game-container') ?? document.body).appendChild(el);
+  _subDetailEl = el;
+  return el;
+}
+
+function _showSubDetail(aug: AugmentItem, rect: DOMRect): void {
+  const el = _ensureSubDetail();
+  const shape = aug.shape ?? [[1]];
+  el.innerHTML = `
+    <div class="sub-aug-detail__name" style="color:${aug.color}">${aug.name}</div>
+    <div class="sub-aug-detail__shape">형태 &nbsp;·&nbsp; ${_shapeLabel(shape)}</div>
+    <div class="sub-aug-detail__stat">${aug.desc}</div>
+    <div class="sub-aug-detail__hint">▸ 드래그해서 잠수정에 배치</div>
+  `;
+  el.style.display = 'block';
+  // Remove old animation so it replays
+  el.style.animation = 'none';
+  requestAnimationFrame(() => {
+    el.style.animation = '';
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const elW = el.offsetWidth  || 230;
+    const elH = el.offsetHeight || 120;
+    let left = rect.left + rect.width / 2 - elW / 2;
+    let top  = rect.bottom + 10;
+    if (left < 8)           left = 8;
+    if (left + elW > vw - 8) left = vw - elW - 8;
+    if (top + elH > vh - 8)  top  = rect.top - elH - 10;
+    el.style.left = `${left}px`;
+    el.style.top  = `${top}px`;
+  });
+}
+
+function _hideSubDetail(): void {
+  if (_subDetailEl) _subDetailEl.style.display = 'none';
+}
 
 // ── 공통 타입 ──────────────────────────────────────────────────
 export interface InventoryItem {
@@ -139,18 +158,12 @@ export function renderInventory(
         <div class="inv-cell__icon" style="background:${item.color}80;border:1px solid ${item.color}"></div>
         <div class="inv-cell__name">${item.name}</div>
       `;
-      // 툴팁
-      let tip: HTMLElement | null = null;
       cell.addEventListener('mouseenter', (e) => {
-        tip = document.createElement('div');
-        // 인벤토리 설명도 동일한 3줄 포맷을 사용하도록 통일한다.
-        tip.className = 'mng-tooltip';
-        tip.innerHTML = _formatTooltipHtml(`${item.name}\\n아이템 설명\\n${item.desc}`);
-        document.body.appendChild(tip);
-        _positionTip(tip, e as MouseEvent);
+        const ev = e as MouseEvent;
+        _showTip(ev.clientX, ev.clientY, buildSimpleTipHtml(item.name, item.desc, item.color));
       });
-      cell.addEventListener('mousemove', (e) => { if (tip) _positionTip(tip, e as MouseEvent); });
-      cell.addEventListener('mouseleave', () => { tip?.remove(); tip = null; });
+      cell.addEventListener('mousemove', (e) => _moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY));
+      cell.addEventListener('mouseleave', _hideTip);
     } else {
       cell.innerHTML = `<div class="inv-cell__num">${idx + 1}</div>`;
     }
@@ -158,14 +171,6 @@ export function renderInventory(
   });
 }
 
-function _positionTip(tip: HTMLElement, e: MouseEvent): void {
-  const margin = 10;
-  let x = e.clientX + margin, y = e.clientY + margin;
-  const rect = tip.getBoundingClientRect();
-  if (x + rect.width  > window.innerWidth)  x = e.clientX - rect.width  - margin;
-  if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - margin;
-  tip.style.left = `${x}px`; tip.style.top = `${y}px`;
-}
 
 // ================================================================
 //  잠수정 패널
@@ -177,7 +182,7 @@ export function renderSubmarine(
 ): void {
   el.innerHTML = `
     <div class="sub-pending-area" id="sub-pending">
-      <div class="sub-pending-lbl">대기 — 클릭하여 장착</div>
+      <div class="sub-pending-lbl">대기 증강 — 클릭: 상세 정보 &nbsp;/&nbsp; 드래그: 배치</div>
     </div>
     <div class="sub-grid-wrap">
       <div class="sub-grid-lbl">잠  수  정 — 장착 시 효과 발동</div>
@@ -188,45 +193,84 @@ export function renderSubmarine(
   const pendingEl = el.querySelector('#sub-pending')!;
   const gridEl    = el.querySelector('#sub-grid')!;
 
+  // 패널 외부 클릭 시 핀 해제
+  const onDocClick = () => {
+    _hideSubDetail();
+    _pinnedAugmentId = null;
+    pendingEl.querySelectorAll<HTMLElement>('.sub-aug-star.pinned')
+      .forEach(s => s.classList.remove('pinned'));
+  };
+  document.addEventListener('click', onDocClick, { once: true });
+
   // 대기 증강 렌더
   sub.pending.forEach(aug => {
     const star = document.createElement('div');
     star.className = 'sub-aug-star';
-    star.title = `${aug.name}\n${aug.desc}`;
-    // 대기 중인 블럭은 심해 네온/야광 콘셉트를 살리기 위해 배경 + 글로우를 동시에 부여한다.
-    star.style.background = `${aug.color}40`;
-    star.style.border = `1px solid ${aug.color}`;
-    star.style.boxShadow = `0 0 6px ${aug.color}60`;
-    // 배경 에셋은 증강 카드별로 순환하여 시각적인 다양성을 만든다.
-    const art = _pickAugmentArt(aug.id);
-    star.style.setProperty('--aug-art', `url("${art}")`);
-    // 심해 별/블럭 입자를 연출하기 위해 pseudo 레이어에 사용할 색상도 CSS 변수로 전달한다.
-    star.style.setProperty('--aug-glow', aug.color);
-    // 테트리스 기반 블럭(ㄴ, ㅁ, L, I 등) 형태를 data attribute로 전달한다.
+    // 네온/야광 콘셉트: 색 배경 + 외부 글로우
+    star.style.background = `${aug.color}38`;
+    star.style.border      = `1px solid ${aug.color}cc`;
+    star.style.boxShadow   = `0 0 8px ${aug.color}55, inset 0 0 6px ${aug.color}22`;
+    // 배경 에셋 (증강 id 기반 순환)
+    star.style.setProperty('--aug-art',      `url("${_pickAugmentArt(aug.id)}")`);
+    star.style.setProperty('--aug-mask-art', `url("${_pickRandomMaskArt()}")`);
+    star.style.setProperty('--aug-glow',     aug.color);
+    // 모양 데이터
     const shape = aug.shape ?? [[1]];
     star.dataset.shape = JSON.stringify(shape);
     star.dataset.augId = aug.id;
-    // 증강별로 무작위 우주 배경을 지정해 클릭/배치 시마다 느낌을 바꾼다.
-    star.style.setProperty('--aug-mask-art', `url("${_pickRandomMaskArt()}")`);
-    // 파편마다 떠다니는 시작 타이밍/거리/각도를 다르게 줘서 우주 유영 느낌을 만든다.
-    star.style.setProperty('--float-delay', `${(Math.random() * 4).toFixed(2)}s`);
-    star.style.setProperty('--float-distance', `${(6 + Math.random() * 10).toFixed(1)}px`);
-    star.style.setProperty('--float-tilt', `${(-5 + Math.random() * 10).toFixed(1)}deg`);
-    star.textContent = '';
+    // 개별 부유 타이밍 — 서로 다른 속도/거리/기울기로 우주 유영 느낌
+    star.style.setProperty('--float-delay',    `${(Math.random() * 5).toFixed(2)}s`);
+    star.style.setProperty('--float-distance', `${(5 + Math.random() * 9).toFixed(1)}px`);
+    star.style.setProperty('--float-tilt',     `${(-6 + Math.random() * 12).toFixed(1)}deg`);
+    star.style.setProperty('--twinkle-delay',  `${(Math.random() * 3).toFixed(2)}s`);
+
     const label = document.createElement('div');
     label.className = 'sub-aug-star__label';
     label.textContent = aug.name;
     star.appendChild(label);
-    // 클릭 시 확대 고정 + 설명창 표기를 토글한다.
+
+    // 이미 핀 상태이면 클래스 복원
+    if (_pinnedAugmentId === aug.id) star.classList.add('pinned');
+
+    // 호버 툴팁 (핀 상태가 아닐 때만)
+    star.addEventListener('mouseenter', (e) => {
+      if (_pinnedAugmentId === aug.id) return;
+      const ev = e as MouseEvent;
+      _showTip(ev.clientX, ev.clientY, buildSimpleTipHtml(aug.name, aug.desc, aug.color));
+    });
+    star.addEventListener('mousemove', (e) => {
+      if (_pinnedAugmentId !== aug.id)
+        _moveTip((e as MouseEvent).clientX, (e as MouseEvent).clientY);
+    });
+    star.addEventListener('mouseleave', () => {
+      if (_pinnedAugmentId !== aug.id) _hideTip();
+    });
+
+    // 클릭: 핀 상세 패널 토글 (re-render 없이)
     star.addEventListener('click', (e) => {
       e.stopPropagation();
-      _pinnedAugmentId = _pinnedAugmentId === aug.id ? null : aug.id;
-      onGridChange();
+      document.addEventListener('click', onDocClick, { once: true }); // 다시 등록
+      _hideTip();
+      if (_pinnedAugmentId === aug.id) {
+        _pinnedAugmentId = null;
+        star.classList.remove('pinned');
+        _hideSubDetail();
+      } else {
+        pendingEl.querySelectorAll<HTMLElement>('.sub-aug-star.pinned')
+          .forEach(s => s.classList.remove('pinned'));
+        _pinnedAugmentId = aug.id;
+        star.classList.add('pinned');
+        _showSubDetail(aug, star.getBoundingClientRect());
+      }
     });
-    // 드래그 시작 시 현재 증강을 저장하고 dataTransfer에 식별자를 담는다.
+
+    // 드래그
     star.draggable = true;
     star.addEventListener('dragstart', (e) => {
       _draggingAugment = aug;
+      _hideSubDetail();
+      _pinnedAugmentId = null;
+      star.classList.remove('pinned');
       e.dataTransfer?.setData('text/plain', aug.id);
       e.dataTransfer?.setDragImage(star, star.clientWidth / 2, star.clientHeight / 2);
       star.classList.add('dragging');
@@ -235,21 +279,8 @@ export function renderSubmarine(
       _draggingAugment = null;
       star.classList.remove('dragging');
     });
-    pendingEl.appendChild(star);
 
-    // 클릭 고정된 카드에만 디아블로풍 상세 설명창을 노출한다.
-    if (_pinnedAugmentId === aug.id) {
-      const detail = document.createElement('div');
-      detail.className = 'sub-aug-detail';
-      detail.innerHTML = `
-        <div class="sub-aug-detail__name">${aug.name}</div>
-        <div class="sub-aug-detail__shape">칸 형태: ${_shapeLabel(shape)}</div>
-        <div class="sub-aug-detail__stat">능력: ${aug.desc}</div>
-        <div class="sub-aug-detail__hint">드래그해서 잠수정 칸으로 배치</div>
-      `;
-      star.appendChild(detail);
-      star.classList.add('pinned');
-    }
+    pendingEl.appendChild(star);
   });
 
   // 그리드 셀 렌더
@@ -274,6 +305,7 @@ export function renderSubmarine(
         cell.classList.remove('drop-ok');
         if (!_draggingAugment) return;
         if (_subPlaceAt(sub, _draggingAugment, row, col)) {
+          _hideSubDetail();
           _pinnedAugmentId = null;
           onGridChange();
         }
