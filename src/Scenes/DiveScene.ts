@@ -135,6 +135,11 @@ export class DiveScene extends Phaser.Scene {
     this._battleParty = data.battleParty?.length
       ? data.battleParty
       : ((CharacterManager as unknown as { loadParty?: () => string[] }).loadParty?.() ?? []);
+    // 탐사 중 전투 불능/제거된 파티원 id를 정리하여 실제 생존 인원만 유지한다.
+    const allChars = CharacterManager.loadAll() ?? [];
+    this._battleParty = this._battleParty.filter(id =>
+      allChars.some(char => char.id === id && char.status === 'alive')
+    );
 
     this._inventory = Array.isArray(data.inventory) && data.inventory.length === INV_MAX
       ? data.inventory
@@ -142,7 +147,13 @@ export class DiveScene extends Phaser.Scene {
 
     this._submarine = data.submarine && Array.isArray(data.submarine.grid)
       ? data.submarine
-      : { pending: [], grid: new Array(SUB_COLS * SUB_ROWS).fill(null) };
+      : {
+          // 임시 테스트 단계에서는 잠수정 증강을 기본 소지 상태로 시작한다.
+          // TODO: 추후 심해상점/이벤트/적 처치 드랍으로 획득하도록 전환한다.
+          // TODO: 추후 라운드 시작 시 대기 증강을 초기화하는 규칙을 적용한다.
+          pending: this._buildTestAugments(),
+          grid: new Array(SUB_COLS * SUB_ROWS).fill(null),
+        };
 
     this._shopItems = Array.isArray(data.shopItems) && data.shopItems.length
       ? data.shopItems
@@ -161,6 +172,20 @@ export class DiveScene extends Phaser.Scene {
     this._deepCoinTxt = null;
   }
 
+  // 잠수정 탭의 테트리스/별 블럭 시각 테스트를 위해 6종 이상 증강을 즉시 지급한다.
+  private _buildTestAugments(): AugmentItem[] {
+    return SHOP_DEFAULTS
+      .filter((item) => item.type === 'augment')
+      .slice(0, 6)
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        desc: item.desc,
+        color: item.color,
+        shape: item.shape,
+      }));
+  }
+
   create(): void {
     clearAllSceneDom();
     const { width: W, height: H } = this.scale;
@@ -172,6 +197,12 @@ export class DiveScene extends Phaser.Scene {
       deepCoin: this._deepCoin, log: this._log, battleParty: this._battleParty,
       inventory: this._inventory, submarine: this._submarine, shopItems: this._shopItems,
     });
+
+    // 생존 탐사 인원이 없으면 라운드 진행이 불가능하므로 탐사를 자동 종료한다.
+    if (this._battleParty.length === 0) {
+      this.time.delayedCall(300, () => this._exitExpedition());
+      return;
+    }
 
     if (this._round > this._maxRound) {
       this.time.delayedCall(300, () => this._exitExpedition());

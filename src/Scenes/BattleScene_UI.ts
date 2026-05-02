@@ -528,7 +528,7 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
     const btnW = Math.round(W * 0.18), btnH = Math.round(H * 0.06);
     const btnBg  = this.add.graphics().setDepth(52);
     const btnTxt = this.add.text(W / 2, btnY,
-      victory ? '다음으로' : '공방으로', {
+      victory ? '다음으로' : '계속 진행', {
         fontSize: this._fs(16), color: '#c8a070', fontFamily: FontManager.TITLE,
       }).setOrigin(0.5).setDepth(53);
     const drawBtn = (hover: boolean) => {
@@ -567,7 +567,23 @@ export abstract class BattleSceneUI extends BattleSceneSetup {
             }
           } else {
             if (this._log.length > 0) this._log[this._log.length - 1].result = 'defeat';
-            this.scene.start('AtelierScene');
+            // 패배 시에도 전멸이 아니라면 생존 파티원으로 다음 라운드를 이어서 진행한다.
+            const chars = CharacterManager.loadAll() ?? [];
+            const aliveParty = this._battleParty.filter(id =>
+              chars.some(char => char.id === id && char.status === 'alive')
+            );
+            // 탐사 인원이 모두 사라졌을 때만 공방으로 복귀한다.
+            if (aliveParty.length === 0) {
+              this.scene.start('AtelierScene');
+            } else {
+              this.scene.start('DiveScene', {
+                cogMax: this._cogMax, battleParty: aliveParty,
+                round: this._round + 1, maxRound: this._maxRound,
+                deepCoin: this._deepCoin, log: this._log,
+                inventory: this._inventory, submarine: this._submarine,
+                shopItems: this._shopItems,
+              });
+            }
           }
         },
       });

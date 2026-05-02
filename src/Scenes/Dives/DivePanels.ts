@@ -14,6 +14,32 @@ import type { Character, StatKey } from '../../types';
 
 // ── 툴팁 (모듈 내 공유) ────────────────────────────────────────
 let _divePanelsTip: HTMLElement | null = null;
+
+// 설명창 가독성 향상:
+// 1) 제목(크게) 2) 설명(중간) 3) 현재 수치(작게) 3단 레이아웃을 고정 적용한다.
+function _formatTooltipHtml(text: string): string {
+  const lines = text.split('\\n').map(v => v.trim()).filter(Boolean);
+  const title = lines[0] ?? '';
+  const desc  = lines[1] ?? '';
+  // 제목 텍스트를 기준으로 테마 색을 자동 선택한다. (스탯/능력/기타)
+  const themeColor = (() => {
+    if (/체력|HP/i.test(title)) return '#d96a74';
+    if (/건강|Health/i.test(title)) return '#5bc9a8';
+    if (/공격|Attack/i.test(title)) return '#d0834a';
+    if (/민첩|Agility/i.test(title)) return '#b48af6';
+    if (/행운|Luck/i.test(title)) return '#e8c66a';
+    if (/스킬|능력|피날레|강화|오버클럭/i.test(title)) return '#7fc7ff';
+    return '#e8c78f';
+  })();
+  // 값 라인은 3번째 줄부터 모두 포함해 스탯/스킬/기타 설명창 포맷을 통일한다.
+  const value = lines.slice(2).join('<br>');
+  return [
+    title ? `<div class="mng-tooltip__title" style="color:${themeColor}">${title}</div>` : '',
+    desc ? `<div class="mng-tooltip__desc">${desc}</div>` : '',
+    value ? `<div class="mng-tooltip__value" style="color:${themeColor}">${value}</div>` : '',
+  ].join('');
+}
+
 function _ensureTip(): HTMLElement {
   if (_divePanelsTip) return _divePanelsTip;
   const el = document.createElement('div');
@@ -45,6 +71,10 @@ export interface InventoryItem {
 export interface AugmentItem {
   id: string; name: string; desc: string; color: string;
   shape?: number[][];
+  // 잠수정 대기 공간에서 표시할 커스텀 배경 에셋 경로이다.
+  artKey?: string;
+  // 잠수정 그리드 상의 앵커 좌표(드래그 배치/제거 시 사용)이다.
+  anchor?: { row: number; col: number };
 }
 export interface ShopItem {
   id: string; name: string; desc: string; color: string;
@@ -67,11 +97,24 @@ export const SHOP_DEFAULTS: ShopItem[] = [
   { id:'ration',       name:'건조식량',    desc:'탐사 라운드를 1 연장한다.',   color:'#806030', price:4, type:'consumable', sold:false },
   { id:'aug_pressure', name:'수압 강화',   desc:'아군 전체 공격력 +10%',      color:'#3090a0', price:5, type:'augment',     shape:[[1,1,0],[0,1,1]], sold:false },
   { id:'aug_shell',    name:'철각 외장',   desc:'아군 전체 피격 데미지 -8%',  color:'#806040', price:6, type:'augment',     shape:[[1,0],[1,1],[0,1]], sold:false },
+  // 탐사 밸류 강화를 위해 민첩/보상 계열 증강도 기본 풀에 포함한다.
+  { id:'aug_tide',     name:'조류 기동',   desc:'아군 전체 민첩 +12%',         color:'#53c4df', price:6, type:'augment',     shape:[[1,1,1],[0,1,0]], sold:false },
+  { id:'aug_salvage',  name:'인양 증폭',   desc:'탐사 종료 보상 +15%',         color:'#d0b76e', price:7, type:'augment',     shape:[[1,1],[1,1]], sold:false },
+  // 테스트 시 다양한 블럭 모양을 바로 확인할 수 있도록 5~6종 이상의 증강을 제공한다.
+  { id:'aug_overdrive',name:'과급 터빈',   desc:'아군 전체 공격 속도 +10%',    color:'#f18d65', price:7, type:'augment',     shape:[[1,0,0],[1,1,1]], sold:false },
+  { id:'aug_barrier',  name:'심해 장막',   desc:'아군 전체 방어력 +12%',        color:'#8aa8ff', price:7, type:'augment',     shape:[[1,1,1,1]], sold:false },
+  { id:'aug_lens',     name:'추적 렌즈',   desc:'치명타 확률 +8%',              color:'#b08cff', price:8, type:'augment',     shape:[[1,1,0],[0,1,1]], sold:false },
+  { id:'aug_resonance',name:'공명 코일',   desc:'스킬 위력 +10%',              color:'#58d7b6', price:8, type:'augment',     shape:[[0,1,0],[1,1,1]], sold:false },
 ];
 
 export const INV_MAX   = 10;
 export const SUB_COLS  = 8;
 export const SUB_ROWS  = 4;
+
+// 잠수정 패널에서 현재 확대 고정된(핀) 증강 카드 id를 기억한다.
+let _pinnedAugmentId: string | null = null;
+// 잠수정 패널 드래그 중인 증강을 공유 상태로 저장한다.
+let _draggingAugment: AugmentItem | null = null;
 
 // ================================================================
 //  인벤토리 패널
@@ -100,8 +143,9 @@ export function renderInventory(
       let tip: HTMLElement | null = null;
       cell.addEventListener('mouseenter', (e) => {
         tip = document.createElement('div');
-        tip.className = 'inv-tooltip';
-        tip.innerHTML = `<div class="inv-tooltip__name">${item.name}</div><div class="inv-tooltip__desc">${item.desc}</div>`;
+        // 인벤토리 설명도 동일한 3줄 포맷을 사용하도록 통일한다.
+        tip.className = 'mng-tooltip';
+        tip.innerHTML = _formatTooltipHtml(`${item.name}\\n아이템 설명\\n${item.desc}`);
         document.body.appendChild(tip);
         _positionTip(tip, e as MouseEvent);
       });
@@ -149,15 +193,63 @@ export function renderSubmarine(
     const star = document.createElement('div');
     star.className = 'sub-aug-star';
     star.title = `${aug.name}\n${aug.desc}`;
+    // 대기 중인 블럭은 심해 네온/야광 콘셉트를 살리기 위해 배경 + 글로우를 동시에 부여한다.
     star.style.background = `${aug.color}40`;
     star.style.border = `1px solid ${aug.color}`;
     star.style.boxShadow = `0 0 6px ${aug.color}60`;
-    star.textContent = aug.name;
-    star.addEventListener('click', () => {
-      _subPlaceToGrid(sub, aug);
+    // 배경 에셋은 증강 카드별로 순환하여 시각적인 다양성을 만든다.
+    const art = _pickAugmentArt(aug.id);
+    star.style.setProperty('--aug-art', `url("${art}")`);
+    // 심해 별/블럭 입자를 연출하기 위해 pseudo 레이어에 사용할 색상도 CSS 변수로 전달한다.
+    star.style.setProperty('--aug-glow', aug.color);
+    // 테트리스 기반 블럭(ㄴ, ㅁ, L, I 등) 형태를 data attribute로 전달한다.
+    const shape = aug.shape ?? [[1]];
+    star.dataset.shape = JSON.stringify(shape);
+    star.dataset.augId = aug.id;
+    // 증강별로 무작위 우주 배경을 지정해 클릭/배치 시마다 느낌을 바꾼다.
+    star.style.setProperty('--aug-mask-art', `url("${_pickRandomMaskArt()}")`);
+    // 파편마다 떠다니는 시작 타이밍/거리/각도를 다르게 줘서 우주 유영 느낌을 만든다.
+    star.style.setProperty('--float-delay', `${(Math.random() * 4).toFixed(2)}s`);
+    star.style.setProperty('--float-distance', `${(6 + Math.random() * 10).toFixed(1)}px`);
+    star.style.setProperty('--float-tilt', `${(-5 + Math.random() * 10).toFixed(1)}deg`);
+    star.textContent = '';
+    const label = document.createElement('div');
+    label.className = 'sub-aug-star__label';
+    label.textContent = aug.name;
+    star.appendChild(label);
+    // 클릭 시 확대 고정 + 설명창 표기를 토글한다.
+    star.addEventListener('click', (e) => {
+      e.stopPropagation();
+      _pinnedAugmentId = _pinnedAugmentId === aug.id ? null : aug.id;
       onGridChange();
     });
+    // 드래그 시작 시 현재 증강을 저장하고 dataTransfer에 식별자를 담는다.
+    star.draggable = true;
+    star.addEventListener('dragstart', (e) => {
+      _draggingAugment = aug;
+      e.dataTransfer?.setData('text/plain', aug.id);
+      e.dataTransfer?.setDragImage(star, star.clientWidth / 2, star.clientHeight / 2);
+      star.classList.add('dragging');
+    });
+    star.addEventListener('dragend', () => {
+      _draggingAugment = null;
+      star.classList.remove('dragging');
+    });
     pendingEl.appendChild(star);
+
+    // 클릭 고정된 카드에만 디아블로풍 상세 설명창을 노출한다.
+    if (_pinnedAugmentId === aug.id) {
+      const detail = document.createElement('div');
+      detail.className = 'sub-aug-detail';
+      detail.innerHTML = `
+        <div class="sub-aug-detail__name">${aug.name}</div>
+        <div class="sub-aug-detail__shape">칸 형태: ${_shapeLabel(shape)}</div>
+        <div class="sub-aug-detail__stat">능력: ${aug.desc}</div>
+        <div class="sub-aug-detail__hint">드래그해서 잠수정 칸으로 배치</div>
+      `;
+      star.appendChild(detail);
+      star.classList.add('pinned');
+    }
   });
 
   // 그리드 셀 렌더
@@ -167,6 +259,25 @@ export function renderSubmarine(
       const aug = sub.grid[idx];
       const cell = document.createElement('div');
       cell.className = `sub-cell${aug ? ' placed' : ''}`;
+      cell.dataset.row = String(row);
+      cell.dataset.col = String(col);
+      // 드롭 가능 영역 하이라이트를 위해 드래그 오버 이벤트를 등록한다.
+      cell.addEventListener('dragover', (e) => {
+        if (_draggingAugment && _canPlaceAt(sub, _draggingAugment, row, col)) {
+          e.preventDefault();
+          cell.classList.add('drop-ok');
+        }
+      });
+      cell.addEventListener('dragleave', () => cell.classList.remove('drop-ok'));
+      cell.addEventListener('drop', (e) => {
+        e.preventDefault();
+        cell.classList.remove('drop-ok');
+        if (!_draggingAugment) return;
+        if (_subPlaceAt(sub, _draggingAugment, row, col)) {
+          _pinnedAugmentId = null;
+          onGridChange();
+        }
+      });
 
       if (aug) {
         cell.style.background = `${aug.color}38`;
@@ -191,21 +302,71 @@ export function renderSubmarine(
   }
 }
 
-function _subPlaceToGrid(sub: SubmarineData, aug: AugmentItem): void {
-  const cells = aug.shape ? aug.shape.flat().filter(Boolean).length : 1;
-  for (let row = 0; row < SUB_ROWS; row++) {
-    for (let col = 0; col <= SUB_COLS - cells; col++) {
-      const fits = Array.from({ length: cells }, (_, k) =>
-        sub.grid[row * SUB_COLS + col + k] === null
-      ).every(Boolean);
-      if (fits) {
-        for (let k = 0; k < cells; k++) sub.grid[row * SUB_COLS + col + k] = aug;
-        const pi = sub.pending.indexOf(aug);
-        if (pi !== -1) sub.pending.splice(pi, 1);
-        return;
-      }
+// 증강 id를 기반으로 배경 텍스처를 순환 선택해, 중복 클릭 카드도 다른 테마처럼 보이게 만든다.
+function _pickAugmentArt(seed: string): string {
+  const assets = [
+    '/Games/Assets/Sprites/Background_001.png',
+    '/Games/Assets/Sprites/Background_004.png',
+    '/Games/Assets/Sprites/BattleBackground_002.png',
+    '/Games/Assets/Sprites/BattleBackground_006.png',
+    '/Games/Assets/Sprites/Background_007.png',
+  ];
+  const hash = seed.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return assets[hash % assets.length];
+}
+
+// 배치용 레이어 마스크에는 배틀/일반 배경을 랜덤으로 선택해 사용한다.
+function _pickRandomMaskArt(): string {
+  const assets = [
+    '/Games/Assets/Sprites/Background_002.png',
+    '/Games/Assets/Sprites/Background_006.png',
+    '/Games/Assets/Sprites/BattleBackground_001.png',
+    '/Games/Assets/Sprites/BattleBackground_004.png',
+    '/Games/Assets/Sprites/BattleBackground_005.png',
+  ];
+  return assets[Math.floor(Math.random() * assets.length)];
+}
+
+// 도형 배열을 사람이 읽기 쉬운 이름(ㄴ/ㅁ/L/I 등)으로 요약한다.
+function _shapeLabel(shape: number[][]): string {
+  const h = shape.length;
+  const w = Math.max(...shape.map(r => r.length));
+  const count = shape.flat().filter(Boolean).length;
+  if (h === 1 && w >= 4) return 'I';
+  if (h === 2 && w === 2 && count === 4) return 'ㅁ';
+  if (count >= 4 && (h >= 3 || w >= 3)) return 'L/ㄴ 계열';
+  return '커스텀';
+}
+
+function _canPlaceAt(sub: SubmarineData, aug: AugmentItem, baseRow: number, baseCol: number): boolean {
+  const shape = aug.shape ?? [[1]];
+  for (let r = 0; r < shape.length; r++) {
+    for (let c = 0; c < shape[r].length; c++) {
+      if (!shape[r][c]) continue;
+      const row = baseRow + r;
+      const col = baseCol + c;
+      if (row < 0 || row >= SUB_ROWS || col < 0 || col >= SUB_COLS) return false;
+      if (sub.grid[row * SUB_COLS + col] !== null) return false;
     }
   }
+  return true;
+}
+
+function _subPlaceAt(sub: SubmarineData, aug: AugmentItem, baseRow: number, baseCol: number): boolean {
+  if (!_canPlaceAt(sub, aug, baseRow, baseCol)) return false;
+  const shape = aug.shape ?? [[1]];
+  for (let r = 0; r < shape.length; r++) {
+    for (let c = 0; c < shape[r].length; c++) {
+      if (!shape[r][c]) continue;
+      const row = baseRow + r;
+      const col = baseCol + c;
+      sub.grid[row * SUB_COLS + col] = aug;
+    }
+  }
+  aug.anchor = { row: baseRow, col: baseCol };
+  const pi = sub.pending.indexOf(aug);
+  if (pi !== -1) sub.pending.splice(pi, 1);
+  return true;
 }
 
 function _subRemoveFromGrid(sub: SubmarineData, aug: AugmentItem): void {
