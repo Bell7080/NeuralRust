@@ -134,6 +134,8 @@ export const SUB_ROWS  = 4;
 let _pinnedAugmentId: string | null = null;
 // 잠수정 패널 드래그 중인 증강을 공유 상태로 저장한다.
 let _draggingAugment: AugmentItem | null = null;
+// 패널 안에서 떠다니는 카드의 좌표를 id 기반으로 기억해 재렌더 시에도 안정된 위치를 유지한다.
+const _augPosMap = new Map<string, { x: number; y: number }>();
 
 // ================================================================
 //  인벤토리 패널
@@ -264,15 +266,19 @@ export function renderSubmarine(
       }
     });
 
-    // 드래그
+    // 드래그 (브라우저 기본 ghost image 사용 — setDragImage 호출 시 transform 애니메이션과 충돌하여 드래그 자체가 불발되는 케이스를 방지)
     star.draggable = true;
     star.addEventListener('dragstart', (e) => {
       _draggingAugment = aug;
       _hideSubDetail();
+      _hideTip();
       _pinnedAugmentId = null;
       star.classList.remove('pinned');
-      e.dataTransfer?.setData('text/plain', aug.id);
-      e.dataTransfer?.setDragImage(star, star.clientWidth / 2, star.clientHeight / 2);
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', aug.id);
+      }
+      // 드래그 중에는 부유 애니메이션을 멈춰서 ghost와 위치가 어긋나지 않게 한다.
       star.classList.add('dragging');
     });
     star.addEventListener('dragend', () => {
@@ -282,6 +288,51 @@ export function renderSubmarine(
 
     pendingEl.appendChild(star);
   });
+
+  // ── 카드 산포 배치 (패널 전체에 떠다니도록) ─────────────────
+  const positionStars = () => {
+    const stars = Array.from(pendingEl.querySelectorAll<HTMLElement>('.sub-aug-star'));
+    if (stars.length === 0) return;
+    const pw = (pendingEl as HTMLElement).clientWidth;
+    const ph = (pendingEl as HTMLElement).clientHeight;
+    if (pw < 40 || ph < 40) {
+      requestAnimationFrame(positionStars);
+      return;
+    }
+    const cardSize = stars[0].offsetWidth || 48;
+    const padTop   = 30;        // 라벨 영역 확보
+    const margin   = 6;
+    const usableW  = Math.max(cardSize, pw - cardSize - margin * 2);
+    const usableH  = Math.max(cardSize, ph - cardSize - padTop - margin);
+    const N        = stars.length;
+    // 가로/세로 비율을 반영한 균형 잡힌 그리드 분할
+    const cols     = Math.max(1, Math.round(Math.sqrt(N * (usableW / Math.max(1, usableH)))));
+    const rows     = Math.max(1, Math.ceil(N / cols));
+    const cellW    = usableW / cols;
+    const cellH    = usableH / rows;
+
+    stars.forEach((star, idx) => {
+      const augId = star.dataset.augId ?? '';
+      let pos = _augPosMap.get(augId);
+      if (!pos) {
+        const col = idx % cols;
+        const row = Math.floor(idx / cols);
+        const baseX = margin + col * cellW + cellW * 0.5 - cardSize * 0.5;
+        const baseY = padTop + row * cellH + cellH * 0.5 - cardSize * 0.5;
+        // 각 셀 내부에서 큰 폭으로 흔들어 격자감을 지운다.
+        const jitterX = (Math.random() - 0.5) * cellW * 0.8;
+        const jitterY = (Math.random() - 0.5) * cellH * 0.7;
+        pos = {
+          x: Math.max(margin, Math.min(pw - cardSize - margin, baseX + jitterX)),
+          y: Math.max(padTop, Math.min(ph - cardSize - margin, baseY + jitterY)),
+        };
+        _augPosMap.set(augId, pos);
+      }
+      star.style.left = `${pos.x}px`;
+      star.style.top  = `${pos.y}px`;
+    });
+  };
+  requestAnimationFrame(positionStars);
 
   // 그리드 셀 렌더
   for (let row = 0; row < SUB_ROWS; row++) {
@@ -304,7 +355,9 @@ export function renderSubmarine(
         e.preventDefault();
         cell.classList.remove('drop-ok');
         if (!_draggingAugment) return;
-        if (_subPlaceAt(sub, _draggingAugment, row, col)) {
+        const placedAug = _draggingAugment;
+        if (_subPlaceAt(sub, placedAug, row, col)) {
+          _augPosMap.delete(placedAug.id);
           _hideSubDetail();
           _pinnedAugmentId = null;
           onGridChange();
