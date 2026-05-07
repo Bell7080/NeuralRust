@@ -573,9 +573,10 @@ export function renderSubmarine(
         cells.forEach(cl => {
           const dr = (Number(cl.dataset.row) - minR) * cellH;
           const dc = (Number(cl.dataset.col) - minC) * cellW;
-          cl.style.setProperty('--block-art',      `url("${art}")`);
-          cl.style.setProperty('--block-art-size', `${spanW}px ${spanH}px`);
-          cl.style.setProperty('--block-art-pos',  `-${dc}px -${dr}px`);
+          cl.style.backgroundImage    = `url("${art}")`;
+          cl.style.backgroundSize     = `${spanW}px ${spanH}px`;
+          cl.style.backgroundPosition = `-${dc}px -${dr}px`;
+          cl.style.backgroundRepeat   = 'no-repeat';
         });
       }
     }
