@@ -557,22 +557,46 @@ export function renderSubmarine(
         const spanW = (maxC - minC + 1) * cellW;
         const spanH = (maxR - minR + 1) * cellH;
 
-        // 블럭 전체에 하나의 이미지가 깔리도록 각 셀의 base offset 을 CSS 변수로 설정
-        // (CSS 애니메이션이 이 base 에 drift 를 더해 배경이 유영하는 느낌)
+        // 블럭 전체에 하나의 이미지가 깔리도록 각 셀의 base offset 을 CSS 변수로 설정.
+        // 비율 왜곡을 막기 위해 이미지 자연 크기를 받아 cover 비율로 확대한 뒤,
+        // 블럭 중앙 정렬 기준으로 셀별 오프셋을 계산한다.
         const art = _pickAugmentArt(aug.id);
-        cells.forEach(cl => {
-          const dr = (Number(cl.dataset.row) - minR) * cellH;
-          const dc = (Number(cl.dataset.col) - minC) * cellW;
-          cl.style.backgroundImage = `url("${art}")`;
-          cl.style.backgroundSize  = `${spanW}px ${spanH}px`;
-          cl.style.backgroundRepeat= 'no-repeat';
-          cl.style.setProperty('--bg-x', `${-dc}px`);
-          cl.style.setProperty('--bg-y', `${-dr}px`);
+        const blockCells = cells;
+        _withImageSize(art, (natW, natH) => {
+          const scale  = Math.max(spanW / natW, spanH / natH);
+          const drawW  = natW * scale;
+          const drawH  = natH * scale;
+          const offsetX = (spanW - drawW) / 2;  // 중앙 정렬 (음수 = 좌우 잘림)
+          const offsetY = (spanH - drawH) / 2;
+          blockCells.forEach(cl => {
+            const dr = (Number(cl.dataset.row) - minR) * cellH;
+            const dc = (Number(cl.dataset.col) - minC) * cellW;
+            cl.style.backgroundImage = `url("${art}")`;
+            cl.style.backgroundSize  = `${drawW}px ${drawH}px`;
+            cl.style.backgroundRepeat= 'no-repeat';
+            cl.style.setProperty('--bg-x', `${offsetX - dc}px`);
+            cl.style.setProperty('--bg-y', `${offsetY - dr}px`);
+          });
         });
       }
     }
   };
   requestAnimationFrame(applyBlockArt);
+}
+
+// 이미지 자연 크기 캐시 — placed 블럭이 비율을 유지하며 cover 로 확대되도록.
+const _imgSizeCache = new Map<string, { w: number; h: number }>();
+function _withImageSize(src: string, cb: (w: number, h: number) => void): void {
+  const cached = _imgSizeCache.get(src);
+  if (cached) { cb(cached.w, cached.h); return; }
+  const img = new Image();
+  img.onload = () => {
+    const size = { w: img.naturalWidth || 1, h: img.naturalHeight || 1 };
+    _imgSizeCache.set(src, size);
+    cb(size.w, size.h);
+  };
+  img.onerror = () => cb(1, 1);
+  img.src = src;
 }
 
 // 증강 id를 기반으로 배경 텍스처를 순환 선택해, 중복 클릭 카드도 다른 테마처럼 보이게 만든다.
