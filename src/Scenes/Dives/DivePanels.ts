@@ -530,11 +530,12 @@ export function renderSubmarine(
   }
 
   // ── 배치 블럭 사후 처리: 이미지 오프셋 + 중앙 셀 이름 ──────────
-  requestAnimationFrame(() => {
+  const applyBlockArt = () => {
     const firstCell = gridEl.querySelector<HTMLElement>('.sub-cell');
     if (!firstCell) return;
-    const cellW = firstCell.offsetWidth  || 1;
-    const cellH = firstCell.offsetHeight || 1;
+    const cellW = firstCell.offsetWidth;
+    const cellH = firstCell.offsetHeight;
+    if (cellW < 4 || cellH < 4) { requestAnimationFrame(applyBlockArt); return; }
 
     const visited = new Set<AugmentItem>();
     for (let r = 0; r < SUB_ROWS; r++) {
@@ -579,7 +580,8 @@ export function renderSubmarine(
         });
       }
     }
-  });
+  };
+  requestAnimationFrame(applyBlockArt);
 }
 
 // 증강 id를 기반으로 배경 텍스처를 순환 선택해, 중복 클릭 카드도 다른 테마처럼 보이게 만든다.

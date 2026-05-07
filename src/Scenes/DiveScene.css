@@ -484,9 +484,9 @@
 }
 /* 배치 블럭 이미지 일렁임 */
 @keyframes sub-block-wave {
-  0%,100% { opacity: 0.14; filter: brightness(0.85) saturate(1.0); }
-  30%     { opacity: 0.22; filter: brightness(1.25) saturate(1.2); }
-  60%     { opacity: 0.16; filter: brightness(0.95) saturate(1.05); }
+  0%,100% { opacity: 0.48; filter: brightness(0.85) saturate(1.0); }
+  30%     { opacity: 0.65; filter: brightness(1.20) saturate(1.2); }
+  60%     { opacity: 0.52; filter: brightness(0.95) saturate(1.05); }
 }
 /* 상세 패널 진입 */
 @keyframes sub-detail-enter {
@@ -522,7 +522,7 @@
   background-image:    var(--block-art);
   background-size:     var(--block-art-size, cover);
   background-position: var(--block-art-pos, center);
-  mix-blend-mode: screen;
+  mix-blend-mode: overlay;
   pointer-events: none;
   animation:      sub-block-wave 5s ease-in-out infinite;
   animation-delay:var(--block-wave-delay, 0s);
