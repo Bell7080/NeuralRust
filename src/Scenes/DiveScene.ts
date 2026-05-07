@@ -827,7 +827,10 @@ export class DiveScene extends Phaser.Scene {
         renderInventory(el, this._inventory);
         break;
       case 'submarine':
-        renderSubmarine(el, this._submarine, () => this._openTab('submarine'));
+        renderSubmarine(el, this._submarine, () => {
+          this._persistState();
+          this._openTab('submarine');
+        });
         break;
       case 'shop':
         renderShop(el, this._shopItems, this._deepCoin, (item, coinEl) => {
@@ -853,6 +856,15 @@ export class DiveScene extends Phaser.Scene {
         renderJournal(el, this._log);
         break;
     }
+  }
+
+  // 잠수정 배치/제거 같은 인게임 변경 사항을 즉시 세이브 데이터에 반영한다.
+  private _persistState(): void {
+    SaveManager.saveCurrentScene('DiveScene', {
+      cogMax: this._cogMax, round: this._round, maxRound: this._maxRound,
+      deepCoin: this._deepCoin, log: this._log, battleParty: this._battleParty,
+      inventory: this._inventory, submarine: this._submarine, shopItems: this._shopItems,
+    });
   }
 
   // ================================================================

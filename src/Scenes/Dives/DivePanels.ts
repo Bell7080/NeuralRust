@@ -488,7 +488,6 @@ export function renderSubmarine(
 
       if (aug) {
         cell.dataset.augId = aug.id;
-        cell.style.background = `${aug.color}28`;
 
         // 인접한 같은 증강 셀과의 경계 border를 제거해 하나의 덩어리처럼 보이게 한다.
         const hasT = row > 0          && sub.grid[(row-1)*SUB_COLS+col] === aug;
