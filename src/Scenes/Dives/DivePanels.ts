@@ -57,7 +57,7 @@ function _showSubDetail(aug: AugmentItem, rect: DOMRect): void {
   const shape = aug.shape ?? [[1]];
   el.innerHTML = `
     <div class="sub-aug-detail__name" style="color:${aug.color}">${aug.name}</div>
-    <div class="sub-aug-detail__shape">형태 &nbsp;·&nbsp; ${_shapeLabel(shape)}</div>
+    ${_renderShapeGrid(shape, aug.color)}
     <div class="sub-aug-detail__stat">${aug.desc}</div>
     <div class="sub-aug-detail__hint">▸ 드래그해서 잠수정에 배치</div>
   `;
@@ -132,10 +132,165 @@ export const SUB_ROWS  = 4;
 
 // 잠수정 패널에서 현재 확대 고정된(핀) 증강 카드 id를 기억한다.
 let _pinnedAugmentId: string | null = null;
-// 잠수정 패널 드래그 중인 증강을 공유 상태로 저장한다.
-let _draggingAugment: AugmentItem | null = null;
 // 패널 안에서 떠다니는 카드의 좌표를 id 기반으로 기억해 재렌더 시에도 안정된 위치를 유지한다.
 const _augPosMap = new Map<string, { x: number; y: number }>();
+
+// ── 마우스 드래그 상태 ──────────────────────────────────────────
+let _dragAug:       AugmentItem | null = null;
+let _dragStar:      HTMLElement | null = null;
+let _dragClone:     HTMLElement | null = null;
+let _dragSub:       SubmarineData | null = null;
+let _dragGridEl:    Element | null = null;
+let _dragOnChange:  (() => void) | null = null;
+let _dragStartX    = 0, _dragStartY = 0;
+let _dragActive    = false;   // 임계값 초과 후 실제 드래그 진행 중
+let _dragWasActive = false;   // 드래그 종료 후 click 이벤트 억제용
+let _dragHoverRow  = -1, _dragHoverCol = -1;
+let _dragCanPlace  = false;
+
+function _renderShapeGrid(shape: number[][], color: string): string {
+  return `<div class="sub-aug-shape">${
+    shape.map(row =>
+      `<div class="sub-aug-shape__row">${
+        row.map(v =>
+          `<span class="sub-aug-shape__cell${v ? ' on' : ''}" style="${v ? `color:${color};text-shadow:0 0 8px ${color}aa` : ''}">${v ? '■' : '□'}</span>`
+        ).join('')
+      }</div>`
+    ).join('')
+  }</div>`;
+}
+
+function _clearDropHighlights(): void {
+  _dragGridEl?.querySelectorAll<HTMLElement>('.sub-cell')
+    .forEach(c => { c.classList.remove('drop-ok'); c.classList.remove('drop-bad'); });
+}
+
+function _startDrag(
+  star: HTMLElement, aug: AugmentItem, sub: SubmarineData,
+  gridEl: Element, onGridChange: () => void, e: MouseEvent,
+): void {
+  _dragAug      = aug;
+  _dragStar     = star;
+  _dragSub      = sub;
+  _dragGridEl   = gridEl;
+  _dragOnChange = onGridChange;
+  _dragStartX   = e.clientX;
+  _dragStartY   = e.clientY;
+  _dragActive   = false;
+  _dragWasActive = false;
+  _dragHoverRow  = -1; _dragHoverCol = -1;
+  _dragCanPlace  = false;
+  document.addEventListener('mousemove', _onDragMove);
+  document.addEventListener('mouseup',   _onDragEnd);
+}
+
+function _onDragMove(e: MouseEvent): void {
+  if (!_dragAug) return;
+
+  // 임계값(6px) 초과 시 비로소 시각적 드래그 시작
+  if (!_dragActive) {
+    const d = Math.hypot(e.clientX - _dragStartX, e.clientY - _dragStartY);
+    if (d < 6) return;
+    _dragActive = true;
+
+    _hideSubDetail();
+    _hideTip();
+    _pinnedAugmentId = null;
+    _dragStar?.classList.remove('pinned');
+    _dragStar?.classList.add('dragging');
+
+    // 블럭 모양 Ghost 생성
+    const shape  = _dragAug.shape ?? [[1]];
+    const cols   = Math.max(...shape.map(r => r.length));
+    const cs     = 22; // ghost 셀 1칸 px
+    const gap    = 3;
+    _dragClone = document.createElement('div');
+    _dragClone.style.cssText = [
+      'position:fixed', 'pointer-events:none', 'z-index:99999',
+      'display:flex', 'flex-direction:column', `gap:${gap}px`,
+      'transform-origin:top left', 'opacity:0.82',
+    ].join(';');
+    shape.forEach(row => {
+      const rowEl = document.createElement('div');
+      rowEl.style.cssText = `display:flex;gap:${gap}px;`;
+      row.forEach(v => {
+        const cellEl = document.createElement('div');
+        cellEl.style.cssText = [
+          `width:${cs}px`, `height:${cs}px`, 'border-radius:3px',
+          v ? `background:${_dragAug!.color}99;border:1.5px solid ${_dragAug!.color};box-shadow:0 0 8px ${_dragAug!.color}77`
+            : 'background:transparent',
+        ].join(';');
+        rowEl.appendChild(cellEl);
+      });
+      _dragClone!.appendChild(rowEl);
+    });
+    document.body.appendChild(_dragClone);
+  }
+
+  // Ghost 이동 (커서 = 블럭 좌상단 + 작은 오프셋)
+  if (_dragClone) {
+    _dragClone.style.left = `${e.clientX + 6}px`;
+    _dragClone.style.top  = `${e.clientY + 6}px`;
+  }
+
+  // 그리드 셀 하이라이트
+  _clearDropHighlights();
+  _dragHoverRow = -1; _dragHoverCol = -1;
+  _dragCanPlace = false;
+
+  // Ghost 아래 셀 찾기 — Ghost가 위에 있으므로 잠깐 숨기고 찾는다
+  if (_dragClone) _dragClone.style.display = 'none';
+  const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+  if (_dragClone) _dragClone.style.display = '';
+
+  const cell = el?.closest<HTMLElement>('.sub-cell');
+  if (cell && _dragAug && _dragSub && _dragGridEl) {
+    const row = Number(cell.dataset.row ?? -1);
+    const col = Number(cell.dataset.col ?? -1);
+    if (row >= 0 && col >= 0) {
+      _dragHoverRow = row; _dragHoverCol = col;
+      _dragCanPlace = _canPlaceAt(_dragSub, _dragAug, row, col);
+      const shape = _dragAug.shape ?? [[1]];
+      shape.forEach((shapeRow, r) => {
+        shapeRow.forEach((filled, c) => {
+          if (!filled) return;
+          const targetCell = _dragGridEl!.querySelector<HTMLElement>(
+            `[data-row="${row + r}"][data-col="${col + c}"]`
+          );
+          if (targetCell) targetCell.classList.add(_dragCanPlace ? 'drop-ok' : 'drop-bad');
+        });
+      });
+    }
+  }
+}
+
+function _onDragEnd(_e: MouseEvent): void {
+  document.removeEventListener('mousemove', _onDragMove);
+  document.removeEventListener('mouseup',   _onDragEnd);
+
+  _clearDropHighlights();
+  _dragClone?.remove();
+  _dragClone = null;
+  _dragStar?.classList.remove('dragging');
+
+  if (_dragActive) {
+    _dragWasActive = true;
+    if (_dragCanPlace && _dragHoverRow >= 0 && _dragAug && _dragSub) {
+      if (_subPlaceAt(_dragSub, _dragAug, _dragHoverRow, _dragHoverCol)) {
+        _augPosMap.delete(_dragAug.id);
+        _hideSubDetail();
+        _pinnedAugmentId = null;
+        _dragOnChange?.();
+      }
+    }
+  }
+
+  _dragAug = null; _dragStar = null;
+  _dragSub = null; _dragGridEl = null; _dragOnChange = null;
+  _dragActive = false;
+  _dragHoverRow = -1; _dragHoverCol = -1;
+  _dragCanPlace = false;
+}
 
 // ================================================================
 //  인벤토리 패널
@@ -248,10 +403,11 @@ export function renderSubmarine(
       if (_pinnedAugmentId !== aug.id) _hideTip();
     });
 
-    // 클릭: 핀 상세 패널 토글 (re-render 없이)
+    // 클릭: 핀 상세 패널 토글 (드래그 완료 직후엔 억제)
     star.addEventListener('click', (e) => {
+      if (_dragWasActive) { _dragWasActive = false; return; }
       e.stopPropagation();
-      document.addEventListener('click', onDocClick, { once: true }); // 다시 등록
+      document.addEventListener('click', onDocClick, { once: true });
       _hideTip();
       if (_pinnedAugmentId === aug.id) {
         _pinnedAugmentId = null;
@@ -266,24 +422,10 @@ export function renderSubmarine(
       }
     });
 
-    // 드래그 (브라우저 기본 ghost image 사용 — setDragImage 호출 시 transform 애니메이션과 충돌하여 드래그 자체가 불발되는 케이스를 방지)
-    star.draggable = true;
-    star.addEventListener('dragstart', (e) => {
-      _draggingAugment = aug;
-      _hideSubDetail();
-      _hideTip();
-      _pinnedAugmentId = null;
-      star.classList.remove('pinned');
-      if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', aug.id);
-      }
-      // 드래그 중에는 부유 애니메이션을 멈춰서 ghost와 위치가 어긋나지 않게 한다.
-      star.classList.add('dragging');
-    });
-    star.addEventListener('dragend', () => {
-      _draggingAugment = null;
-      star.classList.remove('dragging');
+    // 마우스 드래그 시작 (mousedown → _startDrag → _onDragMove → _onDragEnd)
+    star.addEventListener('mousedown', (e) => {
+      if ((e as MouseEvent).button !== 0) return;
+      _startDrag(star, aug, sub, gridEl, onGridChange, e as MouseEvent);
     });
 
     pendingEl.appendChild(star);
@@ -343,26 +485,6 @@ export function renderSubmarine(
       cell.className = `sub-cell${aug ? ' placed' : ''}`;
       cell.dataset.row = String(row);
       cell.dataset.col = String(col);
-      // 드롭 가능 영역 하이라이트를 위해 드래그 오버 이벤트를 등록한다.
-      cell.addEventListener('dragover', (e) => {
-        if (_draggingAugment && _canPlaceAt(sub, _draggingAugment, row, col)) {
-          e.preventDefault();
-          cell.classList.add('drop-ok');
-        }
-      });
-      cell.addEventListener('dragleave', () => cell.classList.remove('drop-ok'));
-      cell.addEventListener('drop', (e) => {
-        e.preventDefault();
-        cell.classList.remove('drop-ok');
-        if (!_draggingAugment) return;
-        const placedAug = _draggingAugment;
-        if (_subPlaceAt(sub, placedAug, row, col)) {
-          _augPosMap.delete(placedAug.id);
-          _hideSubDetail();
-          _pinnedAugmentId = null;
-          onGridChange();
-        }
-      });
 
       if (aug) {
         cell.style.background = `${aug.color}38`;

@@ -370,6 +370,28 @@
   pointer-events: none;
   user-select:    none;
 }
+/* 증강 블럭 모양 격자 (설명창 내부) */
+.sub-aug-shape {
+  display:        inline-flex;
+  flex-direction: column;
+  gap:            4px;
+  margin:         6px 0 8px;
+}
+.sub-aug-shape__row {
+  display:        flex;
+  gap:            4px;
+}
+.sub-aug-shape__cell {
+  font-family:    var(--font-mono, monospace);
+  font-size:      clamp(14px, 1.2vw, 18px);
+  line-height:    1;
+  letter-spacing: 0.04em;
+  color:          rgba(80,130,170,0.35);
+}
+.sub-aug-shape__cell.on {
+  filter:         drop-shadow(0 0 4px currentColor);
+}
+
 /* 증강 상세 패널 (position: fixed — JS로 위치 지정) */
 .sub-aug-detail {
   position:       fixed;
@@ -482,8 +504,14 @@
 .sub-cell.placed { cursor: pointer; }
 .sub-cell.placed:hover { filter: brightness(1.25); }
 .sub-cell.drop-ok {
-  border-color:   rgba(145,223,255,0.95);
-  box-shadow:     inset 0 0 10px rgba(117,213,255,0.52);
+  border-color:   rgba(130,230,255,0.95);
+  box-shadow:     inset 0 0 10px rgba(100,210,255,0.55);
+  background:     rgba(60,180,255,0.12);
+}
+.sub-cell.drop-bad {
+  border-color:   rgba(255,90,90,0.9);
+  box-shadow:     inset 0 0 8px rgba(255,60,60,0.4);
+  background:     rgba(255,40,40,0.08);
 }
 .sub-cell__name {
   font-family:    var(--font-mono,monospace);
