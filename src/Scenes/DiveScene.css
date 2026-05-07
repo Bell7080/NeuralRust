@@ -484,9 +484,9 @@
 }
 /* 배치 블럭 이미지 일렁임 */
 @keyframes sub-block-wave {
-  0%,100% { opacity: 0.48; filter: brightness(0.85) saturate(1.0); }
-  30%     { opacity: 0.65; filter: brightness(1.20) saturate(1.2); }
-  60%     { opacity: 0.52; filter: brightness(0.95) saturate(1.05); }
+  0%,100% { filter: brightness(0.88) saturate(0.95); }
+  40%     { filter: brightness(1.10) saturate(1.15); }
+  70%     { filter: brightness(0.95) saturate(1.05); }
 }
 /* 상세 패널 진입 */
 @keyframes sub-detail-enter {
@@ -509,25 +509,16 @@
   transition:     filter 0.1s;
   box-sizing:     border-box;
 }
-/* 배치된 블럭 — 이미지 레이어 + 일렁임 */
+/* 배치된 블럭 — 이미지 직접 배경 */
 .sub-cell.placed {
-  cursor:         pointer;
-  z-index:        1;
-  isolation:      isolate;
-}
-.sub-cell.placed::before {
-  content:        '';
-  position:       absolute;
-  inset:          0;
+  cursor:              pointer;
   background-image:    var(--block-art);
   background-size:     var(--block-art-size, cover);
   background-position: var(--block-art-pos, center);
-  mix-blend-mode: overlay;
-  pointer-events: none;
-  animation:      sub-block-wave 5s ease-in-out infinite;
-  animation-delay:var(--block-wave-delay, 0s);
+  animation:           sub-block-wave 6s ease-in-out infinite;
+  animation-delay:     var(--block-wave-delay, 0s);
 }
-.sub-cell.placed:hover { filter: brightness(1.4); }
+.sub-cell.placed:hover { filter: brightness(1.3); }
 .sub-cell.drop-ok {
   border-color:   rgba(130,230,255,0.95);
   box-shadow:     inset 0 0 10px rgba(100,210,255,0.55);

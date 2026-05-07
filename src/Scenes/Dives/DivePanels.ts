@@ -588,10 +588,19 @@ export function renderSubmarine(
 function _pickAugmentArt(seed: string): string {
   const assets = [
     '/Games/Assets/Sprites/Background_001.png',
+    '/Games/Assets/Sprites/Background_002.png',
+    '/Games/Assets/Sprites/Background_003.png',
     '/Games/Assets/Sprites/Background_004.png',
-    '/Games/Assets/Sprites/BattleBackground_002.png',
-    '/Games/Assets/Sprites/BattleBackground_006.png',
+    '/Games/Assets/Sprites/Background_005.png',
+    '/Games/Assets/Sprites/Background_006.png',
     '/Games/Assets/Sprites/Background_007.png',
+    '/Games/Assets/Sprites/Background_009.png',
+    '/Games/Assets/Sprites/BattleBackground_001.png',
+    '/Games/Assets/Sprites/BattleBackground_002.png',
+    '/Games/Assets/Sprites/BattleBackground_003.png',
+    '/Games/Assets/Sprites/BattleBackground_004.png',
+    '/Games/Assets/Sprites/BattleBackground_005.png',
+    '/Games/Assets/Sprites/BattleBackground_006.png',
   ];
   const hash = seed.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   return assets[hash % assets.length];
