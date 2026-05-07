@@ -52,14 +52,14 @@ function _ensureSubDetail(): HTMLElement {
   return el;
 }
 
-function _showSubDetail(aug: AugmentItem, rect: DOMRect): void {
+function _showSubDetail(aug: AugmentItem, rect: DOMRect, placed = false): void {
   const el = _ensureSubDetail();
   const shape = aug.shape ?? [[1]];
   el.innerHTML = `
     <div class="sub-aug-detail__name" style="color:${aug.color}">${aug.name}</div>
     ${_renderShapeGrid(shape, aug.color)}
     <div class="sub-aug-detail__stat">${aug.desc}</div>
-    <div class="sub-aug-detail__hint">▸ 드래그해서 잠수정에 배치</div>
+    <div class="sub-aug-detail__hint">${placed ? '▸ 다시 클릭하면 제거' : '▸ 드래그해서 잠수정에 배치'}</div>
   `;
   el.style.display = 'block';
   // Remove old animation so it replays
@@ -480,33 +480,106 @@ export function renderSubmarine(
   for (let row = 0; row < SUB_ROWS; row++) {
     for (let col = 0; col < SUB_COLS; col++) {
       const idx = row * SUB_COLS + col;
-      const aug = sub.grid[idx];
+      const aug  = sub.grid[idx];
       const cell = document.createElement('div');
       cell.className = `sub-cell${aug ? ' placed' : ''}`;
       cell.dataset.row = String(row);
       cell.dataset.col = String(col);
 
       if (aug) {
-        cell.style.background = `${aug.color}38`;
-        cell.style.borderColor = `${aug.color}90`;
-        // 같은 증강의 첫 셀에만 이름 표시
-        const prev = col > 0 ? sub.grid[idx - 1] : null;
-        if (prev !== aug) {
-          const nm = document.createElement('div');
-          nm.className = 'sub-cell__name';
-          nm.style.color = aug.color;
-          nm.textContent = aug.name;
-          cell.appendChild(nm);
-        }
-        cell.title = `${aug.name} — 클릭하여 제거`;
+        cell.dataset.augId = aug.id;
+        cell.style.background = `${aug.color}28`;
+
+        // 인접한 같은 증강 셀과의 경계 border를 제거해 하나의 덩어리처럼 보이게 한다.
+        const hasT = row > 0          && sub.grid[(row-1)*SUB_COLS+col] === aug;
+        const hasB = row < SUB_ROWS-1 && sub.grid[(row+1)*SUB_COLS+col] === aug;
+        const hasL = col > 0          && sub.grid[row*SUB_COLS+col-1]   === aug;
+        const hasR = col < SUB_COLS-1 && sub.grid[row*SUB_COLS+col+1]   === aug;
+        cell.style.borderTop    = hasT ? 'none' : `1.5px solid ${aug.color}cc`;
+        cell.style.borderBottom = hasB ? 'none' : `1.5px solid ${aug.color}cc`;
+        cell.style.borderLeft   = hasL ? 'none' : `1.5px solid ${aug.color}cc`;
+        cell.style.borderRight  = hasR ? 'none' : `1.5px solid ${aug.color}cc`;
+
+        // 블럭 바깥쪽 모서리에만 둥글기를 준다.
+        cell.style.borderRadius = [
+          !hasT && !hasL ? '5px' : '0',
+          !hasT && !hasR ? '5px' : '0',
+          !hasB && !hasR ? '5px' : '0',
+          !hasB && !hasL ? '5px' : '0',
+        ].join(' ');
+
+        // 증강마다 고유한 일렁임 타이밍
+        const waveDelay = (aug.id.charCodeAt(4) % 40) / 10;
+        cell.style.setProperty('--block-wave-delay', `${waveDelay}s`);
+
+        // 클릭: 첫 클릭=설명창, 재클릭=제거
         cell.addEventListener('click', () => {
-          _subRemoveFromGrid(sub, aug);
-          onGridChange();
+          if (_pinnedAugmentId === aug.id) {
+            _hideSubDetail();
+            _pinnedAugmentId = null;
+            _subRemoveFromGrid(sub, aug);
+            onGridChange();
+          } else {
+            _pinnedAugmentId = aug.id;
+            _showSubDetail(aug, cell.getBoundingClientRect(), true);
+          }
         });
       }
       gridEl.appendChild(cell);
     }
   }
+
+  // ── 배치 블럭 사후 처리: 이미지 오프셋 + 중앙 셀 이름 ──────────
+  requestAnimationFrame(() => {
+    const firstCell = gridEl.querySelector<HTMLElement>('.sub-cell');
+    if (!firstCell) return;
+    const cellW = firstCell.offsetWidth  || 1;
+    const cellH = firstCell.offsetHeight || 1;
+
+    const visited = new Set<AugmentItem>();
+    for (let r = 0; r < SUB_ROWS; r++) {
+      for (let c = 0; c < SUB_COLS; c++) {
+        const aug = sub.grid[r * SUB_COLS + c];
+        if (!aug || visited.has(aug)) continue;
+        visited.add(aug);
+
+        const cells = Array.from(
+          gridEl.querySelectorAll<HTMLElement>(`.sub-cell[data-aug-id="${aug.id}"]`),
+        );
+        if (!cells.length) continue;
+
+        const rowNums = cells.map(c => Number(c.dataset.row));
+        const colNums = cells.map(c => Number(c.dataset.col));
+        const minR = Math.min(...rowNums), minC = Math.min(...colNums);
+        const maxR = Math.max(...rowNums), maxC = Math.max(...colNums);
+        const spanW = (maxC - minC + 1) * cellW;
+        const spanH = (maxR - minR + 1) * cellH;
+
+        // 중앙 셀 탐색 — 이름 표시
+        const centR = (minR + maxR) / 2, centC = (minC + maxC) / 2;
+        let centerCell = cells[0], minDist = Infinity;
+        cells.forEach(cl => {
+          const d = Math.hypot(Number(cl.dataset.row) - centR, Number(cl.dataset.col) - centC);
+          if (d < minDist) { minDist = d; centerCell = cl; }
+        });
+        const nm = document.createElement('div');
+        nm.className = 'sub-cell__name';
+        nm.style.color = aug.color;
+        nm.textContent = aug.name;
+        centerCell.appendChild(nm);
+
+        // 블럭 전체에 하나의 이미지가 깔리도록 각 셀의 오프셋 계산
+        const art = _pickAugmentArt(aug.id);
+        cells.forEach(cl => {
+          const dr = (Number(cl.dataset.row) - minR) * cellH;
+          const dc = (Number(cl.dataset.col) - minC) * cellW;
+          cl.style.setProperty('--block-art',      `url("${art}")`);
+          cl.style.setProperty('--block-art-size', `${spanW}px ${spanH}px`);
+          cl.style.setProperty('--block-art-pos',  `-${dc}px -${dr}px`);
+        });
+      }
+    }
+  });
 }
 
 // 증강 id를 기반으로 배경 텍스처를 순환 선택해, 중복 클릭 카드도 다른 테마처럼 보이게 만든다.

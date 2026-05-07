@@ -482,6 +482,12 @@
   40%      { opacity: 1;    }
   60%      { opacity: 0.72; }
 }
+/* 배치 블럭 이미지 일렁임 */
+@keyframes sub-block-wave {
+  0%,100% { opacity: 0.14; filter: brightness(0.85) saturate(1.0); }
+  30%     { opacity: 0.22; filter: brightness(1.25) saturate(1.2); }
+  60%     { opacity: 0.16; filter: brightness(0.95) saturate(1.05); }
+}
 /* 상세 패널 진입 */
 @keyframes sub-detail-enter {
   from { opacity: 0; transform: translateY(-8px) scale(0.97); }
@@ -489,20 +495,39 @@
 }
 .sub-grid {
   display:        grid;
-  gap:            3px;
+  gap:            0;   /* 셀 간격 없앰 — 같은 증강 셀이 border 제거로 이어짐 */
 }
 .sub-cell {
   aspect-ratio:   1;
   background:     rgba(10,12,14,1);
-  border:         1px solid rgba(42,32,24,0.5);
+  border:         1px solid rgba(42,32,24,0.45);
   position:       relative;
   display:        flex;
   align-items:    center;
   justify-content:center;
-  transition:     background 0.1s, border-color 0.1s;
+  overflow:       hidden;
+  transition:     filter 0.1s;
+  box-sizing:     border-box;
 }
-.sub-cell.placed { cursor: pointer; }
-.sub-cell.placed:hover { filter: brightness(1.25); }
+/* 배치된 블럭 — 이미지 레이어 + 일렁임 */
+.sub-cell.placed {
+  cursor:         pointer;
+  z-index:        1;
+  isolation:      isolate;
+}
+.sub-cell.placed::before {
+  content:        '';
+  position:       absolute;
+  inset:          0;
+  background-image:    var(--block-art);
+  background-size:     var(--block-art-size, cover);
+  background-position: var(--block-art-pos, center);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation:      sub-block-wave 5s ease-in-out infinite;
+  animation-delay:var(--block-wave-delay, 0s);
+}
+.sub-cell.placed:hover { filter: brightness(1.4); }
 .sub-cell.drop-ok {
   border-color:   rgba(130,230,255,0.95);
   box-shadow:     inset 0 0 10px rgba(100,210,255,0.55);
