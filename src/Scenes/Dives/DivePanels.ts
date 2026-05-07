@@ -5,6 +5,7 @@
 //  역할: DiveScene 5개 패널 CSS DOM 렌더러
 //        인벤토리 / 잠수정 / 상점 / 파티 / 일지
 // ================================================================
+/// <reference types="vite/client" />
 
 import { CharacterManager }       from '../../Managers/CharacterManager';
 import { CharacterSpriteManager } from '../../Managers/CharacterSpriteManager';
@@ -490,10 +491,11 @@ export function renderSubmarine(
         cell.dataset.augId = aug.id;
 
         // 인접한 같은 증강 셀과의 경계 border를 제거해 하나의 덩어리처럼 보이게 한다.
-        const hasT = row > 0          && sub.grid[(row-1)*SUB_COLS+col] === aug;
-        const hasB = row < SUB_ROWS-1 && sub.grid[(row+1)*SUB_COLS+col] === aug;
-        const hasL = col > 0          && sub.grid[row*SUB_COLS+col-1]   === aug;
-        const hasR = col < SUB_COLS-1 && sub.grid[row*SUB_COLS+col+1]   === aug;
+        // (저장 후 로드 시 객체 identity 가 깨지므로 id 로 비교)
+        const hasT = row > 0          && sub.grid[(row-1)*SUB_COLS+col]?.id === aug.id;
+        const hasB = row < SUB_ROWS-1 && sub.grid[(row+1)*SUB_COLS+col]?.id === aug.id;
+        const hasL = col > 0          && sub.grid[row*SUB_COLS+col-1]?.id   === aug.id;
+        const hasR = col < SUB_COLS-1 && sub.grid[row*SUB_COLS+col+1]?.id   === aug.id;
         cell.style.borderTop    = hasT ? 'none' : `1.5px solid ${aug.color}cc`;
         cell.style.borderBottom = hasB ? 'none' : `1.5px solid ${aug.color}cc`;
         cell.style.borderLeft   = hasL ? 'none' : `1.5px solid ${aug.color}cc`;
@@ -536,12 +538,12 @@ export function renderSubmarine(
     const cellH = firstCell.offsetHeight;
     if (cellW < 4 || cellH < 4) { requestAnimationFrame(applyBlockArt); return; }
 
-    const visited = new Set<AugmentItem>();
+    const visited = new Set<string>();
     for (let r = 0; r < SUB_ROWS; r++) {
       for (let c = 0; c < SUB_COLS; c++) {
         const aug = sub.grid[r * SUB_COLS + c];
-        if (!aug || visited.has(aug)) continue;
-        visited.add(aug);
+        if (!aug || visited.has(aug.id)) continue;
+        visited.add(aug.id);
 
         const cells = Array.from(
           gridEl.querySelectorAll<HTMLElement>(`.sub-cell[data-aug-id="${aug.id}"]`),
@@ -586,36 +588,38 @@ export function renderSubmarine(
 
 // 증강 id를 기반으로 배경 텍스처를 순환 선택해, 중복 클릭 카드도 다른 테마처럼 보이게 만든다.
 function _pickAugmentArt(seed: string): string {
-  const assets = [
-    '/Games/Assets/Sprites/Background_001.png',
-    '/Games/Assets/Sprites/Background_002.png',
-    '/Games/Assets/Sprites/Background_003.png',
-    '/Games/Assets/Sprites/Background_004.png',
-    '/Games/Assets/Sprites/Background_005.png',
-    '/Games/Assets/Sprites/Background_006.png',
-    '/Games/Assets/Sprites/Background_007.png',
-    '/Games/Assets/Sprites/Background_009.png',
-    '/Games/Assets/Sprites/BattleBackground_001.png',
-    '/Games/Assets/Sprites/BattleBackground_002.png',
-    '/Games/Assets/Sprites/BattleBackground_003.png',
-    '/Games/Assets/Sprites/BattleBackground_004.png',
-    '/Games/Assets/Sprites/BattleBackground_005.png',
-    '/Games/Assets/Sprites/BattleBackground_006.png',
+  const base = import.meta.env.BASE_URL;
+  const files = [
+    'Background_001.png',
+    'Background_002.png',
+    'Background_003.png',
+    'Background_004.png',
+    'Background_005.png',
+    'Background_006.png',
+    'Background_007.png',
+    'Background_009.png',
+    'BattleBackground_001.png',
+    'BattleBackground_002.png',
+    'BattleBackground_003.png',
+    'BattleBackground_004.png',
+    'BattleBackground_005.png',
+    'BattleBackground_006.png',
   ];
   const hash = seed.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-  return assets[hash % assets.length];
+  return `${base}Games/Assets/Sprites/${files[hash % files.length]}`;
 }
 
 // 배치용 레이어 마스크에는 배틀/일반 배경을 랜덤으로 선택해 사용한다.
 function _pickRandomMaskArt(): string {
-  const assets = [
-    '/Games/Assets/Sprites/Background_002.png',
-    '/Games/Assets/Sprites/Background_006.png',
-    '/Games/Assets/Sprites/BattleBackground_001.png',
-    '/Games/Assets/Sprites/BattleBackground_004.png',
-    '/Games/Assets/Sprites/BattleBackground_005.png',
+  const base = import.meta.env.BASE_URL;
+  const files = [
+    'Background_002.png',
+    'Background_006.png',
+    'BattleBackground_001.png',
+    'BattleBackground_004.png',
+    'BattleBackground_005.png',
   ];
-  return assets[Math.floor(Math.random() * assets.length)];
+  return `${base}Games/Assets/Sprites/${files[Math.floor(Math.random() * files.length)]}`;
 }
 
 // 도형 배열을 사람이 읽기 쉬운 이름(ㄴ/ㅁ/L/I 등)으로 요약한다.
@@ -662,7 +666,7 @@ function _subPlaceAt(sub: SubmarineData, aug: AugmentItem, baseRow: number, base
 
 function _subRemoveFromGrid(sub: SubmarineData, aug: AugmentItem): void {
   for (let i = 0; i < sub.grid.length; i++) {
-    if (sub.grid[i] === aug) sub.grid[i] = null;
+    if (sub.grid[i]?.id === aug.id) sub.grid[i] = null;
   }
   sub.pending.push(aug);
 }
