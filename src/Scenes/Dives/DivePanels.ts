@@ -557,28 +557,17 @@ export function renderSubmarine(
         const spanW = (maxC - minC + 1) * cellW;
         const spanH = (maxR - minR + 1) * cellH;
 
-        // 중앙 셀 탐색 — 이름 표시
-        const centR = (minR + maxR) / 2, centC = (minC + maxC) / 2;
-        let centerCell = cells[0], minDist = Infinity;
-        cells.forEach(cl => {
-          const d = Math.hypot(Number(cl.dataset.row) - centR, Number(cl.dataset.col) - centC);
-          if (d < minDist) { minDist = d; centerCell = cl; }
-        });
-        const nm = document.createElement('div');
-        nm.className = 'sub-cell__name';
-        nm.style.color = aug.color;
-        nm.textContent = aug.name;
-        centerCell.appendChild(nm);
-
-        // 블럭 전체에 하나의 이미지가 깔리도록 각 셀의 오프셋 계산
+        // 블럭 전체에 하나의 이미지가 깔리도록 각 셀의 base offset 을 CSS 변수로 설정
+        // (CSS 애니메이션이 이 base 에 drift 를 더해 배경이 유영하는 느낌)
         const art = _pickAugmentArt(aug.id);
         cells.forEach(cl => {
           const dr = (Number(cl.dataset.row) - minR) * cellH;
           const dc = (Number(cl.dataset.col) - minC) * cellW;
-          cl.style.backgroundImage    = `url("${art}")`;
-          cl.style.backgroundSize     = `${spanW}px ${spanH}px`;
-          cl.style.backgroundPosition = `-${dc}px -${dr}px`;
-          cl.style.backgroundRepeat   = 'no-repeat';
+          cl.style.backgroundImage = `url("${art}")`;
+          cl.style.backgroundSize  = `${spanW}px ${spanH}px`;
+          cl.style.backgroundRepeat= 'no-repeat';
+          cl.style.setProperty('--bg-x', `${-dc}px`);
+          cl.style.setProperty('--bg-y', `${-dr}px`);
         });
       }
     }
